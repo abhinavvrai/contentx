@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:ital@1&display=swap" rel="stylesheet">
 
+
 <style>
 :root{
   --orange:#FF8C00;
@@ -19,20 +20,49 @@
   --muted:rgba(245,245,245,.5);
 }
 
+
 *{margin:0;padding:0;box-sizing:border-box;}
 
+
 html{scroll-behavior:smooth;font-size:16px;}
+
 
 body{
   background:var(--bg);
   color:var(--text);
   font-family:'DM Sans',sans-serif;
   overflow-x:hidden;
-  cursor:none;
 }
 
+/* show custom cursor only on desktop */
+@media (pointer:fine){
+
+  body{
+    cursor:none;
+  }
+
+  #cursor,
+  #cursor-ring{
+    display:block;
+  }
+
+}
+
+/* hide custom cursor on mobile/tablet */
+@media (pointer:coarse){
+
+  #cursor,
+  #cursor-ring{
+    display:none;
+  }
+
+  body{
+    cursor:auto;
+  }
+
+} 
 /* ──── CUSTOM CURSOR ──── */
-/*#cursor{
+#cursor{
   position:fixed;width:12px;height:12px;
   background:var(--orange);border-radius:50%;
   pointer-events:none;z-index:99999;
@@ -48,13 +78,15 @@ body{
   transition:all .18s ease;
 }
 body:hover #cursor{opacity:1;}
-*/
+
+
 /* ──── PROGRESS BAR ──── */
 .progress{
   position:fixed;top:0;left:0;height:2px;width:0%;
   background:linear-gradient(90deg,var(--orange),var(--red));
   z-index:9999;transition:width .05s linear;
 }
+
 
 /* ──── NOISE OVERLAY ──── */
 .noise{
@@ -63,6 +95,7 @@ body:hover #cursor{opacity:1;}
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   background-size:200px;
 }
+
 
 /* ──── BG ORBS ──── */
 .orb{
@@ -74,11 +107,13 @@ body:hover #cursor{opacity:1;}
 .orb2{width:400px;height:400px;background:radial-gradient(circle,rgba(255,60,0,.07),transparent 70%);bottom:-100px;right:-80px;animation-duration:27s;animation-delay:-10s;}
 .orb3{width:300px;height:300px;background:radial-gradient(circle,rgba(255,140,0,.05),transparent 70%);top:50%;left:60%;animation-duration:18s;animation-delay:-5s;}
 
+
 @keyframes orbFloat{
   0%,100%{transform:translate(0,0) scale(1);}
   33%{transform:translate(30px,-40px) scale(1.05);}
   66%{transform:translate(-20px,30px) scale(.97);}
 }
+
 
 /* ──── NAV ──── */
 nav{
@@ -92,12 +127,14 @@ nav{
   z-index:998;
 }
 
+
 .logo{
   font-family:'Bebas Neue',sans-serif;
   font-size:26px;letter-spacing:.08em;
   background:linear-gradient(90deg,var(--orange),var(--red));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
 }
+
 
 .nav-links{display:flex;gap:30px;list-style:none;}
 .nav-links a{
@@ -106,6 +143,7 @@ nav{
   transition:color .3s;
 }
 .nav-links a:hover{color:var(--orange);}
+
 
 .nav-cta{
   padding:9px 22px;border-radius:30px;
@@ -119,6 +157,7 @@ nav{
   transform:translateY(-2px);
 }
 
+
 /* ──── HERO ──── */
 .hero{
   min-height:100vh;
@@ -129,6 +168,7 @@ nav{
   gap:60px;
   position:relative;
 }
+
 
 .hero-tag{
   display:inline-flex;align-items:center;gap:8px;
@@ -146,7 +186,9 @@ nav{
   animation:pulse 2s infinite;
 }
 
+
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
 
 .hero h1{
   font-family:'Bebas Neue',sans-serif;
@@ -160,6 +202,7 @@ nav{
 .hero h1 .line:nth-child(2) span{animation-delay:.15s;}
 .hero h1 .line:nth-child(3) span{animation-delay:.3s;}
 
+
 .hero h1 em{
   font-style:italic;font-family:'Playfair Display',serif;
   background:linear-gradient(90deg,var(--orange),var(--red),#ffaa33);
@@ -168,9 +211,11 @@ nav{
   animation:shimmer 4s linear infinite;
 }
 
+
 @keyframes shimmer{0%{background-position:0%}100%{background-position:200%}}
 @keyframes slideUp{from{transform:translateY(110%);}to{transform:translateY(0);}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+
 
 .hero-sub{
   margin-top:22px;font-size:17px;
@@ -178,10 +223,12 @@ nav{
   animation:fadeUp .8s .45s both;
 }
 
+
 .hero-actions{
   margin-top:36px;display:flex;gap:16px;flex-wrap:wrap;
   animation:fadeUp .8s .55s both;
 }
+
 
 .btn-primary{
   padding:14px 34px;border-radius:40px;
@@ -200,6 +247,7 @@ nav{
 .btn-primary:hover::after{transform:translateX(100%);}
 .btn-primary:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(255,100,0,.35);}
 
+
 .btn-ghost{
   padding:14px 34px;border-radius:40px;
   background:transparent;
@@ -210,16 +258,19 @@ nav{
 }
 .btn-ghost:hover{border-color:var(--orange);color:var(--orange);background:rgba(255,140,0,.05);}
 
+
 /* ──── PROFILE PICTURE ──── */
 .hero-visual{
   display:flex;flex-direction:column;align-items:center;gap:20px;
   animation:fadeUp .8s .35s both;
 }
 
+
 .profile-wrap{
   position:relative;width:280px;height:280px;
   flex-shrink:0;
 }
+
 
 .profile-ring{
   position:absolute;inset:-6px;border-radius:50%;
@@ -228,9 +279,11 @@ nav{
   padding:3px;
 }
 
+
 .profile-ring-inner{
   width:100%;height:100%;border-radius:50%;background:var(--bg);
 }
+
 
 .profile-pic{
   position:absolute;inset:6px;
@@ -239,6 +292,7 @@ nav{
   display:block;
 }
 
+
 .profile-glow{
   position:absolute;inset:-30px;
   background:radial-gradient(circle,rgba(255,140,0,.2),transparent 70%);
@@ -246,8 +300,10 @@ nav{
   animation:glowPulse 3s ease-in-out infinite;
 }
 
+
 @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 @keyframes glowPulse{0%,100%{opacity:.6;}50%{opacity:1;}}
+
 
 .stats{
   display:flex;gap:28px;text-align:center;
@@ -258,6 +314,7 @@ nav{
   display:block;
 }
 .stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+
 
 /* ──── MARQUEE ──── */
 .marquee-wrap{
@@ -281,8 +338,10 @@ nav{
 .marquee-track span strong{color:var(--orange);}
 @keyframes marquee{from{transform:translateX(0);}to{transform:translateX(-50%);}}
 
+
 /* ──── SECTION ──── */
 .section{padding:100px 5%;}
+
 
 .section-label{
   font-size:11px;letter-spacing:.14em;text-transform:uppercase;
@@ -293,6 +352,7 @@ nav{
   content:'';width:24px;height:1px;background:var(--orange);
 }
 
+
 .section-title{
   font-family:'Bebas Neue',sans-serif;
   font-size:clamp(36px,5vw,58px);
@@ -300,7 +360,9 @@ nav{
   margin-bottom:8px;
 }
 
+
 .section-sub{color:var(--muted);font-size:16px;margin-bottom:50px;max-width:500px;}
+
 
 /* ──── GRID / VIDEO CARDS ──── */
 .grid{
@@ -308,6 +370,7 @@ nav{
   grid-template-columns:repeat(3,1fr);
   gap:16px;
 }
+
 
 .card{
   position:relative;overflow:hidden;
@@ -326,8 +389,10 @@ nav{
   transform:translateY(-4px) scale(1.01) !important;
 }
 
+
 .landscape video{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;}
 .vertical video{width:100%;aspect-ratio:9/16;object-fit:cover;display:block;}
+
 
 .card-overlay{
   position:absolute;inset:0;
@@ -336,6 +401,7 @@ nav{
   display:flex;align-items:flex-end;padding:16px;
 }
 .card:hover .card-overlay{opacity:1;}
+
 
 .sound-btn{
   margin-left:auto;
@@ -349,6 +415,7 @@ nav{
 .sound-btn:hover{background:rgba(255,140,0,.3);}
 .card.active .sound-btn{background:rgba(255,140,0,.4);}
 
+
 .play-icon{
   position:absolute;top:50%;left:50%;
   transform:translate(-50%,-50%);
@@ -361,6 +428,7 @@ nav{
   pointer-events:none;
 }
 .card:hover .play-icon{opacity:1;}
+
 
 /* ──── "WE BUILD ATTENTION" ──── */
 .manifesto{
@@ -410,11 +478,13 @@ nav{
 }
 .pill:hover{background:rgba(255,140,0,.12);border-color:var(--orange);color:var(--orange);}
 
+
 /* ──── PRICING ──── */
 .plans{
   display:flex;gap:20px;flex-wrap:wrap;
   justify-content:center;margin-top:50px;
 }
+
 
 .plan{
   padding:36px 30px;width:280px;border-radius:24px;
@@ -456,6 +526,7 @@ nav{
 }
 .price-note{font-size:12px;color:var(--muted);margin-bottom:20px;}
 
+
 .plan-features{list-style:none;margin-top:20px;}
 .plan-features li{
   padding:9px 0;font-size:14px;color:var(--muted);
@@ -463,6 +534,7 @@ nav{
   display:flex;align-items:center;gap:10px;
 }
 .plan-features li::before{content:'→';color:var(--orange);font-size:13px;}
+
 
 /* ──── PROCESS ──── */
 .process-steps{
@@ -484,6 +556,7 @@ nav{
 }
 .step h4{font-size:16px;font-weight:600;margin-bottom:8px;}
 .step p{font-size:13px;color:var(--muted);line-height:1.6;}
+
 
 /* ──── CONTACT ──── */
 .contact-section{
@@ -510,6 +583,7 @@ nav{
   pointer-events:none;
 }
 
+
 .founder-pic-wrap{
   position:relative;width:120px;height:120px;
   margin:0 auto 20px;
@@ -528,11 +602,13 @@ nav{
   border-radius:50%;object-fit:cover;object-position:center top;
 }
 
+
 .founder-name{
   font-family:'Bebas Neue',sans-serif;
   font-size:30px;letter-spacing:.04em;
 }
 .founder-role{font-size:13px;color:var(--muted);margin-bottom:28px;}
+
 
 .contact-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
 .contact-btn{
@@ -545,6 +621,7 @@ nav{
 .contact-btn.email{background:linear-gradient(90deg,var(--orange),var(--red));}
 .contact-btn.wa{background:#25D366;}
 .contact-btn:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,.3);}
+
 
 /* ──── FOOTER ──── */
 footer{
@@ -559,6 +636,7 @@ footer .logo{font-family:'Bebas Neue',sans-serif;font-size:22px;
 }
 footer p{font-size:12px;color:var(--muted);}
 
+
 /* ──── SCROLL REVEAL ──── */
 .reveal{
   opacity:0;transform:translateY(40px);
@@ -566,6 +644,7 @@ footer p{font-size:12px;color:var(--muted);}
               transform .8s cubic-bezier(.2,.8,.2,1);
 }
 .reveal.visible{opacity:1;transform:translateY(0);}
+
 
 /* ──── MOBILE ──── */
 @media(max-width:1024px){
@@ -595,17 +674,22 @@ footer p{font-size:12px;color:var(--muted);}
 </style>
 </head>
 
+
 <body>
+
 
 <div id="cursor"></div>
 <div id="cursor-ring"></div>
 
+
 <div class="noise"></div>
 <div class="progress" id="progress"></div>
+
 
 <div class="orb orb1"></div>
 <div class="orb orb2"></div>
 <div class="orb orb3"></div>
+
 
 <!-- NAV -->
 <nav>
@@ -617,6 +701,7 @@ footer p{font-size:12px;color:var(--muted);}
   </ul>
   <a href="https://wa.me/917987909860" class="nav-cta" target="_blank">Let's Talk →</a>
 </nav>
+
 
 <!-- HERO -->
 <section class="hero">
@@ -639,12 +724,13 @@ footer p{font-size:12px;color:var(--muted);}
       <img src="profile.jpg" class="profile-pic" alt="Abhinav Rai - Content X Founder" onerror="this.style.background='linear-gradient(135deg,#FF8C00,#FF3C00)';this.removeAttribute('src');">
     </div>
     <div class="stats">
-      <div><span class="stat-num" data-target="50">0</span><span class="stat-lbl">Clients</span></div>
-      <div><span class="stat-num" data-target="200">0</span><span class="stat-lbl">Videos</span></div>
+      <div><span class="stat-num" data-target="20">0</span><span class="stat-lbl">Clients</span></div>
+      <div><span class="stat-num" data-target="1000">0</span><span class="stat-lbl">Videos</span></div>
       <div><span class="stat-num" data-target="3">0</span><span class="stat-lbl">Years</span></div>
     </div>
   </div>
 </section>
+
 
 <!-- MARQUEE -->
 <div class="marquee-wrap">
@@ -680,6 +766,7 @@ footer p{font-size:12px;color:var(--muted);}
   </div>
 </div>
 
+
 <!-- WORK: PREMIUM -->
 <section id="work" class="section">
   <div class="reveal">
@@ -687,9 +774,11 @@ footer p{font-size:12px;color:var(--muted);}
     <h2 class="section-title">Premium Edits</h2>
   </div>
 
+
   <div class="reveal" style="margin-bottom:12px;">
     <h3 style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;">Long Form</h3>
   </div>
+
 
   <div class="grid landscape" id="grid-landscape">
     <div class="card">
@@ -709,9 +798,11 @@ footer p{font-size:12px;color:var(--muted);}
     </div>
   </div>
 
+
   <div class="reveal" style="margin-top:60px;margin-bottom:12px;">
     <h3 style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;">Reels</h3>
   </div>
+
 
   <div class="grid vertical" id="grid-premium">
     <div class="card">
@@ -731,6 +822,7 @@ footer p{font-size:12px;color:var(--muted);}
     </div>
   </div>
 </section>
+
 
 <!-- STANDARD -->
 <section class="section" style="padding-top:20px;">
@@ -758,6 +850,7 @@ footer p{font-size:12px;color:var(--muted);}
   </div>
 </section>
 
+
 <!-- QUICK -->
 <section class="section" style="padding-top:20px;">
   <div class="reveal">
@@ -784,6 +877,7 @@ footer p{font-size:12px;color:var(--muted);}
   </div>
 </section>
 
+
 <!-- MANIFESTO -->
 <section class="manifesto">
   <h2 class="manifesto-title reveal">
@@ -799,6 +893,7 @@ footer p{font-size:12px;color:var(--muted);}
     <div class="pill">Viral Frameworks</div>
   </div>
 </section>
+
 
 <!-- PROCESS -->
 <section id="process" class="section" style="background:var(--bg2);">
@@ -830,6 +925,7 @@ footer p{font-size:12px;color:var(--muted);}
     </div>
   </div>
 </section>
+
 
 <!-- PRICING -->
 <section id="pricing" class="section">
@@ -878,6 +974,7 @@ footer p{font-size:12px;color:var(--muted);}
   </div>
 </section>
 
+
 <!-- CONTACT -->
 <section class="contact-section">
   <div class="contact-left reveal">
@@ -901,6 +998,7 @@ footer p{font-size:12px;color:var(--muted);}
   </div>
 </section>
 
+
 <!-- FOOTER -->
 <footer>
   <div class="logo">Content X</div>
@@ -908,11 +1006,13 @@ footer p{font-size:12px;color:var(--muted);}
   <p style="color:var(--orange);font-size:12px;">Edits That Convert.</p>
 </footer>
 
+
 <script>
 // ── Cursor ──
 const cursor = document.getElementById('cursor');
 const ring   = document.getElementById('cursor-ring');
 let mx=0,my=0,rx=0,ry=0;
+
 
 document.addEventListener('mousemove',e=>{
   mx=e.clientX; my=e.clientY;
@@ -926,6 +1026,7 @@ function animRing(){
 }
 animRing();
 
+
 document.querySelectorAll('a,button,.card,.plan,.step,.pill').forEach(el=>{
   el.addEventListener('mouseenter',()=>{
     ring.style.transform='translate(-50%,-50%) scale(1.8)';
@@ -937,12 +1038,14 @@ document.querySelectorAll('a,button,.card,.plan,.step,.pill').forEach(el=>{
   });
 });
 
+
 // ── Scroll Progress ──
 const prog = document.getElementById('progress');
 window.addEventListener('scroll',()=>{
   const pct = window.scrollY/(document.body.scrollHeight-window.innerHeight)*100;
   prog.style.width=pct+'%';
 });
+
 
 // ── Reveal on scroll ──
 const revealObs = new IntersectionObserver(entries=>{
@@ -953,6 +1056,7 @@ const revealObs = new IntersectionObserver(entries=>{
   });
 },{threshold:.12});
 document.querySelectorAll('.reveal').forEach(el=>revealObs.observe(el));
+
 
 // ── Card grid stagger ──
 const gridObs = new IntersectionObserver(entries=>{
@@ -966,6 +1070,7 @@ const gridObs = new IntersectionObserver(entries=>{
 },{threshold:.1});
 document.querySelectorAll('.grid').forEach(g=>gridObs.observe(g));
 
+
 // ── Video autoplay ──
 const vidObs = new IntersectionObserver(entries=>{
   entries.forEach(e=>{
@@ -976,10 +1081,12 @@ const vidObs = new IntersectionObserver(entries=>{
 },{threshold:.4});
 document.querySelectorAll('video').forEach(v=>vidObs.observe(v));
 
+
 // ── Sound toggle ──
 document.querySelectorAll('.card').forEach(card=>{
   const video=card.querySelector('video');
   const soundBtn=card.querySelector('.sound-btn');
+
 
   card.addEventListener('click',()=>{
     const isMuted=video.muted;
@@ -997,11 +1104,13 @@ document.querySelectorAll('.card').forEach(card=>{
     }
   });
 
+
   // reset icon when muted by another card
   video.addEventListener('volumechange',()=>{
     if(video.muted && soundBtn) soundBtn.textContent='🔊';
   });
 });
+
 
 // ── Counter animation ──
 const counterObs = new IntersectionObserver(entries=>{
@@ -1027,6 +1136,7 @@ const counterObs = new IntersectionObserver(entries=>{
 },{threshold:.5});
 document.querySelectorAll('[data-target]').forEach(el=>counterObs.observe(el));
 
+
 // ── Floating particles ──
 for(let i=0;i<24;i++){
   const d=document.createElement('div');
@@ -1048,3 +1158,8 @@ for(let i=0;i<24;i++){
 </script>
 </body>
 </html>
+
+
+
+
+
