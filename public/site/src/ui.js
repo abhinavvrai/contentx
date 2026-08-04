@@ -1,9 +1,5 @@
 import { demoComments, demoProjects } from "./data.js";
 
-const icon = name => ({
-  play: "▶", pause: "Ⅱ", folder: "▱", upload: "↑", check: "✓", clock: "◷", comment: "◌", link: "↗", more: "•••", back: "←", search: "⌕", plus: "+", bell: "◦"
-}[name] || "•");
-
 export function renderMarketing(root, data, actions) {
   root.className = "marketing-app";
   root.innerHTML = `
@@ -48,7 +44,8 @@ export function renderMarketing(root, data, actions) {
     <footer class="site-footer"><div class="section-shell"><div><a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a><p>Premium video editing and a better way to review it.</p></div><div><strong>Explore</strong><a href="#work">Work</a><a href="#workflow">How it works</a><a href="#pricing">Pricing</a></div><div><strong>Connect</strong><a href="${data.whatsapp}" target="_blank" rel="noreferrer">WhatsApp ↗</a><a href="mailto:${data.email}">Email</a><button data-action="login">Client login</button></div></div><p class="copyright">© 2026 Content X. Built for better content.</p></footer>
   `;
 
-  root.querySelectorAll('[data-action="workspace"], [data-action="login"]').forEach(btn => btn.addEventListener("click", actions.openDashboard));
+  root.querySelectorAll('[data-action="workspace"]').forEach(btn => btn.addEventListener("click", actions.openDashboard));
+  root.querySelectorAll('[data-action="login"]').forEach(btn => btn.addEventListener("click", actions.openAccess));
   root.querySelectorAll(".work-card").forEach(card => {
     const video = card.querySelector("video");
     const button = card.querySelector("button");

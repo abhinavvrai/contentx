@@ -4,7 +4,7 @@ export default function Home() {
       <iframe
         className="site-frame"
         src="/site/index.html"
-        title="Content X — Create. Review. Publish."
+        title="Content X — Managed Content Production"
       />
     </main>
   );
