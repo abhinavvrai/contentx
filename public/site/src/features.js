@@ -91,12 +91,24 @@ export function recordNotification(type, title, message, meta = {}) {
 export function initTheme() {
   const theme = localStorage.getItem("cx_theme") || "light";
   document.documentElement.dataset.theme = theme;
+  syncThemeControls();
+}
+
+function syncThemeControls() {
+  const dark = document.documentElement.dataset.theme === "dark";
+  document.querySelectorAll("[data-theme-toggle], [data-market-theme]").forEach(button => {
+    const label = button.dataset.themeLabel || "";
+    button.textContent = `${dark ? "\u2600" : "\u263e"}${label ? ` ${label}` : ""}`;
+    button.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+    button.setAttribute("aria-pressed", String(dark));
+    button.title = dark ? "Switch to light mode" : "Switch to dark mode";
+  });
 }
 
 export function toggleTheme() {
   const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next; localStorage.setItem("cx_theme", next);
-  document.querySelectorAll("[data-theme-toggle]").forEach(b => b.textContent = next === "dark" ? "☀" : "☾");
+  syncThemeControls();
 }
 
 export function enhanceMarketing(root, actions) {
@@ -109,13 +121,27 @@ export function enhanceMarketing(root, actions) {
   if (nav) nav.insertAdjacentHTML("beforeend", '<a href="#contact-form">Contact</a>');
 
   const workflow = root.querySelector("#workflow");
-  if (workflow) workflow.insertAdjacentHTML("afterend", `
+  if (workflow) {
+    const feedbackDemo = workflow.querySelector('[data-action="workspace"]');
+    if (feedbackDemo) {
+      const restoredDemo = feedbackDemo.cloneNode(true);
+      restoredDemo.textContent = "Try video feedback \u2192";
+      restoredDemo.dataset.feedbackDemo = "";
+      feedbackDemo.replaceWith(restoredDemo);
+      restoredDemo.addEventListener("click", () => {
+        store.set("cx_access", { email: "demo@apexfitness.in", plan: "Interactive feedback demo", paid: false, code: "CX-DEMO", clientId: "apex" });
+        actions.openReview();
+      });
+      restoredDemo.insertAdjacentHTML("beforebegin", '<div class="feedback-demo-points"><span>\u25cc Timestamped notes</span><span>\u270e Frame annotations</span><span>\u21c4 Version comparison</span></div>');
+    }
+    workflow.insertAdjacentHTML("afterend", `
     <section id="network" class="network-section block-section"><div class="section-shell">
       <div class="section-heading split"><div><p class="eyebrow"><span></span>Content X network</p><h2>Ideas meet the people who can <em>make them real.</em></h2></div><p>Pitch a video idea, join our vetted creative network, or build a project team across strategy, scripts, production, editing and social management.</p></div>
       <div class="network-paths"><article class="idea-path"><small>HAVE A STRONG CONCEPT?</small><h3>Pitch a video idea.</h3><p>Creators and strategists can submit original video concepts. If a brand picks it, we connect both sides and manage the production.</p><button class="pill pill-light" data-apply="Pitch a video idea">Submit your idea →</button></article><article class="talent-path"><small>BUILD WITH CONTENT X</small><h3>Join the creator network.</h3><p>Apply once, show us your strongest work, and get matched with suitable paid projects when they arrive.</p><button class="pill pill-dark" data-apply="Content Creator">Apply as a creator →</button></article></div>
       <div class="talent-grid">${talentRoles.map(([name,copy,symbol]) => `<article><span>${symbol}</span><h3>${name}</h3><p>${copy}</p><button data-apply="${name}">Apply for this role →</button></article>`).join("")}</div>
       <div class="network-note"><strong>One project. One connected team.</strong><span>Content strategist</span><i>→</i><span>Scriptwriter</span><i>→</i><span>Creator</span><i>→</i><span>Editor</span><i>→</i><span>Social manager</span></div>
     </div></section>`);
+  }
 
   const roleGrid = root.querySelector(".talent-grid");
   if (roleGrid) roleGrid.outerHTML = `<div class="network-roles"><p><strong>We currently welcome</strong> idea creators, content creators, scriptwriters, editors, social media managers and cover designers.</p><button class="pill pill-dark" data-apply="Join creative network">One application for every role →</button></div>`;
@@ -131,6 +157,7 @@ export function enhanceMarketing(root, actions) {
     pricing.querySelectorAll('input[name="quality"]').forEach(input => input.addEventListener("change", () => { quality = input.value; updatePrice(); })); slider.addEventListener("input", () => { count = Number(slider.value); updatePrice(); }); pricing.querySelectorAll("[data-volume]").forEach(btn => btn.addEventListener("click", () => { count = Math.min(30, Math.max(Number(slider.min), count + (btn.dataset.volume === "plus" ? 1 : -1))); updatePrice(); }));
     pricing.querySelector("[data-calculator-checkout]").addEventListener("click", () => { const base = bases[quality], factor = billing === "monthly" ? .8 : 1.25, total = Math.round(base * factor * count); actions.openCheckout({ id:`${billing}-${quality.toLowerCase()}-${count}`, name:`${quality} · ${count} videos`, price:total, unit:billing === "monthly" ? "month" : "project", badge:billing === "monthly" ? "20% monthly saving" : "One-off package", features:[`${count} ${quality} videos`, `${money(Math.round(total/count))} effective per video`, "2 revision rounds per video", billing === "monthly" ? "Monthly workspace & production queue" : "Single-project workspace access"] }); }); updatePrice();
   }
+  if (pricing) enhancePricingSelections(pricing, actions);
 
   const faq = root.querySelector("#faq");
   if (faq) faq.insertAdjacentHTML("afterend", `<section id="contact-form" class="contact-form-section block-section"><div class="section-shell contact-grid"><div><p class="eyebrow"><span></span>Tell us what you need</p><h2>Start with a <em>conversation.</em></h2><p>Share your goal, budget and timeline. Your enquiry will appear inside the Content X owner dashboard—nothing is emailed yet.</p><div class="contact-details"><span>Typical reply</span><strong>Within one business day</strong><span>Best for</span><strong>Projects, retainers & partnerships</strong></div></div><form class="lead-form"><div class="field-pair"><label>Name<input name="name" required placeholder="Your name"></label><label>Phone / WhatsApp<input name="phone" required placeholder="+91 …"></label></div><label>Email<input type="email" name="email" placeholder="you@company.com"></label><label>I’m interested in<select name="interest"><option>Monthly video package</option><option>One-off video</option><option>Full content strategy</option><option>Scripts + video editing</option><option>Social media management</option><option>Joining the creator network</option></select></label><label>Tell us about the project<textarea name="message" required placeholder="What are you creating, how many videos do you need, and when do you want to start?"></textarea></label><button class="pill pill-hot" type="submit">Save my enquiry →</button><small>Saved privately in this website’s owner dashboard for testing.</small></form></div></section>`);
@@ -138,6 +165,52 @@ export function enhanceMarketing(root, actions) {
   root.querySelectorAll("[data-apply]").forEach(btn => btn.addEventListener("click", () => openApplication(btn.dataset.apply)));
   root.querySelectorAll('[data-action="login"]').forEach(btn => { const replacement = btn.cloneNode(true); btn.replaceWith(replacement); replacement.addEventListener("click", actions.openAccess); });
   root.querySelectorAll('a[href^="mailto:"]').forEach(link => { link.href = "#contact-form"; link.textContent = link.textContent.trim() === "Email" ? "Website enquiry" : "Send a project brief"; });
+}
+
+function enhancePricingSelections(pricing, actions) {
+  pricing.dataset.pricingRestored = "true";
+  const steps = pricing.querySelectorAll(".calculator-step");
+  const qualityStep = steps[0], volumeStep = steps[1];
+  if (!qualityStep || !volumeStep) return;
+  volumeStep.querySelector("header>span").textContent = "03";
+  volumeStep.querySelector("header strong").textContent = "Select number of videos";
+  qualityStep.insertAdjacentHTML("afterend", `<div class="calculator-step delivery-format-step"><header><span>02</span><div><strong>Delivery format</strong><small>Select the main format included in this estimate.</small></div></header><div class="delivery-format-options"><label><input type="radio" name="deliveryFormat" value="Vertical 9:16" checked><span><b>9:16</b><strong>Reels & Shorts</strong><small>Vertical social delivery</small></span></label><label><input type="radio" name="deliveryFormat" value="Landscape 16:9"><span><b>16:9</b><strong>YouTube & web</strong><small>Landscape delivery</small></span></label><label><input type="radio" name="deliveryFormat" value="Square 1:1"><span><b>1:1</b><strong>Square social</strong><small>Feed-ready delivery</small></span></label></div></div>`);
+  volumeStep.querySelector(".volume-control").insertAdjacentHTML("afterend", '<div class="volume-presets" aria-label="Quick video quantity choices"></div>');
+  const summaryTitle = pricing.querySelector(".calculator-summary h3");
+  summaryTitle.insertAdjacentHTML("afterend", '<span class="selected-format" data-summary-format>Vertical 9:16</span>');
+  const slider = pricing.querySelector('.volume-control input[type="range"]');
+  const presets = pricing.querySelector(".volume-presets");
+  const currentBilling = () => pricing.querySelector("[data-billing].active")?.dataset.billing || "monthly";
+  const renderPresets = () => {
+    const monthly = currentBilling() === "monthly";
+    const values = monthly ? [10, 15, 20, 25, 30] : [1, 3, 5, 10, 20];
+    const selected = Number(slider.value);
+    presets.innerHTML = values.map(value => `<button type="button" class="${value === selected ? "active" : ""}" data-volume-preset="${value}" aria-pressed="${value === selected}">${value} video${value === 1 ? "" : "s"}</button>`).join("");
+    presets.querySelectorAll("[data-volume-preset]").forEach(button => button.addEventListener("click", () => {
+      slider.value = button.dataset.volumePreset;
+      slider.dispatchEvent(new Event("input", { bubbles: true }));
+      renderPresets();
+    }));
+  };
+  pricing.querySelectorAll("[data-billing]").forEach(button => button.addEventListener("click", () => setTimeout(renderPresets, 0)));
+  slider.addEventListener("input", renderPresets);
+  pricing.querySelectorAll("[data-volume]").forEach(button => button.addEventListener("click", () => setTimeout(renderPresets, 0)));
+  pricing.querySelectorAll('input[name="deliveryFormat"]').forEach(input => input.addEventListener("change", () => {
+    pricing.querySelector("[data-summary-format]").textContent = input.value;
+  }));
+  const oldCheckout = pricing.querySelector("[data-calculator-checkout]");
+  const checkout = oldCheckout.cloneNode(true);
+  oldCheckout.replaceWith(checkout);
+  checkout.addEventListener("click", () => {
+    const bases = { Standard: 2000, Gold: 2500, Premium: 3500 };
+    const billing = currentBilling();
+    const quality = pricing.querySelector('input[name="quality"]:checked').value;
+    const format = pricing.querySelector('input[name="deliveryFormat"]:checked').value;
+    const count = Number(slider.value);
+    const total = Math.round(bases[quality] * (billing === "monthly" ? .8 : 1.25) * count);
+    actions.openCheckout({ id:`${billing}-${quality.toLowerCase()}-${count}`, name:`${quality} \u00b7 ${count} videos`, price:total, unit:billing === "monthly" ? "month" : "project", badge:billing === "monthly" ? "20% monthly saving" : "One-off package", features:[`${count} ${quality} videos`, `${format} delivery`, `${money(Math.round(total/count))} effective per video`, "2 revision rounds per video", billing === "monthly" ? "Monthly workspace & production queue" : "Single-project workspace access"] });
+  });
+  renderPresets();
 }
 
 function openWorkMenu() {
@@ -203,7 +276,7 @@ export function renderCheckout(root, actions) {
 
 export function enhanceDashboard(root, actions) {
   const user = root.querySelector(".dash-user");
-  if (user) user.insertAdjacentHTML("beforebegin", `<button class="owner-switch" data-owner>⚙ Owner view</button><button class="owner-switch" data-theme-toggle>${document.documentElement.dataset.theme === "dark" ? "☀" : "☾"} Theme</button>`);
+  if (user) user.insertAdjacentHTML("beforebegin", `<button class="owner-switch" data-owner>⚙ Owner view</button><button class="owner-switch" data-theme-toggle data-theme-label="Theme">${document.documentElement.dataset.theme === "dark" ? "☀" : "☾"} Theme</button>`);
   root.querySelector("[data-owner]")?.addEventListener("click", actions.openAdmin); root.querySelector("[data-theme-toggle]")?.addEventListener("click", toggleTheme);
   const nav = root.querySelector(".dash-sidebar nav");
   const client = activeClientContext();
@@ -301,6 +374,8 @@ export function enhanceReview(root, actions) {
   const managedRequests = store.get("cx_managed_review_requests", []);
   const activeManagedReview = managedRequests.find(request => request.project === "Apex Fitness Launch" && !["Completed", "Cancelled"].includes(request.status));
   const headerActions = root.querySelector(".review-head-actions");
+  headerActions?.insertAdjacentHTML("afterbegin", `<button class="review-theme-button" type="button" data-theme-toggle aria-label="Switch colour theme">${document.documentElement.dataset.theme === "dark" ? "\u2600" : "\u263e"}</button>`);
+  root.querySelector(".review-theme-button")?.addEventListener("click", toggleTheme);
   headerActions?.insertAdjacentHTML("afterbegin", `<button class="pill managed-review-button ${activeManagedReview ? "is-active" : ""}" data-managed-review>${activeManagedReview ? "✓ Managed review active" : "✦ Let Content X review"}</button>`);
   wrap.insertAdjacentHTML("beforeend", `<canvas class="annotation-canvas" aria-label="Frame annotation canvas"></canvas><div class="watermark">CONTENT X · PREVIEW</div><div class="frame-annotation-toolbar" role="toolbar" aria-label="Frame annotation tools"><div class="annotation-tool-group"><button class="active" data-draw-tool="arrow" title="Arrow"><span>↗</span><small>Arrow</small></button><button data-draw-tool="line" title="Line"><span>╱</span><small>Line</small></button><button data-draw-tool="box" title="Rectangle"><span>□</span><small>Box</small></button><button data-draw-tool="circle" title="Ellipse"><span>○</span><small>Circle</small></button><button data-draw-tool="pencil" title="Free draw"><span>〰</span><small>Draw</small></button><button data-draw-tool="pin" title="Anchored comment"><span>●</span><small>Pin</small></button></div><div class="annotation-options"><div class="annotation-colors" aria-label="Annotation colour">${["#ff5c20","#ffd43b","#56d6a5","#4da3ff","#b985ff","#ffffff"].map((value,index) => `<button class="${index === 0 ? "active" : ""}" data-draw-color="${value}" style="--swatch:${value}" aria-label="Use ${value}"></button>`).join("")}</div><div class="annotation-widths"><button data-draw-width="3">S</button><button class="active" data-draw-width="5">M</button><button data-draw-width="8">L</button></div><span class="annotation-separator"></span><button data-annotation-action="undo" title="Undo">↶</button><button data-annotation-action="redo" title="Redo">↷</button><button data-annotation-action="visibility" title="Show or hide saved annotations">◉</button><button data-annotation-action="clear" title="Clear this draft">⌫</button><button data-annotation-action="close" title="Close annotation tools">×</button></div><div class="annotation-hint"><span>Paused at <strong>00:00</strong></span><em>Draw, then send your comment to attach this markup.</em></div></div>`);
   const controls = root.querySelector(".player-controls");
@@ -408,7 +483,7 @@ function renderOwnerGate(root, actions) {
 export function renderAdmin(root, actions) {
   if (!store.get("cx_owner_access")) return renderOwnerGate(root, actions);
   root.className = "admin-app"; const leads = store.get("cx_leads", []), apps = store.get("cx_applications", []), payments = store.get("cx_payments", []), moderation = store.get("cx_moderation", []), settings = store.get("cx_review_settings", { watermark:true, download:false }), managedRequests = store.get("cx_managed_review_requests", []), managedSettings = { enabled:true, price:2500, turnaround:"Within 1 business day", ...store.get("cx_managed_review_settings", {}) };
-  root.innerHTML = `<div class="admin-shell"><aside><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X<small>Owner control room</small></span></a><nav><button class="active" data-admin="overview">⌂ Overview</button><button data-admin="clients">● Clients <b>3</b></button><button data-admin="moderation">◷ Approval queue <b>${moderation.filter(x=>x.status==="Pending").length}</b></button><button data-admin="applications">✦ Talent applications <b>${apps.length}</b></button><button data-admin="leads">↗ Enquiries <b>${leads.length}</b></button><button data-admin="payments">₹ Payments <b>${payments.length}</b></button><button data-admin="team">◇ Team</button><button data-admin="managed-review">✦ Managed review <b>${managedRequests.filter(item=>!["Completed","Cancelled"].includes(item.status)).length}</b></button><button data-admin="settings">⚙ Review controls</button></nav><div><button data-client-view>← Client workspace</button><button data-theme-toggle>${document.documentElement.dataset.theme === "dark" ? "☀" : "☾"} Theme</button></div></aside><main><header><div><p>Owner workspace</p><h1>Operations overview</h1></div><button class="pill pill-hot" data-add-client>+ Add client</button></header><section class="admin-content"></section></main></div>`;
+  root.innerHTML = `<div class="admin-shell"><aside><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X<small>Owner control room</small></span></a><nav><button class="active" data-admin="overview">⌂ Overview</button><button data-admin="clients">● Clients <b>3</b></button><button data-admin="moderation">◷ Approval queue <b>${moderation.filter(x=>x.status==="Pending").length}</b></button><button data-admin="applications">✦ Talent applications <b>${apps.length}</b></button><button data-admin="leads">↗ Enquiries <b>${leads.length}</b></button><button data-admin="payments">₹ Payments <b>${payments.length}</b></button><button data-admin="team">◇ Team</button><button data-admin="managed-review">✦ Managed review <b>${managedRequests.filter(item=>!["Completed","Cancelled"].includes(item.status)).length}</b></button><button data-admin="settings">⚙ Review controls</button></nav><div><button data-client-view>← Client workspace</button><button data-theme-toggle data-theme-label="Theme">${document.documentElement.dataset.theme === "dark" ? "☀" : "☾"} Theme</button></div></aside><main><header><div><p>Owner workspace</p><h1>Operations overview</h1></div><button class="pill pill-hot" data-add-client>+ Add client</button></header><section class="admin-content"></section></main></div>`;
   root.querySelector(".admin-shell>aside>div")?.insertAdjacentHTML("beforeend", '<button data-owner-lock>⌾ Lock owner session</button>');
   const content = root.querySelector(".admin-content");
   const overview = () => content.innerHTML = `<div class="admin-stats"><article><span>₹</span><div><strong>${money(payments.reduce((s,p)=>s+Number(p.amount||0),0))}</strong><small>Recorded revenue</small></div></article><article><span>●</span><div><strong>3</strong><small>Active clients</small></div></article><article><span>◷</span><div><strong>${moderation.filter(x=>x.status==="Pending").length}</strong><small>Pending approvals</small></div></article><article><span>✦</span><div><strong>${apps.length}</strong><small>Talent applications</small></div></article></div><div class="admin-columns"><section><div class="dash-section-head"><div><h2>Projects needing attention</h2><p>Review status across active clients.</p></div></div><div class="admin-table"><div><strong>Apex Fitness Launch</strong><span>Waiting on client review</span><b class="status in-review"><i></i>In review</b></div><div><strong>Founder Story Series</strong><span>2 open comments</span><b class="status editing"><i></i>Editing</b></div><div><strong>Product Walkthrough</strong><span>Ready to deliver</span><b class="status approved"><i></i>Approved</b></div></div></section><section class="control-card"><h2>Preview protection</h2><p>These rules apply to client review files.</p><label><span>Show Content X watermark<small>Protect previews before approval</small></span><input type="checkbox" data-setting="watermark" ${settings.watermark?"checked":""}></label><label><span>Allow client download<small>Turn off until payment or approval</small></span><input type="checkbox" data-setting="download" ${settings.download?"checked":""}></label></section></div>`;

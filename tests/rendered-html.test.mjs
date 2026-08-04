@@ -40,7 +40,7 @@ test("ships the managed-service intake, private provider workspace and protected
   assert.match(main, /route === "marketplace"/);
   assert.match(main, /route === "provider-workspace"/);
   assert.match(main, /enhanceMarketplaceAdmin/);
-  assert.match(index, /polish\.css\?v=managed-service-1/);
+  assert.match(index, /polish\.css\?v=core-features-2/);
   assert.match(marketplace, /Managed creative network/);
   assert.match(marketplace, /We assemble the team/);
   assert.match(marketplace, /One scope and one invoice/);
@@ -81,7 +81,7 @@ test("ships the advanced review command center and shared task workflow", async 
     readFile(new URL("../public/site/src/advanced.css", import.meta.url), "utf8"),
   ]);
 
-  assert.match(index, /advanced\.css\?v=managed-service-1/);
+  assert.match(index, /advanced\.css\?v=core-features-2/);
   assert.match(main, /enhanceReviewSuite/);
   assert.match(main, /enhanceDashboardSuite/);
   assert.match(main, /enhanceAdminSuite/);
@@ -157,4 +157,22 @@ test("ships native reel ratios and isolated client workspaces", async () => {
   assert.match(advancedStyles, /Native media ratios/);
   assert.match(advancedStyles, /Isolated client workspaces/);
   assert.match(advancedStyles, /aspect-ratio:9\/16/);
+});
+
+test("keeps dark mode, video feedback and pricing selection first-class", async () => {
+  const [features, polishStyles] = await Promise.all([
+    readFile(new URL("../public/site/src/features.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/polish.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(features, /syncThemeControls/);
+  assert.match(features, /review-theme-button/);
+  assert.match(features, /Try video feedback/);
+  assert.match(features, /Frame annotations/);
+  assert.match(features, /deliveryFormat/);
+  assert.match(features, /data-volume-preset/);
+  assert.match(features, /Select number of videos/);
+  assert.match(polishStyles, /Restored core controls/);
+  assert.match(polishStyles, /delivery-format-options/);
+  assert.match(polishStyles, /volume-presets/);
 });

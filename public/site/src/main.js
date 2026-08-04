@@ -1,9 +1,9 @@
 import { studio } from "./data.js";
 import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js";
 import { canAccessWorkspace, enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAccess, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js";
-import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=managed-service-1";
+import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=core-features-2";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js";
-import { initProductPolish, polishRoute } from "./polish.js?v=managed-service-1";
+import { initProductPolish, polishRoute } from "./polish.js?v=core-features-2";
 
 const root = document.getElementById("app");
 const loader = document.querySelector("[data-loader]");
