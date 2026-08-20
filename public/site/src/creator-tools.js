@@ -130,13 +130,13 @@ function simplifyShortFormPricing(root) {
   const packages = [["Basic", 1500, "Clean captions, pacing, music and two revision rounds."], ["Better Edit", 2000, "B-roll, sound design and one Roman Hinglish caption pass."], ["Graphics Lite", 2500, "Branded overlays, Hinglish captions and cleaner visual storytelling."]];
   [...qualityOptions.querySelectorAll("label")].forEach((label, index) => { const [name, price, copy] = packages[index]; label.querySelector("input").value = name; label.querySelector("b").textContent = name; label.querySelector("strong").textContent = formatMoney(price); label.querySelector("small").textContent = copy; });
   qualityOptions.insertAdjacentHTML("beforeend", `<label><input type="radio" name="quality" value="Premium Motion"><span><b>Premium Motion</b><strong>₹3,500</strong><small>Advanced motion graphics, refined sound and priority polish.</small></span></label>`);
-  qualityOptions.insertAdjacentHTML("beforeend", `<label class="saas-animation-tier"><input type="radio" name="quality" value="SaaS Animation"><span><i class="saas-tier-badge">UP TO 30 SEC · ADVANCED SAAS</i><b>SaaS Animation</b><strong>₹5,500</strong><small>Up to 30 seconds of animated product UI, dashboard flows, app interactions, callouts and premium sound design.</small></span></label>`);
+  qualityOptions.insertAdjacentHTML("beforeend", `<label class="saas-animation-tier"><input type="radio" name="quality" value="SaaS Animation"><span><i class="saas-tier-badge">UP TO 30 SEC · ADVANCED SAAS</i><b>SaaS Animation</b><strong>₹9,000</strong><small>Up to 30 seconds of animated product UI, dashboard flows, app interactions, callouts and premium sound design.</small></span></label>`);
   const volumeStep = pricing.querySelector(".calculator-step:last-child");
   volumeStep.querySelector("header>span").textContent = "02"; volumeStep.querySelector("header strong").textContent = "How many reels?";
   pricing.querySelector("[data-summary-format]")?.replaceChildren(document.createTextNode("Vertical reels · 15–90 sec · 1 caption pass"));
   const includedNote = pricing.querySelector(".included-note"); if (includedNote) includedNote.textContent = "Includes two revision rounds. Better Edit and above include one low-credit Roman Hinglish caption pass per video; editing the result uses no extra credit.";
   const slider = pricing.querySelector('.volume-control input[type="range"]');
-  const bases = { Basic:1500, "Better Edit":2000, "Graphics Lite":2500, "Premium Motion":3500, "SaaS Animation":5500 };
+  const bases = { Basic:1500, "Better Edit":2000, "Graphics Lite":2500, "Premium Motion":3500, "SaaS Animation":9000 };
   const presets = pricing.querySelector(".volume-presets");
   pricing.querySelector('[data-billing="monthly"] span')?.remove();
   const currentBilling = () => pricing.querySelector("[data-billing].active")?.dataset.billing || "monthly";
