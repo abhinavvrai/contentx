@@ -4,6 +4,12 @@
   "compatibility_date": "2026-08-20",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./worker/index.ts",
+  "routes": [
+    {
+      "pattern": "contentx.co.in",
+      "custom_domain": true
+    }
+  ],
   "assets": {
     "directory": "dist/client",
     "not_found_handling": "none",
