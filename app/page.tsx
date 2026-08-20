@@ -1,11 +1,5 @@
 export default function Home() {
-  return (
-    <main className="site-frame-shell">
-      <iframe
-        className="site-frame"
-        src="/site/index.html"
-        title="Content X — Managed Content Production"
-      />
-    </main>
-  );
+  const contact = "https://wa.me/917987909860?text=Hi%20Abhinav%2C%20I%20want%20to%20start%20a%20Content%20X%20project.";
+  const services = [["Basic Reel", "₹1,500", "Clean pacing, captions and two revisions."], ["Growth Reel", "₹2,500", "B-roll, sound design and colour polish."], ["Premium Motion", "₹3,500", "Motion graphics and premium finishing."], ["Advanced Reel", "₹5,000", "Custom graphics, motion and creative direction."], ["Hook & Idea", "₹1,000", "A strong content angle and opening hook."], ["Full Reel Script", "₹1,500", "A ready-to-shoot script from hook to CTA."], ["Research-led Script", "₹2,000", "Research, structure and refined brand voice."], ["Podcast · 30 min", "₹5,000", "Clean edit, audio cleanup and branded delivery."], ["Podcast · 45 min", "₹7,500", "A polished episode with clear structure."], ["Podcast · 60 min", "₹10,000", "Full episode edit and branded master."]];
+  return <main className="contentx-page"><nav><a className="brand" href="#top"><b>CX</b> Content X</a><a className="button small" href={contact} target="_blank" rel="noreferrer">Start a project ↗</a></nav><section id="top" className="hero"><p className="eyebrow">SHORT-FORM CONTENT · SCRIPTING · PODCAST EDITING</p><h1>Content that looks<br /><em>as serious as you are.</em></h1><p>Premium edits, clear scripts and organised delivery for creators and growing brands.</p><a className="button" href="#services">View services</a><div className="stats"><span><b>1,000+</b> videos delivered</span><span><b>48–72h</b> typical first cut</span><span><b>2 rounds</b> included revisions</span></div></section><section id="services" className="section"><p className="eyebrow">CLEAR PRICING</p><h2>Choose a service. Add only what you <em>need.</em></h2><p>Every edit includes two revision rounds. Listed prices are for one project.</p><div className="cards">{services.map(([name, price, description]) => <article key={name}><h3>{name}</h3><p>{description}</p><strong>{price}</strong><small>per project</small><a href={contact} target="_blank" rel="noreferrer">Choose on WhatsApp →</a></article>)}</div><aside><div><p className="eyebrow">OPTIONAL MONTHLY SUPPORT</p><h3>Social media management</h3><p>Content planning, posting, scheduling, comment management and monthly reporting.</p></div><a className="button" href={contact} target="_blank" rel="noreferrer">Build a monthly plan →</a></aside></section><section className="contact"><p className="eyebrow">READY WHEN YOU ARE</p><h2>Let’s make your next video <em>impossible to skip.</em></h2><a className="button" href={contact} target="_blank" rel="noreferrer">Start on WhatsApp ↗</a></section><footer>© 2026 Content X · Premium content production</footer></main>;
 }
