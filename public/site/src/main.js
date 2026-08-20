@@ -3,6 +3,7 @@ import { renderDashboard, renderMarketing, renderProject, renderReview } from ".
 import { canAccessWorkspace, enhanceDashboard, enhanceProject, enhanceReview, initTheme, renderAccess, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js";
 import { initProductPolish, polishRoute } from "./polish.js?v=core-features-2";
+import { enhanceCreatorTools } from "./creator-tools.js?v=services-groups-1";
 
 const root = document.getElementById("app");
 const loader = document.querySelector("[data-loader]");
@@ -41,6 +42,7 @@ function renderRoute() {
   else if (route === "owner") { renderAdmin(root, actions); enhanceAdminSuite(root, actions); }
   else { renderMarketing(root, studio, actions); }
   polishRoute(root, route);
+  enhanceCreatorTools(root, route);
   loader.classList.add("is-done");
 }
 
