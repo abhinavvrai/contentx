@@ -7,15 +7,12 @@ const store = {
 };
 
 function razorpayPlanId(plan) {
-  const name = String(plan.name || "").toLowerCase();
-  if (name.includes("premium motion")) return "premium_motion";
-  if (name.includes("better edit") || name.includes("graphics")) return "better_edit";
-  return "basic";
+  const validPlans = new Set(["basic_reel", "growth_reel", "premium_motion", "advanced_reel", "script_hook", "script_full", "script_research", "podcast_30", "podcast_45", "podcast_60"]);
+  return validPlans.has(plan.id) ? plan.id : "basic_reel";
 }
 
 function razorpayQuantity(plan) {
-  const match = String(plan.name || "").match(/·\s*(\d+)\s*(?:reel|video)/i);
-  return Math.max(1, Number(match?.[1] || 1));
+  return 1;
 }
 
 function loadRazorpayCheckout() {

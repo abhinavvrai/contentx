@@ -1,13 +1,20 @@
 const RAZORPAY_API_BASE = "https://api.razorpay.com/v1";
 
-export const shortFormPlans = {
-  basic: { name: "Basic short-form reel", amount: 1500 },
-  better_edit: { name: "Better edit reel", amount: 2500 },
-  premium_motion: { name: "Premium motion reel", amount: 3500 },
+export const servicePlans = {
+  basic_reel: { name: "Basic Reel", amount: 1500 },
+  growth_reel: { name: "Growth Reel", amount: 2500 },
+  premium_motion: { name: "Premium Motion Reel", amount: 3500 },
+  advanced_reel: { name: "Advanced Reel", amount: 5000 },
+  script_hook: { name: "Hook & Idea Script", amount: 1000 },
+  script_full: { name: "Full Reel Script", amount: 1500 },
+  script_research: { name: "Research-led Script", amount: 2000 },
+  podcast_30: { name: "Podcast Edit · 30 minutes", amount: 5000 },
+  podcast_45: { name: "Podcast Edit · 45 minutes", amount: 7500 },
+  podcast_60: { name: "Podcast Edit · 60 minutes", amount: 10000 },
 } as const;
 
-export type PlanId = keyof typeof shortFormPlans;
-export type BillingMode = "monthly" | "one_off";
+export type PlanId = keyof typeof servicePlans;
+export type BillingMode = "one_off";
 
 export function getRazorpayConfig() {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -25,16 +32,16 @@ export function calculateOrder(input: {
   quantity: unknown;
   billing: unknown;
 }) {
-  const plan = shortFormPlans[input.planId as PlanId];
-  if (!plan) throw new Error("Choose a valid short-form package.");
+  const plan = servicePlans[input.planId as PlanId];
+  if (!plan) throw new Error("Choose a valid Content X service.");
 
   const quantity = Number(input.quantity);
-  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 30) {
-    throw new Error("Choose between 1 and 30 reels.");
+  if (!Number.isInteger(quantity) || quantity !== 1) {
+    throw new Error("Each payment covers one selected service.");
   }
 
-  const billing: BillingMode = input.billing === "monthly" ? "monthly" : "one_off";
-  const unitAmount = billing === "one_off" ? Math.round(plan.amount * 1.2) : plan.amount;
+  const billing: BillingMode = "one_off";
+  const unitAmount = plan.amount;
   const totalAmount = unitAmount * quantity;
 
   return {
