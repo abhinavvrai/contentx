@@ -91,3 +91,16 @@ html[data-theme="dark"] .notification-summary,html[data-theme="dark"] .notificat
 @media(max-width:1050px){.frame-annotation-toolbar{grid-template-columns:1fr;overflow-x:auto}.annotation-tool-group{border-right:0}.annotation-hint{display:none}.notification-layout{grid-template-columns:1fr 250px}.managed-review-admin{grid-template-columns:280px 1fr}.managed-request-list article{grid-template-columns:1fr auto}.managed-request-list article select{grid-column:1/-1}}
 @media(max-width:760px){.managed-review-button{width:36px;min-width:36px;padding:0;font-size:0}.managed-review-button::after{content:"✦";font-size:13px}.frame-annotation-toolbar{left:8px;bottom:7px;width:calc(100% - 16px);display:none;grid-template-columns:max-content max-content;overflow-x:auto;transform:none}.frame-annotation-toolbar.show{display:grid}.annotation-tool-group button small{display:none}.annotation-options{padding-right:6px}.comment-mode-row{margin-bottom:5px}.comment-mode-row button{height:23px}.managed-review-modal{padding:27px 22px}.managed-review-modal h2{font-size:31px}.managed-review-benefits{grid-template-columns:1fr}.managed-review-price{grid-template-columns:1fr}.notification-summary{grid-template-columns:1fr}.notification-summary>label{padding:12px 0 0;border-left:0;border-top:1px solid #e5e5e2}.notification-layout,.managed-review-admin{grid-template-columns:1fr}.notification-settings{grid-template-columns:1fr}.notification-settings label.project-notification-master{grid-column:auto}.managed-request-list article{grid-template-columns:1fr}.managed-request-list article>strong,.managed-request-list article select{grid-column:auto}}
 .notification-item>button{border:0;background:none;color:var(--orange);font-size:7px;font-weight:900;cursor:pointer}
+
+/* Client / provider audience switch */
+.audience-switch{width:220px;height:43px;display:grid;grid-template-columns:1fr 1fr;flex:none;padding:3px;border:1px solid #dddeda;border-radius:12px;background:#ecece9;box-shadow:inset 0 1px 2px rgba(16,16,20,.04)}
+.audience-switch button{min-width:0;border:0;border-radius:9px;background:transparent;color:#66666e;font-size:10px;font-weight:850;white-space:nowrap;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s,transform .2s}
+.audience-switch button:hover{color:var(--orange)}
+.audience-switch button.active,.audience-switch button[aria-pressed="true"]{background:#17171b;color:#fff;box-shadow:0 5px 14px rgba(17,17,21,.18)}
+.audience-switch button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+html[data-theme="dark"] .audience-switch{border-color:#3a3b40;background:#24252a}
+html[data-theme="dark"] .audience-switch button{color:#aaaab1}
+html[data-theme="dark"] .audience-switch button.active,html[data-theme="dark"] .audience-switch button[aria-pressed="true"]{background:#fff;color:#17171b}
+@media(max-width:1120px){.site-nav nav{gap:18px}.nav-actions{gap:10px}.audience-switch{width:196px}.nav-actions>[data-action="login"]{display:none}}
+@media(max-width:900px){.site-nav nav{display:none}}
+@media(max-width:760px){.site-nav .audience-switch{width:174px;height:39px}.site-nav .nav-actions>.theme-toggle,.site-nav .nav-actions>.pill-hot{display:none}.audience-switch button{font-size:9px}}

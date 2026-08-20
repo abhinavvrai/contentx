@@ -6,6 +6,29 @@ const store = {
   remove(key) { localStorage.removeItem(key); }
 };
 
+function razorpayPlanId(plan) {
+  const name = String(plan.name || "").toLowerCase();
+  if (name.includes("premium motion")) return "premium_motion";
+  if (name.includes("better edit") || name.includes("graphics")) return "better_edit";
+  return "basic";
+}
+
+function razorpayQuantity(plan) {
+  const match = String(plan.name || "").match(/·\s*(\d+)\s*(?:reel|video)/i);
+  return Math.max(1, Number(match?.[1] || 1));
+}
+
+function loadRazorpayCheckout() {
+  if (window.Razorpay) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("Razorpay checkout could not be loaded."));
+    document.head.append(script);
+  });
+}
+
 function activeClientContext() {
   const clients = store.get("cx_clients_v2", []);
   const access = store.get("cx_access", {});
@@ -272,6 +295,69 @@ export function renderCheckout(root, actions) {
     root.querySelector(".payment-success").classList.add("show");
   });
   root.querySelector(".payment-success .pill").addEventListener("click", () => actions.openDashboard(true));
+
+  root.querySelector(".checkout-head>span").textContent = "Secure Razorpay checkout";
+  const testBanner = root.querySelector(".test-banner");
+  testBanner.innerHTML = "<strong>SECURE PAYMENT</strong><span>Pay safely with UPI, card, netbanking or wallets through Razorpay.</span>";
+  const originalForm = root.querySelector("form");
+  const paymentForm = originalForm.cloneNode(true);
+  originalForm.replaceWith(paymentForm);
+  paymentForm.querySelector(".payment-tabs").innerHTML = "<span class=\"payment-method-note\">Choose UPI, card, netbanking or wallet securely in the Razorpay payment window.</span>";
+  paymentForm.querySelector(".payment-fields").remove();
+  const payButton = paymentForm.querySelector(".pay-button");
+  payButton.textContent = `Pay securely with Razorpay · ${money(plan.price)}`;
+  paymentForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const contact = Object.fromEntries(new FormData(paymentForm));
+    const restore = () => { payButton.disabled = false; payButton.textContent = `Pay securely with Razorpay · ${money(plan.price)}`; };
+    payButton.disabled = true;
+    payButton.textContent = "Preparing secure payment…";
+    try {
+      const [configResponse, orderResponse] = await Promise.all([
+        fetch("/api/payments/razorpay/config", { cache:"no-store" }),
+        fetch("/api/payments/razorpay/order", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.unit === "month" ? "monthly" : "one_off" })
+        })
+      ]);
+      const config = await configResponse.json(), order = await orderResponse.json();
+      if (!configResponse.ok || !orderResponse.ok) throw new Error(config.error || order.error || "Payment setup is unavailable. Please try again.");
+      await loadRazorpayCheckout();
+      const checkout = new window.Razorpay({
+        key:config.keyId,
+        amount:order.amount,
+        currency:order.currency,
+        name:"Content X",
+        description:plan.name,
+        order_id:order.orderId,
+        prefill:{ name:contact.name, email:contact.email, contact:contact.phone },
+        theme:{ color:"#f15b2a" },
+        modal:{ ondismiss:restore },
+        handler:async response => {
+          try {
+            const verifyResponse = await fetch("/api/payments/razorpay/verify", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(response) });
+            const verification = await verifyResponse.json();
+            if (!verifyResponse.ok || !verification.verified) throw new Error(verification.error || "Payment verification failed.");
+            const createdAt = Date.now(), code = `CX-${String(createdAt).slice(-6)}`;
+            const payment = { id:verification.paymentId, name:contact.name, phone:contact.phone, email:contact.email, code, plan:plan.name, amount:plan.price, status:"Verified", type:"Razorpay", created:new Date().toLocaleString() };
+            store.set("cx_payments", [payment, ...store.get("cx_payments", [])]);
+            store.set("cx_access", { email:contact.email, plan:plan.name, paid:true, code, clientId:plan.clientId || "apex" });
+            root.querySelector(".access-code").textContent = `Access code: ${code}`;
+            root.querySelector(".payment-success").classList.add("show");
+          } catch (error) {
+            restore();
+            alert(error.message || "We could not verify the payment. Please contact Content X support.");
+          }
+        }
+      });
+      checkout.on("payment.failed", () => { restore(); alert("Payment failed or was cancelled. No amount was charged by Content X."); });
+      checkout.open();
+    } catch (error) {
+      restore();
+      alert(error.message || "Payment setup is unavailable. Please try again.");
+    }
+  });
 }
 
 export function enhanceDashboard(root, actions) {

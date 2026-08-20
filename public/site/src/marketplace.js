@@ -392,7 +392,7 @@ export function enhanceMarketplaceMarketing(root, actions) {
   if (navActions && !navActions.querySelector("[data-hire-talent]")) {
     navActions.querySelector('a[target="_blank"]')?.remove();
     const login = navActions.querySelector('[data-action="login"]');
-    login?.insertAdjacentHTML("beforebegin", '<button class="text-button" data-hire-talent>Build my team</button><button class="text-button" data-offer-market>Offer services</button>');
+    login?.insertAdjacentHTML("beforebegin", '<div class="audience-switch" role="group" aria-label="Choose how you want to use Content X"><button type="button" class="active" data-hire-talent aria-pressed="true"><span>Get services</span></button><button type="button" data-offer-market aria-pressed="false"><span>Work with us</span></button></div>');
     navActions.insertAdjacentHTML("beforeend", '<button class="pill pill-hot" data-start-project>Start a project <span>↗</span></button>');
     navActions.querySelector("[data-hire-talent]").addEventListener("click", actions.openMarketplace);
     navActions.querySelector("[data-offer-market]").addEventListener("click", actions.openProviderOnboarding);
