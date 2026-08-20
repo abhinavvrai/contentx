@@ -318,7 +318,7 @@ export function renderCheckout(root, actions) {
         fetch("/api/payments/razorpay/order", {
           method:"POST",
           headers:{ "Content-Type":"application/json" },
-          body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.unit === "month" ? "monthly" : "one_off" })
+          body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.unit === "month" ? "monthly" : "one_off", name:contact.name, email:contact.email, phone:contact.phone })
         })
       ]);
       const config = await configResponse.json(), order = await orderResponse.json();

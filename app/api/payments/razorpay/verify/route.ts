@@ -1,4 +1,7 @@
 import { getRazorpayConfig, json, signHmacSha256, timingSafeEqual } from "../../../../../lib/razorpay";
+import { getDb } from "../../../../../db";
+import { paymentOrders } from "../../../../../db/schema";
+import { eq } from "drizzle-orm";
 
 export async function POST(request: Request) {
   try {
@@ -16,12 +19,16 @@ export async function POST(request: Request) {
     }
 
     const { keySecret } = getRazorpayConfig();
+    const db = getDb();
+    const paymentOrder = await db.select().from(paymentOrders).where(eq(paymentOrders.razorpayOrderId, orderId)).get();
+    if (!paymentOrder) return json({ error: "This payment order was not created by Content X." }, 400);
     const expectedSignature = await signHmacSha256(`${orderId}|${paymentId}`, keySecret);
     if (!timingSafeEqual(expectedSignature, signature)) {
       return json({ error: "Payment signature could not be verified." }, 400);
     }
 
-    return json({ verified: true, paymentId, orderId });
+    await db.update(paymentOrders).set({ status: "verified", paymentId, updatedAt: new Date() }).where(eq(paymentOrders.razorpayOrderId, orderId));
+    return json({ verified: true, paymentId, orderId, planName: paymentOrder.planName });
   } catch {
     return json({ error: "Payment verification is unavailable." }, 503);
   }
