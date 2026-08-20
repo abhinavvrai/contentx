@@ -1,3 +1,5 @@
 import { rmSync } from "node:fs";
 
-rmSync("dist", { recursive: true, force: true });
+for (const buildDirectory of ["dist", ".wrangler"]) {
+  rmSync(buildDirectory, { recursive: true, force: true });
+}
