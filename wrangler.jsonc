@@ -6,8 +6,12 @@
   "main": "./worker/index.ts",
   "routes": [
     {
-      "pattern": "contentx.co.in",
-      "custom_domain": true
+      "pattern": "contentx.co.in/*",
+      "zone_name": "contentx.co.in"
+    },
+    {
+      "pattern": "www.contentx.co.in/*",
+      "zone_name": "contentx.co.in"
     }
   ],
   "assets": {
