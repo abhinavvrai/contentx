@@ -1,13 +1,14 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "contentx",
+  "account_id": "5b0625a24349c5f1565eef651e2b2128",
   "compatibility_date": "2026-08-20",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./worker/index.ts",
   "routes": [
     {
-      "pattern": "contentx.co.in/*",
-      "zone_name": "contentx.co.in"
+      "pattern": "contentx.co.in",
+      "custom_domain": true
     },
     {
       "pattern": "www.contentx.co.in/*",

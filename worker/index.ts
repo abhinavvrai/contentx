@@ -29,6 +29,10 @@ const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
+    if (url.hostname === "www.contentx.co.in") {
+      return Response.redirect(`https://contentx.co.in${url.pathname}${url.search}`, 308);
+    }
+
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
       return handleImageOptimization(request, {
