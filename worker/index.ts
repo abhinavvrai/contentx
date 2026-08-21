@@ -46,6 +46,10 @@ const worker = {
       return withSecurityHeaders(request, response);
     }
 
+    if (url.pathname.startsWith("/site/") || url.pathname.startsWith("/site-v2/")) {
+      return withSecurityHeaders(request, await env.ASSETS.fetch(request));
+    }
+
     return withSecurityHeaders(request, await handler.fetch(request, env, ctx));
   },
 };
