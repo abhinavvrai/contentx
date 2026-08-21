@@ -37,6 +37,15 @@ export type UploadFile = {
   created_at: number;
   completed_at: number | null;
   deleted_at: number | null;
+  asset_id: string | null;
+  version_number: number;
+  parent_file_id: string | null;
+};
+
+export type ProjectAccess = {
+  project: UploadProject;
+  canUpload: boolean;
+  accessType: "account" | "legacy-link" | "share-link";
 };
 
 let schemaPromise: Promise<void> | null = null;
@@ -51,7 +60,8 @@ export function getUploadBindings(): { db: D1Database; bucket: R2Bucket } {
 export async function ensureUploadSchema(): Promise<void> {
   const { db } = getUploadBindings();
   if (!schemaPromise) {
-    schemaPromise = db.batch([
+    schemaPromise = (async () => {
+      await db.batch([
       db.prepare(`CREATE TABLE IF NOT EXISTS upload_projects (
         id TEXT PRIMARY KEY NOT NULL,
         name TEXT NOT NULL,
@@ -81,8 +91,33 @@ export async function ensureUploadSchema(): Promise<void> {
       )`),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_upload_files_project_status ON upload_files(project_id, status)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_upload_projects_status_updated ON upload_projects(status, updated_at)"),
-      db.prepare("PRAGMA optimize"),
-    ]).then(() => undefined).catch((error) => {
+      db.prepare(`CREATE TABLE IF NOT EXISTS project_share_links (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL,
+        token_hash TEXT NOT NULL UNIQUE,
+        created_by_user_id TEXT,
+        name TEXT NOT NULL,
+        allow_uploads INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'active',
+        expires_at INTEGER,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        last_used_at INTEGER,
+        FOREIGN KEY (project_id) REFERENCES upload_projects(id)
+      )`),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_project_share_links_project_status ON project_share_links(project_id, status, updated_at)"),
+      ]);
+      const columns = await db.prepare("PRAGMA table_info(upload_files)").all<{ name: string }>();
+      const names = new Set(columns.results.map(column => column.name));
+      if (!names.has("asset_id")) await db.prepare("ALTER TABLE upload_files ADD COLUMN asset_id TEXT").run();
+      if (!names.has("version_number")) await db.prepare("ALTER TABLE upload_files ADD COLUMN version_number INTEGER NOT NULL DEFAULT 1").run();
+      if (!names.has("parent_file_id")) await db.prepare("ALTER TABLE upload_files ADD COLUMN parent_file_id TEXT").run();
+      await db.batch([
+        db.prepare("UPDATE upload_files SET asset_id = id WHERE asset_id IS NULL"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_upload_files_asset_version ON upload_files(asset_id, version_number)"),
+        db.prepare("PRAGMA optimize"),
+      ]);
+    })().catch((error) => {
       schemaPromise = null;
       throw error;
     });
@@ -122,16 +157,35 @@ export async function requireOwner(request: Request): Promise<void> {
   }
 }
 
-export async function requireProject(request: Request, projectId: string): Promise<UploadProject> {
+export async function authorizeProject(request: Request, projectId: string, purpose: "view" | "upload" = "view"): Promise<ProjectAccess> {
   const token = bearerToken(request);
   const { db } = getUploadBindings();
   let project: UploadProject | null = null;
+  let canUpload = false;
+  let accessType: ProjectAccess["accessType"] = "account";
   if (token) {
     const tokenHash = await hashToken(token);
     project = await db.prepare(
       `SELECT id, name, client_name, client_email, status, max_file_size, created_at, updated_at
        FROM upload_projects WHERE id = ? AND upload_token_hash = ? LIMIT 1`
     ).bind(projectId, tokenHash).first<UploadProject>();
+    if (project) {
+      canUpload = true;
+      accessType = "legacy-link";
+    } else {
+      const share = await db.prepare(`SELECT p.id, p.name, p.client_name, p.client_email, p.status,
+        p.max_file_size, p.created_at, p.updated_at, s.allow_uploads, s.id AS share_id
+        FROM project_share_links s JOIN upload_projects p ON p.id = s.project_id
+        WHERE s.project_id = ? AND s.token_hash = ? AND s.status = 'active'
+          AND (s.expires_at IS NULL OR s.expires_at > ?) LIMIT 1`)
+        .bind(projectId, tokenHash, Date.now()).first<UploadProject & { allow_uploads: number; share_id: string }>();
+      if (share) {
+        project = share;
+        canUpload = Boolean(share.allow_uploads);
+        accessType = "share-link";
+        await db.prepare("UPDATE project_share_links SET last_used_at = ? WHERE id = ?").bind(Date.now(), share.share_id).run();
+      }
+    }
   } else {
     const user = await getSessionUser(request);
     if (!user) throw new ClientError("Sign in or use the complete private upload link.", 401);
@@ -140,9 +194,15 @@ export async function requireProject(request: Request, projectId: string): Promi
        FROM upload_projects p JOIN user_upload_projects u ON u.project_id = p.id
        WHERE p.id = ? AND u.user_id = ? LIMIT 1`
     ).bind(projectId, user.id).first<UploadProject>();
+    canUpload = Boolean(project);
   }
   if (!project || project.status !== "active") throw new ClientError("This upload link is invalid or no longer active.", 403);
-  return project;
+  if (purpose === "upload" && !canUpload) throw new ClientError("This share link is view-only. Ask the project owner to enable uploads.", 403);
+  return { project, canUpload, accessType };
+}
+
+export async function requireProject(request: Request, projectId: string, purpose: "view" | "upload" = "view"): Promise<UploadProject> {
+  return (await authorizeProject(request, projectId, purpose)).project;
 }
 
 export async function hashToken(token: string): Promise<string> {

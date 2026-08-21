@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const paymentOrders = sqliteTable("payment_orders", {
   razorpayOrderId: text("razorpay_order_id").primaryKey(),
@@ -50,8 +50,32 @@ export const uploadFiles = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     completedAt: integer("completed_at", { mode: "timestamp_ms" }),
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    assetId: text("asset_id"),
+    versionNumber: integer("version_number").notNull().default(1),
+    parentFileId: text("parent_file_id"),
   },
-  table => [index("idx_upload_files_project_status").on(table.projectId, table.status)],
+  table => [
+    index("idx_upload_files_project_status").on(table.projectId, table.status),
+    index("idx_upload_files_asset_version").on(table.assetId, table.versionNumber),
+  ],
+);
+
+export const projectShareLinks = sqliteTable(
+  "project_share_links",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id").notNull().references(() => uploadProjects.id),
+    tokenHash: text("token_hash").notNull().unique(),
+    createdByUserId: text("created_by_user_id"),
+    name: text("name").notNull(),
+    allowUploads: integer("allow_uploads", { mode: "boolean" }).notNull().default(false),
+    status: text("status").notNull().default("active"),
+    expiresAt: integer("expires_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    lastUsedAt: integer("last_used_at"),
+  },
+  table => [index("idx_project_share_links_project_status").on(table.projectId, table.status, table.updatedAt)],
 );
 
 export const accountUsers = sqliteTable("account_users", {
@@ -84,6 +108,23 @@ export const authLoginAttempts = sqliteTable("auth_login_attempts", {
   windowStartedAt: integer("window_started_at").notNull(),
   blockedUntil: integer("blocked_until").notNull().default(0),
 });
+
+export const authIdentities = sqliteTable(
+  "auth_identities",
+  {
+    provider: text("provider").notNull(),
+    providerUserId: text("provider_user_id").notNull(),
+    userId: text("user_id").notNull().references(() => accountUsers.id),
+    email: text("email").notNull(),
+    verifiedAt: integer("verified_at").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  table => [
+    primaryKey({ columns: [table.provider, table.providerUserId] }),
+    index("idx_auth_identities_user").on(table.userId),
+    index("idx_auth_identities_email").on(table.email),
+  ],
+);
 
 export const orderSelections = sqliteTable(
   "order_selections",

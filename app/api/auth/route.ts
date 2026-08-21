@@ -1,17 +1,23 @@
 import {
   AccountError,
+  expiredGoogleNonceCookie,
   expiredSessionCookie,
+  getAccountCapabilities,
   getSessionUser,
+  issueGoogleNonce,
   loginAccount,
+  loginWithGoogle,
   logoutAccount,
   registerAccount,
+  requestEmailOtp,
   sessionCookie,
+  verifyEmailOtp,
 } from "../../../lib/auth";
 
 export async function GET(request: Request) {
   return handle(async () => {
     const user = await getSessionUser(request);
-    return response({ user });
+    return response({ user, providers: getAccountCapabilities() });
   });
 }
 
@@ -27,6 +33,25 @@ export async function POST(request: Request) {
       const { user, token } = await loginAccount(request, input);
       return response({ user }, 200, { "Set-Cookie": sessionCookie(request, token) });
     }
+    if (action === "request_otp") {
+      await requestEmailOtp(request, input);
+      return response({ ok: true });
+    }
+    if (action === "verify_otp") {
+      const { user, token } = await verifyEmailOtp(request, input);
+      return response({ user }, 200, { "Set-Cookie": sessionCookie(request, token) });
+    }
+    if (action === "google_nonce") {
+      const { nonce, cookie } = issueGoogleNonce(request);
+      return response({ nonce, clientId: getAccountCapabilities().google.clientId }, 200, { "Set-Cookie": cookie });
+    }
+    if (action === "google_login") {
+      const { user, token } = await loginWithGoogle(request, input);
+      const headers = new Headers();
+      headers.append("Set-Cookie", sessionCookie(request, token));
+      headers.append("Set-Cookie", expiredGoogleNonceCookie(request));
+      return response({ user }, 200, headers);
+    }
     if (action === "logout") {
       await logoutAccount(request);
       return response({ ok: true }, 200, { "Set-Cookie": expiredSessionCookie(request) });
@@ -36,9 +61,11 @@ export async function POST(request: Request) {
 }
 
 function response(body: unknown, status = 200, headers: HeadersInit = {}) {
+  const responseHeaders = new Headers(headers);
+  responseHeaders.set("Cache-Control", "no-store");
   return Response.json(body, {
     status,
-    headers: { "Cache-Control": "no-store", ...headers },
+    headers: responseHeaders,
   });
 }
 

@@ -7,6 +7,7 @@ import { initProductPolish, polishRoute } from "./polish.js?v=core-features-2";
 import { enhanceCreatorTools } from "./creator-tools.js?v=restored-features-1";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=account-storage-2";
 import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=accounts-1";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=workspace-v2";
 
 const root = document.getElementById("app");
 const loader = document.querySelector("[data-loader]");
@@ -40,14 +41,18 @@ async function renderRoute() {
     canvas.hidden = true;
     overlay.hidden = true;
     progress.hidden = route !== "home";
-    const protectedRoute = ["workspace", "project", "review", "account", "checkout"].includes(route) || route.startsWith("brief");
+    const uploadRoute = route.startsWith("upload?");
+    const uploadHasToken = uploadRoute && Boolean(new URLSearchParams(route.split("?")[1] || "").get("token"));
+    const protectedRoute = ["project", "review", "account", "checkout"].includes(route) || route.startsWith("brief") || route.startsWith("workspace") || (uploadRoute && !uploadHasToken);
     if (protectedRoute || route === "access") await refreshAccountSession();
     if (protectedRoute && !accountUser()) {
       rememberProtectedRoute(route);
       renderAccountAccess(root, actions);
     }
-    else if (route.startsWith("upload?")) await renderClientUpload(root, actions, route);
-    else if (route === "workspace") { renderDashboard(root, actions); enhanceDashboard(root, actions); enhanceMarketplaceDashboard(root, actions); enhanceDashboardSuite(root, actions); }
+    else if (route.startsWith("share?")) await renderSharedWorkspace(root, actions, route);
+    else if (uploadRoute && uploadHasToken) await renderClientUpload(root, actions, route);
+    else if (uploadRoute) await renderClientWorkspace(root, actions, route.replace(/^upload/, "workspace"));
+    else if (route.startsWith("workspace")) await renderClientWorkspace(root, actions, route);
     else if (route === "project") { renderProject(root, actions); enhanceProject(root, actions); enhanceProjectSuite(root, actions); }
     else if (route === "review") { renderReview(root, actions); enhanceReview(root, actions); enhanceReviewSuite(root, actions); }
     else if (route === "access") { if (accountUser()) await renderAccountDashboard(root, actions); else renderAccountAccess(root, actions); }

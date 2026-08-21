@@ -245,11 +245,9 @@ function enhancePricingSelections(pricing, actions) {
 function setupUnifiedPricing(pricing, actions, data) {
   const packages = {
     video: [
-      { id:"basic_reel", name:"Captions Only", price:1500, tag:"Simple", summary:"For a finished video that only needs accurate, branded captions.", includes:["Caption timing and spelling cleanup", "Your brand font and colours", "Vertical social export", "Original edit and pacing stay unchanged"] },
-      { id:"better_edit", name:"Clean Edit", price:2000, tag:"Essential", summary:"A clean, professional short-form edit without heavy graphics.", includes:["Clean cuts and stronger pacing", "Branded captions", "Audio and colour balance", "Royalty-free music", "1 revision round"] },
-      { id:"growth_reel", name:"Social Pro", price:2500, tag:"Popular", featured:true, summary:"A richer social edit built to hold attention.", includes:["Everything in Clean Edit", "B-roll and visual layers", "Transitions and sound design", "Hook-focused pacing", "2 revision rounds"] },
-      { id:"premium_motion", name:"Motion Plus", price:3500, tag:"Premium", summary:"For branded content that needs custom motion and polish.", includes:["Custom motion graphics", "Animated captions and callouts", "Advanced sound design", "Visual storytelling polish", "3 revision rounds"] },
-      { id:"advanced_reel", name:"Signature Edit", price:5000, tag:"Advanced", summary:"High-concept editing for launches, campaigns and hero content.", includes:["Advanced motion and graphics", "Premium colour and sound finish", "Custom branded visual system", "Priority production handling", "3 revision rounds"] },
+      { id:"basic_reel", name:"Basic", price:1500, tag:"Starting", summary:"For a ready-cut short video that needs clear, branded captions.", includes:["1 video up to 60 seconds", "Branded captions throughout", "1080p vertical social export", "1 revision round", "Delivery in 3 working days"] },
+      { id:"growth_reel", name:"Standard", price:2500, tag:"Most popular", featured:true, summary:"A complete attention-led social edit with visuals and sound.", includes:["1 video up to 90 seconds", "Up to 5 relevant B-roll inserts", "Captions, music and timed SFX", "Colour and audio balancing", "2 revision rounds", "Delivery in 4 working days"] },
+      { id:"advanced_reel", name:"Premium", price:5000, tag:"Highest detail", summary:"A polished hero edit with custom movement and deeper storytelling.", includes:["1 video up to 180 seconds", "Up to 10 B-roll inserts", "Custom motion graphics and callouts", "Full sound design and colour finish", "3 revision rounds", "Priority delivery in 5 working days"] },
     ],
     podcast: [
       { id:"podcast_30", name:"Podcast · 30 min", price:5000, tag:"Starter", summary:"A polished short episode with clean audio and a focused flow.", includes:["Audio cleanup and level balance", "Single or multi-camera cut", "Remove pauses and false starts", "Simple branded intro/outro", "2 revision rounds"] },
@@ -259,6 +257,7 @@ function setupUnifiedPricing(pricing, actions, data) {
   };
   const addOns = {
     video: [
+      { id:"broll_sfx", name:"B-roll + Sound Effects", price:500, copy:"Add up to 5 relevant B-roll inserts and timed sound effects." },
       { id:"reel_script", name:"Instagram Reel Script", price:500, copy:"Hook, complete short-form script and CTA." },
       { id:"cover_design", name:"Cover / Thumbnail", price:500, copy:"One scroll-stopping branded cover." },
       { id:"extra_revision", name:"Extra Revision Round", price:300, copy:"One additional consolidated revision." },
@@ -271,7 +270,7 @@ function setupUnifiedPricing(pricing, actions, data) {
       { id:"podcast_cover", name:"Episode Cover", price:500, copy:"One branded episode cover or thumbnail." },
     ],
   };
-  const state = { billing:"one_off", service:"video", quantity:1, planId:"growth_reel", selectedAddOns:new Set(), deliveryFormat:"Vertical 9:16" };
+  const state = { billing:"one_off", service:"video", quantity:1, planId:"basic_reel", selectedAddOns:new Set(), deliveryFormat:"Vertical 9:16" };
   pricing.dataset.pricingRestored = "unified";
   pricing.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple, flexible pricing</p><h2>Choose the work. Add only what you <em>need.</em></h2><p>Start with Video or Podcast, select one clear package, then add scripts, covers or extra support before payment.</p></div><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="one_off" class="active">Per project</button><button type="button" data-unified-billing="monthly">Monthly</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Video</button><button type="button" data-unified-service="podcast">Podcast</button></div></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a video package</strong><small>Click “Know more” for the complete scope.</small></div></header><div class="unified-package-grid" data-unified-packages></div></div><div class="unified-step"><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Buy one video or build a larger batch.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>1</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div></div><div class="unified-step"><header><span>03</span><div><strong>Optional add-ons</strong><small>Every selected add-on is shown in your total before payment.</small></div></header><div class="unified-addon-grid" data-unified-addons></div></div></section><aside class="unified-summary"><span data-unified-badge>ONE-TIME PROJECT</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons <b data-unified-addons-total></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">You’ll add the title, description, instructions, reference links and files immediately after payment.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
     ["Content Strategy & Planning", "Plan", "Content pillars, audience positioning, monthly calendar, campaign concepts, hooks and performance review."],
@@ -325,7 +324,7 @@ function setupUnifiedPricing(pricing, actions, data) {
 
   function switchService(service) {
     state.service = service;
-    state.planId = service === "podcast" ? "podcast_45" : "growth_reel";
+    state.planId = service === "podcast" ? "podcast_45" : "basic_reel";
     state.selectedAddOns.clear();
     state.quantity = Math.max(minimumQuantity(), state.billing === "monthly" ? minimumQuantity() : 1);
     pricing.querySelectorAll("[data-unified-service]").forEach(button => button.classList.toggle("active", button.dataset.unifiedService === service));

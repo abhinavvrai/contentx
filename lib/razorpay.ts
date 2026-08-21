@@ -4,11 +4,11 @@ const RAZORPAY_API_BASE = "https://api.razorpay.com/v1";
 let paymentSchemaPromise: Promise<void> | null = null;
 
 export const servicePlans = {
-  basic_reel: { name: "Captions Only", amount: 1500 },
+  basic_reel: { name: "Basic", amount: 1500 },
   better_edit: { name: "Clean Edit", amount: 2000 },
-  growth_reel: { name: "Social Pro", amount: 2500 },
+  growth_reel: { name: "Standard", amount: 2500 },
   premium_motion: { name: "Motion Plus", amount: 3500 },
-  advanced_reel: { name: "Signature Edit", amount: 5000 },
+  advanced_reel: { name: "Premium", amount: 5000 },
   saas_animation: { name: "SaaS Animation · up to 30 seconds", amount: 9000 },
   script_hook: { name: "Hook & Idea Script", amount: 1000 },
   script_full: { name: "Full Reel Script", amount: 1500 },
@@ -25,6 +25,7 @@ const reelPlanIds = new Set<PlanId>(["basic_reel", "better_edit", "growth_reel",
 const podcastPlanIds = new Set<PlanId>(["podcast_30", "podcast_45", "podcast_60"]);
 
 export const serviceAddOns = {
+  broll_sfx: { name: "B-roll + Sound Effects", amount: 500, service: "video" },
   reel_script: { name: "Instagram Reel Script", amount: 500, service: "video" },
   cover_design: { name: "Cover / Thumbnail", amount: 500, service: "video" },
   extra_revision: { name: "Extra Revision Round", amount: 300, service: "video" },

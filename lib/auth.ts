@@ -5,14 +5,29 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const PASSWORD_ITERATIONS = 310_000;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS = 6;
+const OTP_REQUEST_WINDOW_MS = 15 * 60 * 1000;
+const OTP_REQUEST_COOLDOWN_MS = 60 * 1000;
+const MAX_OTP_REQUESTS = 5;
+const GOOGLE_NONCE_COOKIE = "cx_google_nonce";
+const GOOGLE_NONCE_TTL_SECONDS = 10 * 60;
 
-type AuthBindings = { DB?: D1Database };
+type AuthBindings = {
+  DB?: D1Database;
+  GOOGLE_CLIENT_ID?: string;
+  SUPABASE_URL?: string;
+  SUPABASE_ANON_KEY?: string;
+};
 
 export type AccountUser = {
   id: string;
   name: string;
   email: string;
   createdAt: number;
+};
+
+export type AccountCapabilities = {
+  google: { available: boolean; clientId: string };
+  emailOtp: { available: boolean };
 };
 
 type StoredUser = {
@@ -26,6 +41,7 @@ type StoredUser = {
 };
 
 let authSchemaPromise: Promise<void> | null = null;
+let googleKeysPromise: Promise<Array<JsonWebKey & { kid?: string }>> | null = null;
 
 export class AccountError extends Error {
   constructor(message: string, public status = 400) {
@@ -37,6 +53,109 @@ export function getAccountDatabase(): D1Database {
   const bindings = env as unknown as AuthBindings;
   if (!bindings.DB) throw new Error("Account database is unavailable.");
   return bindings.DB;
+}
+
+export function getAccountCapabilities(): AccountCapabilities {
+  const googleClientId = bindingValue("GOOGLE_CLIENT_ID");
+  const otpAvailable = Boolean(bindingValue("SUPABASE_URL") && bindingValue("SUPABASE_ANON_KEY"));
+  return {
+    google: { available: Boolean(googleClientId), clientId: googleClientId },
+    emailOtp: { available: otpAvailable },
+  };
+}
+
+export async function requestEmailOtp(request: Request, input: Record<string, unknown>): Promise<void> {
+  requireSameOrigin(request);
+  await ensureAccountSchema();
+  const email = cleanEmail(input.email);
+  if (!email) throw new AccountError("Enter a valid email address.");
+  const { url, anonKey } = supabaseConfig();
+  const db = getAccountDatabase();
+  const attemptKey = await otpAttemptKey(request, email);
+  await enforceOtpRequestLimit(db, attemptKey);
+  const response = await fetch(`${url}/auth/v1/otp`, {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, create_user: true }),
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({})) as { msg?: string; message?: string };
+    throw new AccountError(payload.msg || payload.message || "We could not send the verification code.", response.status === 429 ? 429 : 503);
+  }
+  await recordOtpRequest(db, attemptKey);
+}
+
+export async function verifyEmailOtp(request: Request, input: Record<string, unknown>): Promise<{ user: AccountUser; token: string }> {
+  requireSameOrigin(request);
+  await ensureAccountSchema();
+  const email = cleanEmail(input.email);
+  const otp = cleanText(input.otp, 12).replace(/\s+/g, "");
+  if (!email || !/^\d{6,8}$/.test(otp)) throw new AccountError("Enter the verification code sent to your email.");
+  const { url, anonKey } = supabaseConfig();
+  const response = await fetch(`${url}/auth/v1/verify`, {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, token: otp, type: "email" }),
+  });
+  const payload = await response.json().catch(() => ({})) as {
+    user?: { id?: string; email?: string; email_confirmed_at?: string; user_metadata?: { full_name?: string; name?: string } };
+    msg?: string;
+    message?: string;
+  };
+  if (!response.ok || !payload.user?.id || !payload.user.email_confirmed_at) {
+    throw new AccountError(payload.msg || payload.message || "That verification code is invalid or expired.", 401);
+  }
+  const verifiedEmail = cleanEmail(payload.user.email || email);
+  if (!verifiedEmail || verifiedEmail !== email) throw new AccountError("The verified email did not match this sign-in.", 403);
+  const displayName = cleanText(payload.user.user_metadata?.full_name || payload.user.user_metadata?.name, 100) || email.split("@")[0];
+  let user = await findOrCreateIdentityUser("supabase", payload.user.id, verifiedEmail, cleanText(input.name, 100) || displayName);
+  const requestedPassword = typeof input.password === "string" ? input.password : "";
+  if (requestedPassword) {
+    validatePassword(requestedPassword);
+    const requestedName = cleanText(input.name, 100) || user.name;
+    const salt = randomToken(16);
+    const passwordHash = await derivePasswordHash(requestedPassword, salt, PASSWORD_ITERATIONS);
+    await getAccountDatabase().prepare(`UPDATE account_users SET name = ?, password_hash = ?,
+      password_salt = ?, password_iterations = ?, updated_at = ? WHERE id = ?`)
+      .bind(requestedName, passwordHash, salt, PASSWORD_ITERATIONS, Date.now(), user.id).run();
+    user = { ...user, name: requestedName };
+  }
+  return { user, token: await createSession(request, user.id) };
+}
+
+export function issueGoogleNonce(request: Request): { nonce: string; cookie: string } {
+  requireSameOrigin(request);
+  if (!getAccountCapabilities().google.available) throw new AccountError("Google sign-in is not configured yet.", 503);
+  const nonce = randomToken(24);
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  return {
+    nonce,
+    cookie: `${GOOGLE_NONCE_COOKIE}=${nonce}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${GOOGLE_NONCE_TTL_SECONDS}${secure}`,
+  };
+}
+
+export async function loginWithGoogle(request: Request, input: Record<string, unknown>): Promise<{ user: AccountUser; token: string }> {
+  requireSameOrigin(request);
+  await ensureAccountSchema();
+  const credential = cleanText(input.credential, 6000);
+  const nonce = cookieValue(request, GOOGLE_NONCE_COOKIE);
+  if (!credential || !nonce) throw new AccountError("Restart Google sign-in and try again.", 401);
+  const claims = await verifyGoogleCredential(credential, nonce);
+  const user = await findOrCreateIdentityUser("google", claims.sub, claims.email, claims.name || claims.email.split("@")[0]);
+  return { user, token: await createSession(request, user.id) };
+}
+
+export function expiredGoogleNonceCookie(request: Request): string {
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  return `${GOOGLE_NONCE_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`;
 }
 
 export async function ensureAccountSchema(): Promise<void> {
@@ -68,6 +187,16 @@ export async function ensureAccountSchema(): Promise<void> {
         window_started_at INTEGER NOT NULL,
         blocked_until INTEGER NOT NULL DEFAULT 0
       )`),
+      db.prepare(`CREATE TABLE IF NOT EXISTS auth_identities (
+        provider TEXT NOT NULL,
+        provider_user_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        email TEXT NOT NULL,
+        verified_at INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (provider, provider_user_id),
+        FOREIGN KEY (user_id) REFERENCES account_users(id) ON DELETE CASCADE
+      )`),
       db.prepare(`CREATE TABLE IF NOT EXISTS order_selections (
         razorpay_order_id TEXT PRIMARY KEY NOT NULL,
         user_id TEXT NOT NULL,
@@ -98,6 +227,8 @@ export async function ensureAccountSchema(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES account_users(id) ON DELETE CASCADE
       )`),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_account_sessions_user_expires ON account_sessions(user_id, expires_at)"),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_auth_identities_user ON auth_identities(user_id)"),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_auth_identities_email ON auth_identities(email)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_order_selections_user_created ON order_selections(user_id, created_at)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_project_briefs_user_updated ON project_briefs(user_id, updated_at)"),
       db.prepare("PRAGMA optimize"),
@@ -197,6 +328,151 @@ export function sessionCookie(request: Request, token: string): string {
 export function expiredSessionCookie(request: Request): string {
   const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
   return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`;
+}
+
+async function findOrCreateIdentityUser(provider: string, providerUserId: string, email: string, name: string): Promise<AccountUser> {
+  const db = getAccountDatabase();
+  const existingIdentity = await db.prepare(`SELECT u.id, u.name, u.email, u.created_at
+    FROM auth_identities i JOIN account_users u ON u.id = i.user_id
+    WHERE i.provider = ? AND i.provider_user_id = ? LIMIT 1`)
+    .bind(provider, providerUserId).first<{ id: string; name: string; email: string; created_at: number }>();
+  if (existingIdentity) return { id: existingIdentity.id, name: existingIdentity.name, email: existingIdentity.email, createdAt: existingIdentity.created_at };
+
+  const normalizedEmail = cleanEmail(email);
+  if (!normalizedEmail) throw new AccountError("The identity provider did not return a valid email.", 403);
+  let stored = await db.prepare("SELECT id, name, email, created_at FROM account_users WHERE email = ? LIMIT 1")
+    .bind(normalizedEmail).first<{ id: string; name: string; email: string; created_at: number }>();
+  const now = Date.now();
+  if (!stored) {
+    const id = `usr_${crypto.randomUUID().replaceAll("-", "")}`;
+    const salt = randomToken(16);
+    const unusablePassword = randomToken(48);
+    const passwordHash = await derivePasswordHash(unusablePassword, salt, PASSWORD_ITERATIONS);
+    await db.prepare(`INSERT INTO account_users
+      (id, name, email, password_hash, password_salt, password_iterations, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(id, cleanText(name, 100) || normalizedEmail.split("@")[0], normalizedEmail, passwordHash, salt, PASSWORD_ITERATIONS, now, now).run();
+    stored = { id, name: cleanText(name, 100) || normalizedEmail.split("@")[0], email: normalizedEmail, created_at: now };
+  }
+  await db.prepare(`INSERT INTO auth_identities (provider, provider_user_id, user_id, email, verified_at, created_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(provider, provider_user_id) DO UPDATE SET user_id = excluded.user_id,
+      email = excluded.email, verified_at = excluded.verified_at`)
+    .bind(provider, providerUserId, stored.id, normalizedEmail, now, now).run();
+  return { id: stored.id, name: stored.name, email: stored.email, createdAt: stored.created_at };
+}
+
+function supabaseConfig(): { url: string; anonKey: string } {
+  const url = bindingValue("SUPABASE_URL").replace(/\/+$/, "");
+  const anonKey = bindingValue("SUPABASE_ANON_KEY");
+  if (!url || !anonKey || !/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) {
+    throw new AccountError("Email verification is not configured yet.", 503);
+  }
+  return { url, anonKey };
+}
+
+async function otpAttemptKey(request: Request, email: string): Promise<string> {
+  const address = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+  return sha256(`otp|${email}|${address.trim()}`);
+}
+
+async function enforceOtpRequestLimit(db: D1Database, key: string): Promise<void> {
+  const now = Date.now();
+  const row = await db.prepare("SELECT attempts, window_started_at, blocked_until FROM auth_login_attempts WHERE attempt_key = ? LIMIT 1")
+    .bind(key).first<{ attempts: number; window_started_at: number; blocked_until: number }>();
+  if (row?.blocked_until && row.blocked_until > now) throw new AccountError("Too many verification requests. Try again later.", 429);
+  if (row && now - row.window_started_at < OTP_REQUEST_COOLDOWN_MS) throw new AccountError("Wait one minute before requesting another code.", 429);
+}
+
+async function recordOtpRequest(db: D1Database, key: string): Promise<void> {
+  const now = Date.now();
+  const row = await db.prepare("SELECT attempts, window_started_at FROM auth_login_attempts WHERE attempt_key = ? LIMIT 1")
+    .bind(key).first<{ attempts: number; window_started_at: number }>();
+  const withinWindow = row && now - row.window_started_at < OTP_REQUEST_WINDOW_MS;
+  const attempts = withinWindow ? row.attempts + 1 : 1;
+  const blockedUntil = attempts >= MAX_OTP_REQUESTS ? now + OTP_REQUEST_WINDOW_MS : 0;
+  await db.prepare(`INSERT INTO auth_login_attempts (attempt_key, attempts, window_started_at, blocked_until)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(attempt_key) DO UPDATE SET attempts = excluded.attempts,
+      window_started_at = excluded.window_started_at, blocked_until = excluded.blocked_until`)
+    .bind(key, attempts, now, blockedUntil).run();
+}
+
+async function verifyGoogleCredential(token: string, expectedNonce: string): Promise<{ sub: string; email: string; name: string }> {
+  const parts = token.split(".");
+  if (parts.length !== 3) throw new AccountError("Google sign-in was not valid.", 401);
+  const header = decodeJwtPart<{ alg?: string; kid?: string }>(parts[0]);
+  const claims = decodeJwtPart<{
+    iss?: string;
+    aud?: string | string[];
+    exp?: number;
+    sub?: string;
+    email?: string;
+    email_verified?: boolean;
+    name?: string;
+    nonce?: string;
+  }>(parts[1]);
+  if (header.alg !== "RS256" || !header.kid) throw new AccountError("Google sign-in used an unsupported signature.", 401);
+  const clientId = bindingValue("GOOGLE_CLIENT_ID");
+  const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud || ""];
+  if (!clientId || !audiences.includes(clientId)) throw new AccountError("Google sign-in was intended for another application.", 401);
+  if (!["accounts.google.com", "https://accounts.google.com"].includes(claims.iss || "")) throw new AccountError("Google sign-in issuer was not accepted.", 401);
+  if (!claims.exp || claims.exp * 1000 <= Date.now()) throw new AccountError("Google sign-in expired. Try again.", 401);
+  if (!claims.sub || !claims.email || !claims.email_verified) throw new AccountError("Use a verified Google account.", 403);
+  if (!claims.nonce || !(await constantTimeTokenEqual(claims.nonce, expectedNonce))) throw new AccountError("Google sign-in could not be verified.", 401);
+  const keys = await googlePublicKeys();
+  const jwk = keys.find(key => key.kid === header.kid);
+  if (!jwk) {
+    googleKeysPromise = null;
+    throw new AccountError("Google sign-in keys changed. Please try again.", 401);
+  }
+  const key = await crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+  const accepted = await crypto.subtle.verify(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    base64urlDecode(parts[2]),
+    new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
+  );
+  if (!accepted) throw new AccountError("Google sign-in signature was not accepted.", 401);
+  const email = cleanEmail(claims.email);
+  if (!email) throw new AccountError("Google did not return a valid email.", 403);
+  return { sub: claims.sub, email, name: cleanText(claims.name, 100) };
+}
+
+async function googlePublicKeys(): Promise<Array<JsonWebKey & { kid?: string }>> {
+  if (!googleKeysPromise) {
+    googleKeysPromise = fetch("https://www.googleapis.com/oauth2/v3/certs")
+      .then(async response => {
+        if (!response.ok) throw new Error("Google signing keys are unavailable.");
+        const payload = await response.json() as { keys?: Array<JsonWebKey & { kid?: string }> };
+        if (!Array.isArray(payload.keys)) throw new Error("Google signing keys were invalid.");
+        return payload.keys;
+      })
+      .catch(error => {
+        googleKeysPromise = null;
+        throw error;
+      });
+  }
+  return googleKeysPromise;
+}
+
+function decodeJwtPart<T>(value: string): T {
+  try {
+    return JSON.parse(new TextDecoder().decode(base64urlDecode(value))) as T;
+  } catch {
+    throw new AccountError("Google sign-in payload was not valid.", 401);
+  }
+}
+
+async function constantTimeTokenEqual(left: string, right: string): Promise<boolean> {
+  const [leftHash, rightHash] = await Promise.all([sha256(left), sha256(right)]);
+  return constantTimeEqual(leftHash, rightHash);
+}
+
+function bindingValue(key: keyof Omit<AuthBindings, "DB">): string {
+  const bindings = env as unknown as AuthBindings;
+  const value = bindings[key] || process.env[key];
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function validatePassword(password: string): void {

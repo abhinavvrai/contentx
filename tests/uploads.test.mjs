@@ -42,3 +42,21 @@ test("keeps owner downloads streamed behind short-lived signatures", async () =>
   assert.match(storage, /HMAC/);
   assert.match(storage, /expires < Date\.now\(\)/);
 });
+
+test("groups replacement uploads into versions and supports controlled share links", async () => {
+  const [route, storage, schema, workspace] = await Promise.all([
+    readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/uploads.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(route, /replaceFileId/);
+  assert.match(route, /create-share-link/);
+  assert.match(route, /version_count/);
+  assert.match(storage, /project_share_links/);
+  assert.match(storage, /authorizeProject/);
+  assert.match(schema, /versionNumber/);
+  assert.match(schema, /projectShareLinks/);
+  assert.match(workspace, /Drop replacement here/);
+  assert.match(workspace, /Allow uploads/);
+});

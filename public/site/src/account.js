@@ -2,6 +2,8 @@ const AUTH_API = "/api/auth";
 const BRIEF_API = "/api/briefs";
 let currentUser = null;
 let sessionChecked = false;
+let accountProviders = { google:{ available:false, clientId:"" }, emailOtp:{ available:false } };
+let googleScriptPromise = null;
 
 const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" })[character]);
 const money = value => `₹${Math.round(Number(value || 0) / 100).toLocaleString("en-IN")}`;
@@ -16,7 +18,9 @@ async function api(url, options = {}) {
 export async function refreshAccountSession(force = false) {
   if (sessionChecked && !force) return currentUser;
   try {
-    currentUser = (await api(AUTH_API, { cache:"no-store" })).user || null;
+    const session = await api(AUTH_API, { cache:"no-store" });
+    currentUser = session.user || null;
+    accountProviders = session.providers || accountProviders;
   } catch {
     currentUser = null;
   }
@@ -35,7 +39,7 @@ export function rememberProtectedRoute(route) {
 export function renderAccountAccess(root, actions) {
   const returningTo = localStorage.getItem("cx_return_route") || "account";
   root.className = "account-app";
-  root.innerHTML = `<main class="account-access"><section class="account-story"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><div><p class="eyebrow light"><span></span>Client account</p><h1>One login for every order, brief and upload.</h1><p>Choose your package first. After payment, your account keeps the brief, references and project files together.</p><ul><li><b>✓</b> Payment-linked project history</li><li><b>✓</b> Private file upload spaces</li><li><b>✓</b> Secure sessions across devices</li></ul></div><small>Passwords are never stored in readable form.</small></section><section class="account-card"><button class="account-close" type="button" aria-label="Return home">×</button><div class="account-toggle" role="tablist" aria-label="Account action"><button class="active" type="button" data-account-tab="login">Sign in</button><button type="button" data-account-tab="register">Create account</button></div><div data-account-panel></div><aside class="account-security"><span>⌾</span><p><strong>How your password is protected</strong><small>We store a salted PBKDF2-SHA-256 password hash—not the password itself. Login sessions use secure, HTTP-only cookies.</small></p></aside></section></main>`;
+  root.innerHTML = `<main class="account-access"><section class="account-story"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><div><p class="eyebrow light"><span></span>Client workspace</p><h1>Files, versions and feedback in one account.</h1><p>Sign in once to manage every order, project brief, share link and upload.</p><ul><li><b>✓</b> Verified email and Google sign-in</li><li><b>✓</b> Frame-style project workspace</li><li><b>✓</b> Private, versioned file delivery</li></ul></div><small>Your password and verification codes are never stored in readable form.</small></section><section class="account-card"><button class="account-close" type="button" aria-label="Return home">×</button><div class="account-toggle" role="tablist" aria-label="Account action"><button class="active" type="button" data-account-tab="login">Sign in</button><button type="button" data-account-tab="register">Create account</button></div><div data-account-panel></div><aside class="account-security"><span>⌾</span><p><strong>Protected account access</strong><small>Passwords use salted PBKDF2 hashes. Google and OTP identities are accepted only after the provider verifies the email.</small></p></aside></section></main>`;
   root.querySelector(".account-close").addEventListener("click", actions.openMarketing);
   root.querySelector(".account-story .brand").addEventListener("click", event => { event.preventDefault(); actions.openMarketing(); });
   const panel = root.querySelector("[data-account-panel]");
@@ -44,28 +48,107 @@ export function renderAccountAccess(root, actions) {
   function show(mode) {
     tabs.forEach(button => button.classList.toggle("active", button.dataset.accountTab === mode));
     const register = mode === "register";
-    panel.innerHTML = `<p class="eyebrow"><span></span>${register ? "New client account" : "Welcome back"}</p><h2>${register ? "Create your account." : "Sign in to continue."}</h2><p>${register ? "Use the same email you will use for payment." : "Open your orders, briefs and private uploads."}</p><form>${register ? '<label>Full name<input name="name" autocomplete="name" required placeholder="Your full name"></label>' : ""}<label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><label>Password<input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="10" maxlength="128" required placeholder="At least 10 characters"></label>${register ? '<small class="password-tip">A long, unique passphrase is easiest to remember and safest to use.</small>' : ""}<p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Create account →" : "Sign in →"}</button></form>`;
-    panel.querySelector("form").addEventListener("submit", async event => {
+    panel.innerHTML = `<p class="eyebrow"><span></span>${register ? "New client account" : "Welcome back"}</p><h2>${register ? "Create your account." : "Sign in to continue."}</h2><p>${register ? "Verify your email or connect Google, then use the same address at checkout." : "Open projects, file versions and private share links."}</p><div class="account-provider-actions">${accountProviders.google?.available ? `<div data-google-button></div>` : ""}${accountProviders.emailOtp?.available ? `<button type="button" data-account-otp>✉ Continue with email OTP</button>` : ""}</div>${(accountProviders.google?.available || accountProviders.emailOtp?.available) ? '<div class="account-divider"><span>or use a password</span></div>' : ""}<form data-password-form>${register ? '<label>Full name<input name="name" autocomplete="name" required placeholder="Your full name"></label>' : ""}<label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><label>Password<input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="10" maxlength="128" required placeholder="At least 10 characters"></label>${register ? '<small class="password-tip">A long, unique passphrase is easiest to remember and safest to use.</small>' : ""}<p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Create account →" : "Sign in →"}</button></form>`;
+    panel.querySelector("[data-password-form]").addEventListener("submit", async event => {
       event.preventDefault();
       const button = event.currentTarget.querySelector("button[type=submit]");
       const error = event.currentTarget.querySelector(".account-form-error");
       button.disabled = true; button.textContent = register ? "Creating account…" : "Signing in…"; error.hidden = true;
       try {
         const values = Object.fromEntries(new FormData(event.currentTarget));
+        if (register && accountProviders.emailOtp?.available) {
+          await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"request_otp", email:values.email }) });
+          renderOtpVerification(panel, returningTo, true, values);
+          return;
+        }
         const result = await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:register ? "register" : "login", ...values }) });
-        currentUser = result.user; sessionChecked = true;
-        localStorage.setItem("cx_access", JSON.stringify({ email:currentUser.email, name:currentUser.name, paid:true, account:true }));
-        localStorage.removeItem("cx_return_route");
-        location.hash = returningTo;
+        finishAccountAccess(result.user, returningTo);
       } catch (failure) {
         error.textContent = failure.message; error.hidden = false;
         button.disabled = false; button.textContent = register ? "Create account →" : "Sign in →";
       }
     });
+    panel.querySelector("[data-account-otp]")?.addEventListener("click", () => renderOtpAccess(panel, returningTo, register));
+    if (accountProviders.google?.available) renderGoogleAccess(panel, returningTo);
   }
 
   tabs.forEach(button => button.addEventListener("click", () => show(button.dataset.accountTab)));
   show(returningTo === "checkout" ? "register" : "login");
+}
+
+function finishAccountAccess(user, returningTo) {
+  currentUser = user; sessionChecked = true;
+  localStorage.setItem("cx_access", JSON.stringify({ email:user.email, name:user.name, paid:true, account:true }));
+  localStorage.removeItem("cx_return_route");
+  location.hash = returningTo;
+}
+
+function renderOtpAccess(panel, returningTo, register) {
+  panel.innerHTML = `<button class="account-inline-back" type="button">← Other sign-in options</button><p class="eyebrow"><span></span>Verified email</p><h2>${register ? "Create with an OTP." : "Sign in with an OTP."}</h2><p>We’ll send a short, one-time verification code to your email.</p><form data-otp-request><label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">Send verification code →</button></form>`;
+  panel.querySelector(".account-inline-back").addEventListener("click", () => panel.closest(".account-card").querySelector(`[data-account-tab="${register ? "register" : "login"}"]`).click());
+  panel.querySelector("[data-otp-request]").addEventListener("submit", async event => {
+    event.preventDefault();
+    const email = new FormData(event.currentTarget).get("email");
+    const button = event.currentTarget.querySelector("button[type=submit]");
+    const error = event.currentTarget.querySelector("[role=alert]");
+    button.disabled = true; button.textContent = "Sending code…"; error.hidden = true;
+    try {
+      await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"request_otp", email }) });
+      renderOtpVerification(panel, returningTo, register, { email });
+    } catch (failure) { error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Send verification code →"; }
+  });
+}
+
+function renderOtpVerification(panel, returningTo, register, pending) {
+  const email = String(pending.email || "");
+  panel.innerHTML = `<button class="account-inline-back" type="button">← Change details</button><p class="eyebrow"><span></span>Check your inbox</p><h2>Enter your OTP.</h2><p>We sent a verification code to <strong>${escapeHTML(email)}</strong>.</p><form data-otp-verify><input type="hidden" name="email" value="${escapeHTML(email)}"><label>Verification code<input name="otp" inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="8" required placeholder="000000"></label><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Verify & create account" : "Verify & continue"} →</button></form>`;
+  panel.querySelector(".account-inline-back").addEventListener("click", () => renderOtpAccess(panel, returningTo, register));
+  panel.querySelector("[data-otp-verify]").addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = event.currentTarget.querySelector("button[type=submit]");
+    const error = event.currentTarget.querySelector("[role=alert]");
+    button.disabled = true; button.textContent = "Verifying…"; error.hidden = true;
+    try {
+      const values = Object.fromEntries(new FormData(event.currentTarget));
+      const result = await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"verify_otp", ...pending, ...values }) });
+      finishAccountAccess(result.user, returningTo);
+    } catch (failure) { error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = `${register ? "Verify & create account" : "Verify & continue"} →`; }
+  });
+}
+
+async function renderGoogleAccess(panel, returningTo) {
+  const host = panel.querySelector("[data-google-button]");
+  if (!host) return;
+  try {
+    const nonceData = await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"google_nonce" }) });
+    await loadGoogleIdentity();
+    window.google.accounts.id.initialize({
+      client_id:nonceData.clientId,
+      nonce:nonceData.nonce,
+      callback:async response => {
+        try {
+          const result = await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"google_login", credential:response.credential }) });
+          finishAccountAccess(result.user, returningTo);
+        } catch (failure) { showProviderError(panel, failure.message); }
+      },
+    });
+    window.google.accounts.id.renderButton(host, { theme:"outline", size:"large", shape:"rectangular", text:"continue_with", width:Math.min(420, host.clientWidth || 420) });
+  } catch (error) { showProviderError(panel, error.message); }
+}
+
+function loadGoogleIdentity() {
+  if (window.google?.accounts?.id) return Promise.resolve();
+  if (!googleScriptPromise) googleScriptPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script"); script.src = "https://accounts.google.com/gsi/client"; script.async = true; script.defer = true;
+    script.onload = resolve; script.onerror = () => reject(new Error("Google sign-in could not load.")); document.head.append(script);
+  });
+  return googleScriptPromise;
+}
+
+function showProviderError(panel, message) {
+  let error = panel.querySelector(".account-provider-error");
+  if (!error) { error = document.createElement("p"); error.className = "account-form-error account-provider-error"; panel.querySelector(".account-provider-actions")?.after(error); }
+  error.textContent = message; error.hidden = false;
 }
 
 export async function renderAccountDashboard(root, actions) {
@@ -91,7 +174,7 @@ function orderCard(order) {
   const paid = ["verified", "captured"].includes(order.status);
   const hasBrief = Boolean(order.brief_id);
   const addOns = Array.isArray(order.add_ons) ? order.add_ons : [];
-  return `<article class="account-order-card"><header><div><span>${escapeHTML(order.content_type || "video")}</span><small>${new Date(Number(order.created_at)).toLocaleDateString([], { dateStyle:"medium" })}</small></div><b class="${paid ? "paid" : "pending"}">${paid ? "Paid" : "Payment pending"}</b></header><h3>${escapeHTML(order.plan_name)}</h3><p>${Number(order.quantity)} ${order.content_type === "podcast" ? "episode" : "video"}${Number(order.quantity) === 1 ? "" : "s"} · ${escapeHTML(order.billing === "monthly" ? "Monthly" : "One-time")}</p>${addOns.length ? `<ul>${addOns.map(item => `<li>+ ${escapeHTML(item.name)}</li>`).join("")}</ul>` : ""}<footer><strong>${money(order.amount_paise)}</strong><div>${paid ? `<a class="pill pill-dark" href="#brief?order=${encodeURIComponent(order.razorpay_order_id)}">${hasBrief ? "Edit brief" : "Add project brief"}</a>${order.project_id ? `<a class="pill pill-hot" href="#upload?project=${encodeURIComponent(order.project_id)}">Upload files</a>` : ""}` : `<span>Finish payment to add the brief</span>`}</div></footer></article>`;
+  return `<article class="account-order-card"><header><div><span>${escapeHTML(order.content_type || "video")}</span><small>${new Date(Number(order.created_at)).toLocaleDateString([], { dateStyle:"medium" })}</small></div><b class="${paid ? "paid" : "pending"}">${paid ? "Paid" : "Payment pending"}</b></header><h3>${escapeHTML(order.plan_name)}</h3><p>${Number(order.quantity)} ${order.content_type === "podcast" ? "episode" : "video"}${Number(order.quantity) === 1 ? "" : "s"} · ${escapeHTML(order.billing === "monthly" ? "Monthly" : "One-time")}</p>${addOns.length ? `<ul>${addOns.map(item => `<li>+ ${escapeHTML(item.name)}</li>`).join("")}</ul>` : ""}<footer><strong>${money(order.amount_paise)}</strong><div>${paid ? `<a class="pill pill-dark" href="#brief?order=${encodeURIComponent(order.razorpay_order_id)}">${hasBrief ? "Edit brief" : "Add project brief"}</a>${order.project_id ? `<a class="pill pill-hot" href="#workspace?project=${encodeURIComponent(order.project_id)}">Open workspace</a>` : ""}` : `<span>Finish payment to add the brief</span>`}</div></footer></article>`;
 }
 
 export async function renderProjectBrief(root, actions, route) {
@@ -112,7 +195,7 @@ export async function renderProjectBrief(root, actions, route) {
       button.disabled = true; button.textContent = "Saving your brief…"; error.hidden = true;
       try {
         const result = await api(BRIEF_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))) });
-        location.hash = `upload?project=${encodeURIComponent(result.projectId)}`;
+        location.hash = `workspace?project=${encodeURIComponent(result.projectId)}`;
       } catch (failure) {
         error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Save brief & upload files →";
       }
