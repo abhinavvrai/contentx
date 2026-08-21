@@ -19,11 +19,20 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   assert.match(features, /Advanced Motion Graphics", price:2500/);
   assert.match(features, /data-plan-tab/);
   assert.match(features, />Per video</);
+  assert.match(features, /if \(false && pricing\)/);
   assert.match(features, /data-unified-service="video"/);
   assert.match(features, /data-unified-service="podcast"/);
   assert.match(features, /Instagram Reel Script/);
   assert.match(features, /Podcast Episode Script/);
   assert.doesNotMatch(features, /setupUnifiedPricing[\s\S]*One-off flexibility premium/);
+});
+
+test("adds browser security headers at the custom domain worker", async () => {
+  const worker = await load("worker/index.ts");
+  assert.match(worker, /Content-Security-Policy/);
+  assert.match(worker, /X-Content-Type-Options/);
+  assert.match(worker, /frame-ancestors 'self'/);
+  assert.match(worker, /no-store, must-revalidate/);
 });
 
 test("keeps payment totals server-calculated with allowlisted add-ons", async () => {
