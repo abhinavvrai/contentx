@@ -7,12 +7,20 @@ const store = {
 };
 
 function razorpayPlanId(plan) {
-  const validPlans = new Set(["basic_reel", "growth_reel", "premium_motion", "advanced_reel", "script_hook", "script_full", "script_research", "podcast_30", "podcast_45", "podcast_60"]);
-  return validPlans.has(plan.id) ? plan.id : "basic_reel";
+  const validPlans = new Set(["basic_reel", "better_edit", "growth_reel", "premium_motion", "advanced_reel", "saas_animation", "script_hook", "script_full", "script_research", "podcast_30", "podcast_45", "podcast_60"]);
+  if (validPlans.has(plan.id)) return plan.id;
+  const name = String(plan.name || "").toLowerCase();
+  if (name.includes("saas animation")) return "saas_animation";
+  if (name.includes("premium motion")) return "premium_motion";
+  if (name.includes("advanced reel")) return "advanced_reel";
+  if (name.includes("graphics lite") || name.includes("growth reel")) return "growth_reel";
+  if (name.includes("better edit")) return "better_edit";
+  return "basic_reel";
 }
 
 function razorpayQuantity(plan) {
-  return 1;
+  const match = String(plan.name || "").match(/·\s*(\d+)\s*(?:reel|video)/i);
+  return Math.max(1, Number(match?.[1] || 1));
 }
 
 function loadRazorpayCheckout() {

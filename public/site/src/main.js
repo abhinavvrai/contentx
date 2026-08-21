@@ -1,9 +1,10 @@
 import { studio } from "./data.js";
 import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js";
-import { canAccessWorkspace, enhanceDashboard, enhanceProject, enhanceReview, initTheme, renderAccess, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js";
+import { canAccessWorkspace, enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAccess, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js";
+import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=restored-features-1";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js";
 import { initProductPolish, polishRoute } from "./polish.js?v=core-features-2";
-import { enhanceCreatorTools } from "./creator-tools.js?v=loading-fix-2";
+import { enhanceCreatorTools } from "./creator-tools.js?v=restored-features-1";
 
 const root = document.getElementById("app");
 const loader = document.querySelector("[data-loader]");
@@ -35,13 +36,17 @@ function renderRoute() {
     canvas.hidden = true;
     overlay.hidden = true;
     progress.hidden = route !== "home";
-    if (route === "workspace") { if (!canAccessWorkspace()) renderAccess(root, actions); else { renderDashboard(root, actions); enhanceDashboard(root, actions); enhanceDashboardSuite(root, actions); } }
+    if (route === "workspace") { if (!canAccessWorkspace()) renderAccess(root, actions); else { renderDashboard(root, actions); enhanceDashboard(root, actions); enhanceMarketplaceDashboard(root, actions); enhanceDashboardSuite(root, actions); } }
     else if (route === "project") { if (!canAccessWorkspace()) renderAccess(root, actions); else { renderProject(root, actions); enhanceProject(root, actions); enhanceProjectSuite(root, actions); } }
     else if (route === "review") { if (!canAccessWorkspace()) renderAccess(root, actions); else { renderReview(root, actions); enhanceReview(root, actions); enhanceReviewSuite(root, actions); } }
     else if (route === "access") renderAccess(root, actions);
     else if (route === "checkout") renderCheckout(root, actions);
-    else if (route === "owner") { renderAdmin(root, actions); enhanceAdminSuite(root, actions); }
-    else { renderMarketing(root, studio, actions); }
+    else if (route === "marketplace") renderMarketplace(root, actions);
+    else if (route === "talent") renderTalentProfile(root, actions);
+    else if (route === "offer-services") renderProviderOnboarding(root, actions);
+    else if (route === "provider-workspace") renderProviderWorkspace(root, actions);
+    else if (route === "owner") { renderAdmin(root, actions); enhanceMarketplaceAdmin(root); enhanceAdminSuite(root, actions); }
+    else { renderMarketing(root, studio, actions); enhanceMarketing(root, actions); enhanceMarketplaceMarketing(root, actions); }
     polishRoute(root, route);
     enhanceCreatorTools(root, route);
   } catch (error) {

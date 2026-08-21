@@ -2,9 +2,11 @@ const RAZORPAY_API_BASE = "https://api.razorpay.com/v1";
 
 export const servicePlans = {
   basic_reel: { name: "Basic Reel", amount: 1500 },
+  better_edit: { name: "Better Edit Reel", amount: 2000 },
   growth_reel: { name: "Growth Reel", amount: 2500 },
   premium_motion: { name: "Premium Motion Reel", amount: 3500 },
   advanced_reel: { name: "Advanced Reel", amount: 5000 },
+  saas_animation: { name: "SaaS Animation · up to 30 seconds", amount: 9000 },
   script_hook: { name: "Hook & Idea Script", amount: 1000 },
   script_full: { name: "Full Reel Script", amount: 1500 },
   script_research: { name: "Research-led Script", amount: 2000 },
@@ -14,7 +16,9 @@ export const servicePlans = {
 } as const;
 
 export type PlanId = keyof typeof servicePlans;
-export type BillingMode = "one_off";
+export type BillingMode = "monthly" | "one_off";
+
+const reelPlanIds = new Set<PlanId>(["basic_reel", "better_edit", "growth_reel", "premium_motion", "advanced_reel", "saas_animation"]);
 
 export function getRazorpayConfig() {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -36,17 +40,29 @@ export function calculateOrder(input: {
   if (!plan) throw new Error("Choose a valid Content X service.");
 
   const quantity = Number(input.quantity);
-  if (!Number.isInteger(quantity) || quantity !== 1) {
-    throw new Error("Each payment covers one selected service.");
+  const planId = input.planId as PlanId;
+  const isReelPlan = reelPlanIds.has(planId);
+  const billing: BillingMode = input.billing === "monthly" ? "monthly" : "one_off";
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 30) {
+    throw new Error("Choose between 1 and 30 items.");
+  }
+  if (!isReelPlan && quantity !== 1) {
+    throw new Error("Each script or podcast payment covers one selected service.");
+  }
+  if (!isReelPlan && billing !== "one_off") {
+    throw new Error("Scripts and podcasts use one-time pricing.");
+  }
+  if (isReelPlan && billing === "monthly" && quantity < 10) {
+    throw new Error("Monthly reel production starts at 10 videos.");
   }
 
-  const billing: BillingMode = "one_off";
   const unitAmount = plan.amount;
-  const totalAmount = unitAmount * quantity;
+  const billingFactor = isReelPlan && billing === "one_off" ? 1.2 : 1;
+  const totalAmount = Math.round(unitAmount * quantity * billingFactor);
 
   return {
     billing,
-    planId: input.planId as PlanId,
+    planId,
     planName: plan.name,
     quantity,
     unitAmount,
