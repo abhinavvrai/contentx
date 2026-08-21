@@ -53,3 +53,71 @@ export const uploadFiles = sqliteTable(
   },
   table => [index("idx_upload_files_project_status").on(table.projectId, table.status)],
 );
+
+export const accountUsers = sqliteTable("account_users", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  passwordSalt: text("password_salt").notNull(),
+  passwordIterations: integer("password_iterations").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+
+export const accountSessions = sqliteTable(
+  "account_sessions",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    userId: text("user_id").notNull().references(() => accountUsers.id),
+    expiresAt: integer("expires_at").notNull(),
+    createdAt: integer("created_at").notNull(),
+    lastSeenAt: integer("last_seen_at").notNull(),
+    userAgent: text("user_agent"),
+  },
+  table => [index("idx_account_sessions_user_expires").on(table.userId, table.expiresAt)],
+);
+
+export const authLoginAttempts = sqliteTable("auth_login_attempts", {
+  attemptKey: text("attempt_key").primaryKey(),
+  attempts: integer("attempts").notNull(),
+  windowStartedAt: integer("window_started_at").notNull(),
+  blockedUntil: integer("blocked_until").notNull().default(0),
+});
+
+export const orderSelections = sqliteTable(
+  "order_selections",
+  {
+    razorpayOrderId: text("razorpay_order_id").primaryKey(),
+    userId: text("user_id").notNull().references(() => accountUsers.id),
+    contentType: text("content_type").notNull(),
+    deliveryFormat: text("delivery_format"),
+    addOnsJson: text("add_ons_json").notNull().default("[]"),
+    createdAt: integer("created_at").notNull(),
+  },
+  table => [index("idx_order_selections_user_created").on(table.userId, table.createdAt)],
+);
+
+export const projectBriefs = sqliteTable(
+  "project_briefs",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => accountUsers.id),
+    razorpayOrderId: text("razorpay_order_id").notNull().unique(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    instructions: text("instructions").notNull(),
+    referenceUrl: text("reference_url"),
+    status: text("status").notNull().default("submitted"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  table => [index("idx_project_briefs_user_updated").on(table.userId, table.updatedAt)],
+);
+
+export const userUploadProjects = sqliteTable("user_upload_projects", {
+  projectId: text("project_id").primaryKey(),
+  userId: text("user_id").notNull().references(() => accountUsers.id),
+  razorpayOrderId: text("razorpay_order_id").notNull().unique(),
+  createdAt: integer("created_at").notNull(),
+});

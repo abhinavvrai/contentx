@@ -22,6 +22,13 @@
       "when": 1787294065634,
       "tag": "0002_shallow_psynapse",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787297896699,
+      "tag": "0003_stiff_blonde_phantom",
+      "breakpoints": true
     }
   ]
 }

@@ -1,11 +1,12 @@
 import { studio } from "./data.js";
 import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js";
-import { canAccessWorkspace, enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAccess, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js";
+import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=accounts-pricing-1";
 import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=restored-features-1";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js";
 import { initProductPolish, polishRoute } from "./polish.js?v=core-features-2";
 import { enhanceCreatorTools } from "./creator-tools.js?v=restored-features-1";
-import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=project-storage-1";
+import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=account-storage-2";
+import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=accounts-1";
 
 const root = document.getElementById("app");
 const loader = document.querySelector("[data-loader]");
@@ -16,10 +17,12 @@ const progress = document.querySelector("[data-progress]");
 const go = route => { location.hash = route; };
 const actions = {
   openMarketing: () => go("home"),
-  openDashboard: (force = false) => go(force || canAccessWorkspace() ? "workspace" : "access"),
+  openDashboard: () => go("workspace"),
   openProject: () => go("project"),
   openReview: () => go("review"),
-  openAccess: () => go("access"),
+  openAccess: () => { rememberProtectedRoute("account"); go("access"); },
+  openAccount: () => go("account"),
+  openBrief: orderId => go(`brief${orderId ? `?order=${encodeURIComponent(orderId)}` : ""}`),
   openAdmin: () => go("owner"),
   openMarketplace: () => go("marketplace"),
   openProviderOnboarding: () => go("offer-services"),
@@ -29,7 +32,7 @@ const actions = {
   refreshRoute: () => renderRoute()
 };
 
-function renderRoute() {
+async function renderRoute() {
   const route = location.hash.slice(1) || "home";
   try {
     prepareClientRoute(route);
@@ -37,11 +40,19 @@ function renderRoute() {
     canvas.hidden = true;
     overlay.hidden = true;
     progress.hidden = route !== "home";
-    if (route.startsWith("upload?")) renderClientUpload(root, actions, route);
-    else if (route === "workspace") { if (!canAccessWorkspace()) renderAccess(root, actions); else { renderDashboard(root, actions); enhanceDashboard(root, actions); enhanceMarketplaceDashboard(root, actions); enhanceDashboardSuite(root, actions); } }
-    else if (route === "project") { if (!canAccessWorkspace()) renderAccess(root, actions); else { renderProject(root, actions); enhanceProject(root, actions); enhanceProjectSuite(root, actions); } }
-    else if (route === "review") { if (!canAccessWorkspace()) renderAccess(root, actions); else { renderReview(root, actions); enhanceReview(root, actions); enhanceReviewSuite(root, actions); } }
-    else if (route === "access") renderAccess(root, actions);
+    const protectedRoute = ["workspace", "project", "review", "account", "checkout"].includes(route) || route.startsWith("brief");
+    if (protectedRoute || route === "access") await refreshAccountSession();
+    if (protectedRoute && !accountUser()) {
+      rememberProtectedRoute(route);
+      renderAccountAccess(root, actions);
+    }
+    else if (route.startsWith("upload?")) await renderClientUpload(root, actions, route);
+    else if (route === "workspace") { renderDashboard(root, actions); enhanceDashboard(root, actions); enhanceMarketplaceDashboard(root, actions); enhanceDashboardSuite(root, actions); }
+    else if (route === "project") { renderProject(root, actions); enhanceProject(root, actions); enhanceProjectSuite(root, actions); }
+    else if (route === "review") { renderReview(root, actions); enhanceReview(root, actions); enhanceReviewSuite(root, actions); }
+    else if (route === "access") { if (accountUser()) await renderAccountDashboard(root, actions); else renderAccountAccess(root, actions); }
+    else if (route === "account") await renderAccountDashboard(root, actions);
+    else if (route.startsWith("brief")) await renderProjectBrief(root, actions, route);
     else if (route === "checkout") renderCheckout(root, actions);
     else if (route === "marketplace") renderMarketplace(root, actions);
     else if (route === "talent") renderTalentProfile(root, actions);
@@ -58,7 +69,7 @@ function renderRoute() {
   }
 }
 
-window.addEventListener("hashchange", renderRoute);
+window.addEventListener("hashchange", () => { renderRoute(); });
 window.addEventListener("scroll", () => {
   const max = document.documentElement.scrollHeight - innerHeight;
   progress.style.width = `${max > 0 ? (scrollY / max) * 100 : 0}%`;

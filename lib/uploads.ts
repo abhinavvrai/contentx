@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { getSessionUser } from "./auth";
 
 export const DEFAULT_MAX_FILE_BYTES = 50 * 1024 * 1024 * 1024;
 export const DEFAULT_MAX_PROJECT_BYTES = 250 * 1024 * 1024 * 1024;
@@ -123,13 +124,23 @@ export async function requireOwner(request: Request): Promise<void> {
 
 export async function requireProject(request: Request, projectId: string): Promise<UploadProject> {
   const token = bearerToken(request);
-  if (!token) throw new ClientError("This upload link is incomplete.", 401);
-  const tokenHash = await hashToken(token);
   const { db } = getUploadBindings();
-  const project = await db.prepare(
-    `SELECT id, name, client_name, client_email, status, max_file_size, created_at, updated_at
-     FROM upload_projects WHERE id = ? AND upload_token_hash = ? LIMIT 1`
-  ).bind(projectId, tokenHash).first<UploadProject>();
+  let project: UploadProject | null = null;
+  if (token) {
+    const tokenHash = await hashToken(token);
+    project = await db.prepare(
+      `SELECT id, name, client_name, client_email, status, max_file_size, created_at, updated_at
+       FROM upload_projects WHERE id = ? AND upload_token_hash = ? LIMIT 1`
+    ).bind(projectId, tokenHash).first<UploadProject>();
+  } else {
+    const user = await getSessionUser(request);
+    if (!user) throw new ClientError("Sign in or use the complete private upload link.", 401);
+    project = await db.prepare(
+      `SELECT p.id, p.name, p.client_name, p.client_email, p.status, p.max_file_size, p.created_at, p.updated_at
+       FROM upload_projects p JOIN user_upload_projects u ON u.project_id = p.id
+       WHERE p.id = ? AND u.user_id = ? LIMIT 1`
+    ).bind(projectId, user.id).first<UploadProject>();
+  }
   if (!project || project.status !== "active") throw new ClientError("This upload link is invalid or no longer active.", 403);
   return project;
 }

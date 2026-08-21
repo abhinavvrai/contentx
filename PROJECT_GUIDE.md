@@ -13,13 +13,14 @@ Content X is a video-production website and client-review workspace for short-fo
 The public website includes:
 
 - The Content X landing page and portfolio.
-- Short-form reel, scriptwriting, podcast, and SaaS animation pricing.
-- A reel pricing calculator with monthly and one-off options.
+- A unified Video/Podcast pricing builder with monthly and per-project options.
+- Five short-form editing tiers plus service-specific scripts, covers, revisions, clips, and delivery add-ons.
 - Creator tools such as Roman Hinglish captions, hook planning, smart review checks, and support prompts.
 - A managed-services marketplace and private provider onboarding experience.
 - Client workspace, project, review, version, feedback, and owner-dashboard demos.
 - Razorpay checkout backed by Cloudflare APIs and a D1 payment database.
 - Durable project upload spaces backed by R2, with D1 file metadata and private client links.
+- D1-backed client accounts, secure sessions, paid-order history, and post-payment project briefs.
 
 ## 2. Production Architecture
 
@@ -107,23 +108,29 @@ Pricing appears in more than one source file. When pricing changes, update every
 
 | Service | Base price |
 | --- | ---: |
-| Basic reel | ₹1,500 |
-| Better Edit | ₹2,000 |
-| Growth / Graphics Lite | ₹2,500 |
-| Premium Motion | ₹3,500 |
-| Advanced Reel | ₹5,000 |
+| Captions Only | ₹1,500 |
+| Clean Edit | ₹2,000 |
+| Social Pro | ₹2,500 |
+| Motion Plus | ₹3,500 |
+| Signature Edit | ₹5,000 |
 | SaaS Animation, up to 30 seconds | ₹9,000 |
 
 - Monthly reel production starts at 10 videos.
-- One-off reel and animation work is 20% above the base rate.
+- Monthly podcast production starts at 4 episodes.
+- Video and podcast package totals use the displayed base rate; there is no hidden one-off premium.
 
-### Scriptwriting
+### Add-ons
 
-| Service | Price |
+| Service | Price per item |
 | --- | ---: |
-| Hook and outline | ₹1,000 |
-| Creator-ready full reel script | ₹1,500 |
-| Research-led script | ₹2,000 |
+| Instagram Reel Script | ₹500 |
+| Cover / Thumbnail | ₹500 |
+| Extra Revision Round | ₹300 |
+| Priority Delivery | ₹1,000 |
+| Podcast Episode Script | ₹1,500 |
+| Podcast Show Notes & Chapters | ₹500 |
+| Two Podcast Social Clips | ₹1,500 |
+| Podcast Episode Cover | ₹500 |
 
 ### Podcast editing
 
@@ -150,10 +157,10 @@ The following were verified on the production domain after commit `9b77b93`:
 - SaaS-era navigation and premium landing-page design are active.
 - Managed marketplace section and marketplace route load.
 - Creator tools section loads.
-- Reel, scriptwriting, and podcast pricing display.
+- Video and podcast pricing display with the five requested short-form tiers.
 - SaaS Animation displays ₹9,000.
 - SaaS monthly checkout correctly shows ₹90,000 for 10 items.
-- One-off reel and animation calculations apply the 20% premium.
+- Visible package prices and Razorpay base totals match without a hidden one-off premium.
 - Browser console shows no website errors during the verified flows.
 - Razorpay config, order, signature verification, and webhook endpoints exist.
 - Razorpay orders and verification state use the D1 payment database.
@@ -168,16 +175,18 @@ These areas look functional in the interface but are not yet complete production
 
 - The dedicated project-upload portal stores file bytes in the private `UPLOADS` R2 bucket and searchable metadata in D1.
 - Owner-created client links support chunked uploads up to 50 GB per file and 250 GB per project, project file listings, protected downloads, link rotation, upload pausing, and permanent removal.
+- Paid clients can submit a D1-backed project brief and receive a session-authorized R2 upload space without handling a separate project token.
 - The owner file area requires the server-side `CONTENTX_OWNER_TOKEN`; client links use separate high-entropy project tokens stored only as hashes.
 - Legacy workspace attachments, review-comment attachments, provider portfolios, and marketplace upload controls still store only file metadata in browser `localStorage` and are not yet connected to R2.
-- Production still needs user accounts and role-based authorization before the wider workspace can be described as a fully secure multi-user collaboration system.
+- The wider marketplace, provider, review, and owner workspace still needs complete role-based authorization before it can be described as a fully secure multi-user collaboration system.
 
 ### Authentication and permissions
 
-- Client, provider, and owner flows are primarily browser-side demonstrations.
-- Access state and demo records are stored in `localStorage` on the current device.
-- The visible owner preview code is not secure authentication.
-- Production use requires server-side identity, sessions, roles, and authorization checks.
+- Client sign-up, sign-in, paid-order ownership, project briefs, and upload authorization are server-side and stored in D1.
+- Passwords are salted and hashed with PBKDF2-SHA-256 at 310,000 iterations; plaintext passwords are never stored.
+- Session tokens are random, stored only as SHA-256 hashes in D1, and sent through secure HTTP-only SameSite cookies.
+- Repeated failed logins are rate-limited and temporarily blocked.
+- Provider, marketplace, review-demo, and visible owner-preview permissions still include browser-local demonstration behavior and need role-based server authorization before being treated as production multi-user collaboration.
 
 ### Project and marketplace data
 
@@ -201,7 +210,8 @@ These areas look functional in the interface but are not yet complete production
 - Razorpay order creation, signature verification, webhook verification, and D1 records are implemented.
 - A real charge should never be triggered during automated testing.
 - The Razorpay dashboard webhook URL and production webhook secret must remain configured manually.
-- Script and podcast prices are visible in the restored pricing summary; direct payment-entry UX should be rechecked whenever the pricing layout changes.
+- Package and allowlisted add-on totals are recalculated by the server before Razorpay creates an order.
+- Detailed titles, descriptions, creative instructions, and reference links are collected after verified payment, then connected to the client's private upload project.
 
 ## 9. Critical Editing Rules
 
@@ -227,7 +237,7 @@ Before publishing:
 3. Check `git diff --check`.
 4. Test the homepage and confirm the loader becomes hidden.
 5. Confirm the browser console has no errors.
-6. Confirm reels, scripts, podcasts, and SaaS pricing.
+6. Confirm the Video/Podcast toggle, five video tiers, service-specific script add-ons, podcast tiers, and SaaS managed-service card.
 7. Test checkout selection without submitting a real payment.
 8. Test any route changed by the work.
 

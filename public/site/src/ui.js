@@ -1,10 +1,11 @@
 import { demoComments, demoProjects } from "./data.js";
 
 const checkoutPlans = {
-  basic_reel: { name: "Basic Reel", price: 1500, features: ["Clean pacing & edits", "Basic captions", "Music and transitions", "2 revision rounds"] },
-  growth_reel: { name: "Growth Reel", price: 2500, features: ["Everything in Basic", "B-roll and visual layers", "Sound design", "Colour polish"] },
-  premium_motion: { name: "Premium Motion Reel", price: 3500, features: ["Strategy-led hook", "Motion graphics", "Premium sound & colour", "Priority delivery"] },
-  advanced_reel: { name: "Advanced Reel", price: 5000, features: ["High-concept edit", "Custom motion system", "Advanced graphics", "Premium finishing"] },
+  basic_reel: { name: "Captions Only", price: 1500, features: ["Caption timing", "Spelling cleanup", "Brand fonts and colours", "Vertical export"] },
+  better_edit: { name: "Clean Edit", price: 2000, features: ["Clean cuts and pacing", "Branded captions", "Audio and colour balance", "1 revision round"] },
+  growth_reel: { name: "Social Pro", price: 2500, features: ["Everything in Clean Edit", "B-roll and visual layers", "Transitions and sound design", "2 revision rounds"] },
+  premium_motion: { name: "Motion Plus", price: 3500, features: ["Custom motion graphics", "Animated captions", "Advanced sound design", "3 revision rounds"] },
+  advanced_reel: { name: "Signature Edit", price: 5000, features: ["Advanced motion and graphics", "Premium colour and sound", "Custom branded system", "Priority handling"] },
   script_hook: { name: "Hook & Idea Script", price: 1000, features: ["Content angle", "Opening hook", "Short-form outline"] },
   script_full: { name: "Full Reel Script", price: 1500, features: ["Hook to CTA", "Scene-by-scene flow", "Platform-ready copy"] },
   script_research: { name: "Research-led Script", price: 2000, features: ["Research-backed angle", "Retention structure", "Brand voice refinement"] },
@@ -60,6 +61,9 @@ export function renderMarketing(root, data, actions) {
     </main>
     <footer class="site-footer"><div class="section-shell"><div><a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a><p>Premium video editing and a better way to review it.</p></div><div><strong>Explore</strong><a href="#work">Work</a><a href="#workflow">How it works</a><a href="#pricing">Pricing</a></div><div><strong>Connect</strong><a href="${data.whatsapp}" target="_blank" rel="noreferrer">WhatsApp ↗</a><a href="mailto:${data.email}">Email</a><button data-action="login">Client login</button></div></div><p class="copyright">© 2026 Content X. Built for better content.</p></footer>
   `;
+
+  const pricingFallback = root.querySelector("#pricing");
+  if (pricingFallback) pricingFallback.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple pricing</p><h2>Choose Video or Podcast. Add scripts only when you <em>need them.</em></h2><p>Five clear video packages start at ₹1,500. The interactive package builder is loading now.</p></div>`;
 
   root.querySelectorAll('[data-action="workspace"]').forEach(btn => btn.addEventListener("click", actions.openDashboard));
   root.querySelectorAll('[data-action="login"]').forEach(btn => btn.addEventListener("click", actions.openAccess));

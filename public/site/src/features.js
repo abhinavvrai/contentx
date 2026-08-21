@@ -19,8 +19,8 @@ function razorpayPlanId(plan) {
 }
 
 function razorpayQuantity(plan) {
-  const match = String(plan.name || "").match(/·\s*(\d+)\s*(?:reel|video)/i);
-  return Math.max(1, Number(match?.[1] || 1));
+  const match = String(plan.name || "").match(/·\s*(\d+)\s*(?:reel|video|episode)/i);
+  return Math.max(1, Number(plan.quantity || match?.[1] || 1));
 }
 
 function loadRazorpayCheckout() {
@@ -186,6 +186,7 @@ export function enhanceMarketing(root, actions) {
     pricing.querySelector("[data-calculator-checkout]").addEventListener("click", () => { const base = bases[quality], factor = billing === "monthly" ? .8 : 1.25, total = Math.round(base * factor * count); actions.openCheckout({ id:`${billing}-${quality.toLowerCase()}-${count}`, name:`${quality} · ${count} videos`, price:total, unit:billing === "monthly" ? "month" : "project", badge:billing === "monthly" ? "20% monthly saving" : "One-off package", features:[`${count} ${quality} videos`, `${money(Math.round(total/count))} effective per video`, "2 revision rounds per video", billing === "monthly" ? "Monthly workspace & production queue" : "Single-project workspace access"] }); }); updatePrice();
   }
   if (pricing) enhancePricingSelections(pricing, actions);
+  if (pricing) setupUnifiedPricing(pricing, actions, data);
 
   const faq = root.querySelector("#faq");
   if (faq) faq.insertAdjacentHTML("afterend", `<section id="contact-form" class="contact-form-section block-section"><div class="section-shell contact-grid"><div><p class="eyebrow"><span></span>Tell us what you need</p><h2>Start with a <em>conversation.</em></h2><p>Share your goal, budget and timeline. Your enquiry will appear inside the Content X owner dashboard—nothing is emailed yet.</p><div class="contact-details"><span>Typical reply</span><strong>Within one business day</strong><span>Best for</span><strong>Projects, retainers & partnerships</strong></div></div><form class="lead-form"><div class="field-pair"><label>Name<input name="name" required placeholder="Your name"></label><label>Phone / WhatsApp<input name="phone" required placeholder="+91 …"></label></div><label>Email<input type="email" name="email" placeholder="you@company.com"></label><label>I’m interested in<select name="interest"><option>Monthly video package</option><option>One-off video</option><option>Full content strategy</option><option>Scripts + video editing</option><option>Social media management</option><option>Joining the creator network</option></select></label><label>Tell us about the project<textarea name="message" required placeholder="What are you creating, how many videos do you need, and when do you want to start?"></textarea></label><button class="pill pill-hot" type="submit">Save my enquiry →</button><small>Saved privately in this website’s owner dashboard for testing.</small></form></div></section>`);
@@ -241,6 +242,119 @@ function enhancePricingSelections(pricing, actions) {
   renderPresets();
 }
 
+function setupUnifiedPricing(pricing, actions, data) {
+  const packages = {
+    video: [
+      { id:"basic_reel", name:"Captions Only", price:1500, tag:"Simple", summary:"For a finished video that only needs accurate, branded captions.", includes:["Caption timing and spelling cleanup", "Your brand font and colours", "Vertical social export", "Original edit and pacing stay unchanged"] },
+      { id:"better_edit", name:"Clean Edit", price:2000, tag:"Essential", summary:"A clean, professional short-form edit without heavy graphics.", includes:["Clean cuts and stronger pacing", "Branded captions", "Audio and colour balance", "Royalty-free music", "1 revision round"] },
+      { id:"growth_reel", name:"Social Pro", price:2500, tag:"Popular", featured:true, summary:"A richer social edit built to hold attention.", includes:["Everything in Clean Edit", "B-roll and visual layers", "Transitions and sound design", "Hook-focused pacing", "2 revision rounds"] },
+      { id:"premium_motion", name:"Motion Plus", price:3500, tag:"Premium", summary:"For branded content that needs custom motion and polish.", includes:["Custom motion graphics", "Animated captions and callouts", "Advanced sound design", "Visual storytelling polish", "3 revision rounds"] },
+      { id:"advanced_reel", name:"Signature Edit", price:5000, tag:"Advanced", summary:"High-concept editing for launches, campaigns and hero content.", includes:["Advanced motion and graphics", "Premium colour and sound finish", "Custom branded visual system", "Priority production handling", "3 revision rounds"] },
+    ],
+    podcast: [
+      { id:"podcast_30", name:"Podcast · 30 min", price:5000, tag:"Starter", summary:"A polished short episode with clean audio and a focused flow.", includes:["Audio cleanup and level balance", "Single or multi-camera cut", "Remove pauses and false starts", "Simple branded intro/outro", "2 revision rounds"] },
+      { id:"podcast_45", name:"Podcast · 45 min", price:7500, tag:"Popular", featured:true, summary:"A complete mid-length episode with stronger structure and finish.", includes:["Everything in 30 min", "Chapter-ready structure", "Multi-camera pacing", "Branded lower thirds", "2 revision rounds"] },
+      { id:"podcast_60", name:"Podcast · 60 min", price:10000, tag:"Full episode", summary:"Full-length podcast production with a premium branded master.", includes:["Full episode edit", "Advanced audio cleanup", "Multi-camera edit", "Chapters and branded graphics", "2 revision rounds"] },
+    ],
+  };
+  const addOns = {
+    video: [
+      { id:"reel_script", name:"Instagram Reel Script", price:500, copy:"Hook, complete short-form script and CTA." },
+      { id:"cover_design", name:"Cover / Thumbnail", price:500, copy:"One scroll-stopping branded cover." },
+      { id:"extra_revision", name:"Extra Revision Round", price:300, copy:"One additional consolidated revision." },
+      { id:"rush_delivery", name:"Priority Delivery", price:1000, copy:"Priority placement in the production queue." },
+    ],
+    podcast: [
+      { id:"podcast_script", name:"Podcast Episode Script", price:1500, copy:"Opening, segment flow, questions and closing CTA." },
+      { id:"podcast_notes", name:"Show Notes & Chapters", price:500, copy:"Episode summary, timestamps and chapter titles." },
+      { id:"podcast_clips", name:"Two Short Social Clips", price:1500, copy:"Two vertical highlights from the episode." },
+      { id:"podcast_cover", name:"Episode Cover", price:500, copy:"One branded episode cover or thumbnail." },
+    ],
+  };
+  const state = { billing:"one_off", service:"video", quantity:1, planId:"growth_reel", selectedAddOns:new Set(), deliveryFormat:"Vertical 9:16" };
+  pricing.dataset.pricingRestored = "unified";
+  pricing.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple, flexible pricing</p><h2>Choose the work. Add only what you <em>need.</em></h2><p>Start with Video or Podcast, select one clear package, then add scripts, covers or extra support before payment.</p></div><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="one_off" class="active">Per project</button><button type="button" data-unified-billing="monthly">Monthly</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Video</button><button type="button" data-unified-service="podcast">Podcast</button></div></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a video package</strong><small>Click “Know more” for the complete scope.</small></div></header><div class="unified-package-grid" data-unified-packages></div></div><div class="unified-step"><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Buy one video or build a larger batch.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>1</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div></div><div class="unified-step"><header><span>03</span><div><strong>Optional add-ons</strong><small>Every selected add-on is shown in your total before payment.</small></div></header><div class="unified-addon-grid" data-unified-addons></div></div></section><aside class="unified-summary"><span data-unified-badge>ONE-TIME PROJECT</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons <b data-unified-addons-total></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">You’ll add the title, description, instructions, reference links and files immediately after payment.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
+    ["Content Strategy & Planning", "Plan", "Content pillars, audience positioning, monthly calendar, campaign concepts, hooks and performance review."],
+    ["Social Media Management", "Manage", "Scheduling, publishing, captions, hashtag research, comment management and monthly reporting."],
+    ["Full Content Team", "Full service", "Strategy, scripts, editing, covers, scheduling and one accountable Content X manager."],
+    ["SaaS Product Animation", "From ₹9,000", "Up to 30 seconds of animated product UI, callouts, transitions and premium sound design."],
+  ].map(([name,label,copy]) => `<article><span>${label}</span><h4>${name}</h4><p>${copy}</p><details><summary>Know more</summary><ul>${copy.split(", ").map(item => `<li>${item}</li>`).join("")}</ul></details><a href="${data.whatsapp}" target="_blank" rel="noreferrer">Request a custom plan →</a></article>`).join("")}</div></section>`;
+
+  const packageContainer = pricing.querySelector("[data-unified-packages]");
+  const addOnContainer = pricing.querySelector("[data-unified-addons]");
+  const formatSelect = pricing.querySelector("[data-unified-format]");
+
+  const selectedPackage = () => packages[state.service].find(item => item.id === state.planId) || packages[state.service][0];
+  const maximumQuantity = () => state.service === "podcast" ? 12 : 30;
+  const minimumQuantity = () => state.billing === "monthly" ? (state.service === "podcast" ? 4 : 10) : 1;
+  const selectedAddOnObjects = () => addOns[state.service].filter(item => state.selectedAddOns.has(item.id));
+
+  function renderPackages() {
+    pricing.querySelector("[data-package-heading]").textContent = `Choose a ${state.service} package`;
+    packageContainer.innerHTML = packages[state.service].map(item => `<label class="unified-package ${item.featured ? "featured" : ""}"><input type="radio" name="unified-package" value="${item.id}" ${item.id === state.planId ? "checked" : ""}><span class="unified-package-card"><i>${item.tag}</i><h3>${item.name}</h3><strong>${money(item.price)}</strong><small>per ${state.service === "podcast" ? "episode" : "video"}</small><p>${item.summary}</p><details><summary>Know more</summary><ul>${item.includes.map(feature => `<li><b>✓</b>${feature}</li>`).join("")}</ul></details></span></label>`).join("");
+    packageContainer.querySelectorAll('input[name="unified-package"]').forEach(input => input.addEventListener("change", () => { state.planId = input.value; updateSummary(); }));
+  }
+
+  function renderAddOns() {
+    addOnContainer.innerHTML = addOns[state.service].map(item => `<label><input type="checkbox" value="${item.id}" ${state.selectedAddOns.has(item.id) ? "checked" : ""}><span><b>${item.name}</b><strong>+${money(item.price)}</strong><small>${item.copy}</small></span></label>`).join("");
+    addOnContainer.querySelectorAll('input[type="checkbox"]').forEach(input => input.addEventListener("change", () => { input.checked ? state.selectedAddOns.add(input.value) : state.selectedAddOns.delete(input.value); updateSummary(); }));
+  }
+
+  function renderFormats() {
+    const formats = state.service === "podcast" ? ["Video podcast", "Audio podcast", "Multi-camera podcast"] : ["Vertical 9:16", "Landscape 16:9", "Square 1:1"];
+    if (!formats.includes(state.deliveryFormat)) state.deliveryFormat = formats[0];
+    formatSelect.innerHTML = formats.map(format => `<option ${format === state.deliveryFormat ? "selected" : ""}>${format}</option>`).join("");
+  }
+
+  function updateSummary() {
+    const plan = selectedPackage();
+    const extras = selectedAddOnObjects();
+    const base = plan.price * state.quantity;
+    const extrasTotal = extras.reduce((total, item) => total + item.price * state.quantity, 0);
+    const total = base + extrasTotal;
+    pricing.querySelector("[data-unified-count]").textContent = state.quantity;
+    pricing.querySelector("[data-unified-badge]").textContent = state.billing === "monthly" ? "MONTHLY PRODUCTION" : "ONE-TIME PROJECT";
+    pricing.querySelector("[data-unified-summary-name]").textContent = plan.name;
+    pricing.querySelector("[data-unified-summary-meta]").textContent = `${state.quantity} ${state.service === "podcast" ? "episode" : "video"}${state.quantity === 1 ? "" : "s"} · ${state.deliveryFormat}`;
+    pricing.querySelector("[data-unified-summary-list]").innerHTML = plan.includes.slice(0, 3).map(item => `<li><span>✓</span>${item}</li>`).join("") + extras.map(item => `<li><span>+</span>${item.name}</li>`).join("");
+    pricing.querySelector("[data-unified-base]").textContent = money(base);
+    pricing.querySelector("[data-unified-addons-total]").textContent = extrasTotal ? money(extrasTotal) : "₹0";
+    pricing.querySelector("[data-unified-total]").textContent = money(total);
+    pricing.querySelector("[data-unified-effective]").textContent = `${money(Math.round(total / state.quantity))} per ${state.service === "podcast" ? "episode" : "video"}`;
+  }
+
+  function switchService(service) {
+    state.service = service;
+    state.planId = service === "podcast" ? "podcast_45" : "growth_reel";
+    state.selectedAddOns.clear();
+    state.quantity = Math.max(minimumQuantity(), state.billing === "monthly" ? minimumQuantity() : 1);
+    pricing.querySelectorAll("[data-unified-service]").forEach(button => button.classList.toggle("active", button.dataset.unifiedService === service));
+    pricing.querySelector("[data-quantity-note]").textContent = state.billing === "monthly" ? `Monthly ${service} production starts at ${minimumQuantity()}.` : `Choose between 1 and ${maximumQuantity()} ${service === "podcast" ? "episodes" : "videos"}.`;
+    renderPackages(); renderAddOns(); renderFormats(); updateSummary();
+  }
+
+  pricing.querySelectorAll("[data-unified-billing]").forEach(button => button.addEventListener("click", () => {
+    state.billing = button.dataset.unifiedBilling;
+    pricing.querySelectorAll("[data-unified-billing]").forEach(item => item.classList.toggle("active", item === button));
+    state.quantity = Math.max(minimumQuantity(), state.quantity);
+    pricing.querySelector("[data-quantity-note]").textContent = state.billing === "monthly" ? `Monthly ${state.service} production starts at ${minimumQuantity()}.` : `Choose between 1 and ${maximumQuantity()} ${state.service === "podcast" ? "episodes" : "videos"}.`;
+    updateSummary();
+  }));
+  pricing.querySelectorAll("[data-unified-service]").forEach(button => button.addEventListener("click", () => switchService(button.dataset.unifiedService)));
+  pricing.querySelectorAll("[data-unified-quantity]").forEach(button => button.addEventListener("click", () => {
+    state.quantity = Math.min(maximumQuantity(), Math.max(minimumQuantity(), state.quantity + (button.dataset.unifiedQuantity === "plus" ? 1 : -1)));
+    updateSummary();
+  }));
+  formatSelect.addEventListener("change", () => { state.deliveryFormat = formatSelect.value; updateSummary(); });
+  pricing.querySelector("[data-unified-checkout]").addEventListener("click", () => {
+    const plan = selectedPackage();
+    const extras = selectedAddOnObjects();
+    const total = (plan.price + extras.reduce((sum, item) => sum + item.price, 0)) * state.quantity;
+    actions.openCheckout({ id:plan.id, name:`${plan.name} · ${state.quantity} ${state.service === "podcast" ? "episode" : "video"}${state.quantity === 1 ? "" : "s"}`, price:total, basePrice:plan.price, quantity:state.quantity, billing:state.billing, contentType:state.service, deliveryFormat:state.deliveryFormat, addOns:extras, unit:state.billing === "monthly" ? "month" : "project", badge:state.billing === "monthly" ? "Monthly production" : "One-time project", features:[...plan.includes, ...extras.map(item => `${item.name} (+${money(item.price)} each)`)] });
+  });
+  renderPackages(); renderAddOns(); renderFormats(); updateSummary();
+}
+
 function openWorkMenu() {
   const modal = document.createElement("div"); modal.className = "modal-layer"; modal.innerHTML = `<div class="work-menu"><button class="modal-close">×</button><p class="eyebrow"><span></span>Work with Content X</p><h2>Choose one path.</h2><p>We keep applications simple so the right opportunities reach the right people.</p><div><button data-path="idea"><span>✦</span><strong>Submit a video idea</strong><small>Pitch an original hook, format or content concept.</small></button><button data-path="network"><span>●</span><strong>Join the creative network</strong><small>One application covers creator, writing, editing, design and social roles.</small></button></div></div>`; document.body.append(modal); const close = () => modal.remove(); modal.querySelector(".modal-close").addEventListener("click", close); modal.addEventListener("click", e => { if(e.target === modal) close(); }); modal.querySelector('[data-path="idea"]').addEventListener("click", () => { close(); openApplication("Pitch a video idea"); }); modal.querySelector('[data-path="network"]').addEventListener("click", () => { close(); openApplication("Join creative network"); });
 }
@@ -273,6 +387,13 @@ export function renderCheckout(root, actions) {
       : { back: "Back to pricing", eyebrow: "Activate your workspace", secure: "Payment-gated access", note: "Your client workspace opens only after a successful payment record is created.", success: "Your Content X workspace is active." };
   root.className = "checkout-app";
   root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span>Secure test checkout</span><button class="theme-toggle" data-theme-toggle>${document.documentElement.dataset.theme === "dark" ? "☀" : "☾"}</button></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="test-banner"><strong>TEST MODE</strong><span>No real payment will be charged. Completing this form unlocks the dashboard on this device.</span></div><form><h3>Contact information</h3><div class="field-pair"><label>Full name<input name="name" required value="Meera Kapoor"></label><label>WhatsApp<input name="phone" required value="+91 98765 43210"></label></div><label>Email<input name="email" type="email" required value="demo@apexfitness.in"></label><h3>Payment method</h3><div class="payment-tabs"><label><input type="radio" name="method" value="UPI" checked><span>UPI</span></label><label><input type="radio" name="method" value="Card"><span>Card</span></label><label><input type="radio" name="method" value="Bank transfer"><span>Bank transfer</span></label></div><div class="payment-fields"><label>UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123"></label></div><label class="terms"><input type="checkbox" required><span>I agree to the scope, two included revisions per video, and ₹300 for each additional revision round.</span></label><button class="pill pill-hot pay-button" type="submit">Complete test payment · ${money(plan.price)}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge)}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-total"><span>Package total<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><strong>${money(plan.price)}</strong></div><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">Enter workspace →</button></div></div>`;
+  root.querySelector('input[name="name"]').value = "";
+  root.querySelector('input[name="phone"]').value = "";
+  root.querySelector('input[name="email"]').value = "";
+  root.querySelector('input[name="name"]').setAttribute("autocomplete", "name");
+  root.querySelector('input[name="phone"]').setAttribute("autocomplete", "tel");
+  root.querySelector('input[name="email"]').setAttribute("autocomplete", "email");
+  root.querySelector(".terms span").textContent = "I agree to the selected package scope, add-ons and revision allowance shown in this order.";
   root.querySelector(".brand").addEventListener("click", e => { e.preventDefault(); actions.openMarketing(); }); root.querySelector(".back-link").addEventListener("click", plan.marketplace ? actions.openTalentProfile : plan.managedReview ? actions.openReview : actions.openMarketing); root.querySelector("[data-theme-toggle]").addEventListener("click", toggleTheme);
   root.querySelectorAll('.payment-tabs input').forEach(input => input.addEventListener("change", () => { const field = root.querySelector('.payment-fields label'); field.innerHTML = input.value === "Card" ? 'Test card number<input name="paymentRef" required value="4242 4242 4242 4242">' : input.value === "UPI" ? 'UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123">' : 'Bank reference<input name="paymentRef" required placeholder="TEST-TRANSFER">'; }));
   root.querySelector("form").addEventListener("submit", e => {
@@ -299,7 +420,8 @@ export function renderCheckout(root, actions) {
     root.querySelector(".access-code").textContent = `Access code: ${code}`;
     root.querySelector(".payment-success").classList.add("show");
   });
-  root.querySelector(".payment-success .pill").addEventListener("click", () => actions.openDashboard(true));
+  root.querySelector(".payment-success .pill").textContent = "Add project brief →";
+  root.querySelector(".payment-success .pill").addEventListener("click", event => actions.openBrief(event.currentTarget.dataset.orderId || ""));
 
   root.querySelector(".checkout-head>span").textContent = "Secure Razorpay checkout";
   const testBanner = root.querySelector(".test-banner");
@@ -311,6 +433,11 @@ export function renderCheckout(root, actions) {
   paymentForm.querySelector(".payment-fields").remove();
   const payButton = paymentForm.querySelector(".pay-button");
   payButton.textContent = `Pay securely with Razorpay · ${money(plan.price)}`;
+  fetch("/api/auth", { cache:"no-store", credentials:"same-origin" }).then(response => response.json()).then(({ user }) => {
+    if (!user) return;
+    paymentForm.elements.name.value = user.name || "";
+    paymentForm.elements.email.value = user.email || "";
+  }).catch(() => undefined);
   paymentForm.addEventListener("submit", async event => {
     event.preventDefault();
     const contact = Object.fromEntries(new FormData(paymentForm));
@@ -323,7 +450,7 @@ export function renderCheckout(root, actions) {
         fetch("/api/payments/razorpay/order", {
           method:"POST",
           headers:{ "Content-Type":"application/json" },
-          body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.unit === "month" ? "monthly" : "one_off", name:contact.name, email:contact.email, phone:contact.phone })
+          body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.billing || (plan.unit === "month" ? "monthly" : "one_off"), addOns:(plan.addOns || []).map(item => item.id), contentType:plan.contentType || "video", deliveryFormat:plan.deliveryFormat || "", name:contact.name, email:contact.email, phone:contact.phone })
         })
       ]);
       const config = await configResponse.json(), order = await orderResponse.json();
@@ -348,7 +475,8 @@ export function renderCheckout(root, actions) {
             const payment = { id:verification.paymentId, name:contact.name, phone:contact.phone, email:contact.email, code, plan:plan.name, amount:plan.price, status:"Verified", type:"Razorpay", created:new Date().toLocaleString() };
             store.set("cx_payments", [payment, ...store.get("cx_payments", [])]);
             store.set("cx_access", { email:contact.email, plan:plan.name, paid:true, code, clientId:plan.clientId || "apex" });
-            root.querySelector(".access-code").textContent = `Access code: ${code}`;
+            root.querySelector(".access-code").textContent = "Payment verified · Next, add the project brief and files.";
+            root.querySelector(".payment-success .pill").dataset.orderId = verification.orderId;
             root.querySelector(".payment-success").classList.add("show");
           } catch (error) {
             restore();

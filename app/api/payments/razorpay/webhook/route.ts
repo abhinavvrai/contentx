@@ -1,4 +1,4 @@
-import { getRazorpayConfig, json, signHmacSha256, timingSafeEqual } from "../../../../../lib/razorpay";
+import { ensurePaymentSchema, getRazorpayConfig, json, signHmacSha256, timingSafeEqual } from "../../../../../lib/razorpay";
 import { getDb } from "../../../../../db";
 import { paymentOrders } from "../../../../../db/schema";
 import { eq } from "drizzle-orm";
@@ -16,6 +16,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    await ensurePaymentSchema();
     getRazorpayConfig();
     const event = JSON.parse(rawBody) as { event?: string; payload?: { payment?: { entity?: { id?: string; order_id?: string } } } };
     const payment = event.payload?.payment?.entity;

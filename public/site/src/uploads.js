@@ -21,7 +21,7 @@ async function apiRequest(url, options = {}) {
 }
 
 function clientHeaders(token, json = true) {
-  return { Authorization:`Bearer ${token}`, ...(json ? { "Content-Type":"application/json" } : {}) };
+  return { ...(token ? { Authorization:`Bearer ${token}` } : {}), ...(json ? { "Content-Type":"application/json" } : {}) };
 }
 
 function ownerHeaders(json = true) {
@@ -35,7 +35,7 @@ export async function renderClientUpload(root, actions, route) {
   const projectId = params.get("project") || "";
   const token = params.get("token") || "";
   root.innerHTML = uploadShell(`<section class="upload-loading"><span></span><h1>Opening your upload space…</h1><p>Checking this private project link.</p></section>`, actions);
-  if (!projectId || !token) return renderUploadError(root, actions, "This upload link is incomplete. Ask Content X for a new project link.");
+  if (!projectId) return renderUploadError(root, actions, "This upload link is incomplete. Ask Content X for a new project link.");
   try {
     const data = await apiRequest(`${API_PATH}?action=project&projectId=${encodeURIComponent(projectId)}`, { headers:clientHeaders(token, false) });
     renderUploadWorkspace(root, actions, data.project, data.files, projectId, token);

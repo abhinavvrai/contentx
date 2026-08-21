@@ -33,3 +33,9 @@ Before the first file-storage deployment:
 4. Deploy the Worker, open Owner workspace → Project files, and enter the owner token.
 
 Client upload links contain a high-entropy project token. Creating a new link invalidates the previous link. Never put the owner token inside a link or frontend source.
+
+## Client accounts
+
+Client accounts, sessions, paid-order links, and project briefs use the same D1 database. Apply the latest checked-in migration whenever these tables change. Runtime initialization is also idempotent so a fresh deployment can safely create missing tables.
+
+Passwords are never encrypted and stored for later recovery. They are salted and irreversibly hashed with PBKDF2-SHA-256 at 310,000 iterations. Session cookies are HTTP-only, secure on HTTPS, and mapped to token hashes stored in D1.
