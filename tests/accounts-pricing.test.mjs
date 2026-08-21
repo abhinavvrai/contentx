@@ -12,8 +12,13 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   for (const plan of ["Basic", "Standard", "Premium"]) assert.match(features, new RegExp(`name:"${plan}"`));
   assert.match(features, /1 video up to 60 seconds/);
   assert.match(features, /Up to 5 relevant B-roll inserts/);
-  assert.match(features, /Up to 10 B-roll inserts/);
-  assert.match(features, /B-roll \+ Sound Effects", price:500/);
+  assert.match(features, /Up to 10 relevant B-roll inserts/);
+  assert.match(features, /state\.billing === "monthly" \? Math\.max\(minimumQuantity\(\), state\.quantity\) : 1/);
+  assert.match(features, /B-roll \+ Sound Design", price:500/);
+  assert.match(features, /Motion Graphics", price:1000/);
+  assert.match(features, /Advanced Motion Graphics", price:2500/);
+  assert.match(features, /data-plan-tab/);
+  assert.match(features, />Per video</);
   assert.match(features, /data-unified-service="video"/);
   assert.match(features, /data-unified-service="podcast"/);
   assert.match(features, /Instagram Reel Script/);
@@ -25,7 +30,9 @@ test("keeps payment totals server-calculated with allowlisted add-ons", async ()
   const razorpay = await load("lib/razorpay.ts");
   const orderRoute = await load("app/api/payments/razorpay/order/route.ts");
   assert.match(razorpay, /reel_script: \{ name: "Instagram Reel Script", amount: 500/);
-  assert.match(razorpay, /broll_sfx: \{ name: "B-roll \+ Sound Effects", amount: 500/);
+  assert.match(razorpay, /broll_sfx: \{ name: "B-roll \+ Sound Design", amount: 500/);
+  assert.match(razorpay, /motion_graphics: \{ name: "Motion Graphics", amount: 1000/);
+  assert.match(razorpay, /advanced_motion_graphics: \{ name: "Advanced Motion Graphics", amount: 2500/);
   assert.match(razorpay, /podcast_script: \{ name: "Podcast Episode Script", amount: 1500/);
   assert.match(razorpay, /const totalAmount = baseAmount \+ addOnAmount/);
   assert.match(orderRoute, /requireSessionUser/);

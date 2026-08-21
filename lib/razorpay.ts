@@ -25,7 +25,9 @@ const reelPlanIds = new Set<PlanId>(["basic_reel", "better_edit", "growth_reel",
 const podcastPlanIds = new Set<PlanId>(["podcast_30", "podcast_45", "podcast_60"]);
 
 export const serviceAddOns = {
-  broll_sfx: { name: "B-roll + Sound Effects", amount: 500, service: "video" },
+  broll_sfx: { name: "B-roll + Sound Design", amount: 500, service: "video" },
+  motion_graphics: { name: "Motion Graphics", amount: 1000, service: "video" },
+  advanced_motion_graphics: { name: "Advanced Motion Graphics", amount: 2500, service: "video" },
   reel_script: { name: "Instagram Reel Script", amount: 500, service: "video" },
   cover_design: { name: "Cover / Thumbnail", amount: 500, service: "video" },
   extra_revision: { name: "Extra Revision Round", amount: 300, service: "video" },
