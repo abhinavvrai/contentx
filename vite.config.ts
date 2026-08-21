@@ -25,7 +25,7 @@ const localBindingConfig = {
         },
       ]
     : [],
-  r2_buckets: r2
+  r2_buckets: r2 && !hasIndependentWranglerConfig
     ? [
         {
           binding: r2,

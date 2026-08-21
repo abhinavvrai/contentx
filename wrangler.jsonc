@@ -30,7 +30,7 @@
   "r2_buckets": [
     {
       "binding": "UPLOADS",
-      "bucket_name": "contentx-uploads"
+      "bucket_name": "contentx"
     }
   ]
 }

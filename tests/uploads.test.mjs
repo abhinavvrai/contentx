@@ -27,7 +27,7 @@ test("ships durable, private project uploads instead of browser-only metadata", 
   assert.match(uploads, /Promise\.all/);
   assert.equal(JSON.parse(hosting).r2, "UPLOADS");
   assert.match(wrangler, /"binding": "UPLOADS"/);
-  assert.match(wrangler, /"bucket_name": "contentx-uploads"/);
+  assert.match(wrangler, /"bucket_name": "contentx"/);
 });
 
 test("keeps owner downloads streamed behind short-lived signatures", async () => {

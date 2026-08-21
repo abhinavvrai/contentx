@@ -27,7 +27,7 @@ The project upload service uses the private R2 bucket bound as `UPLOADS` and D1 
 
 Before the first file-storage deployment:
 
-1. Create the Cloudflare R2 bucket named `contentx-uploads` if it does not already exist.
+1. Confirm the private Cloudflare R2 bucket named `contentx` exists.
 2. Add a long, random Worker secret named `CONTENTX_OWNER_TOKEN`.
 3. Apply the latest D1 migrations to `contentx-payments`.
 4. Deploy the Worker, open Owner workspace → Project files, and enter the owner token.
