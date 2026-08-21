@@ -84,6 +84,7 @@ function formatMoney(value) { return `₹${new Intl.NumberFormat("en-IN").format
 
 function upgradePricing(root) {
   const pricing = root.querySelector("#pricing"); if (!pricing || pricing.dataset.creatorPricing) return;
+  if (!pricing.querySelector(".pricing-calculator")) return;
   pricing.dataset.creatorPricing = "true";
   const heading = pricing.querySelector(".section-heading p:last-child");
   if (heading) heading.textContent = "Monthly production starts at 10 videos and is 20% below the base rate. One-off work is 20% higher per video.";
@@ -112,13 +113,17 @@ function upgradePricing(root) {
   };
   pricing.querySelectorAll("[data-billing]").forEach(button => button.addEventListener("click", () => setTimeout(updater, 0)));
   qualityInputs.forEach(input => input.addEventListener("change", updater)); slider?.addEventListener("input", updater); pricing.querySelectorAll("[data-volume]").forEach(button => button.addEventListener("click", () => setTimeout(updater, 0)));
-  const oldCheckout = pricing.querySelector("[data-calculator-checkout]"); const checkout = oldCheckout.cloneNode(true); oldCheckout.replaceWith(checkout);
-  checkout.addEventListener("click", () => { const billing = pricing.querySelector("[data-billing].active")?.dataset.billing || "monthly", quality = pricing.querySelector('input[name="quality"]:checked')?.value || "Enhanced", bases = { Basic: 1500, Enhanced: 2500, "Premium Motion": 3500 }, count = Number(slider.value), total = Math.round(bases[quality] * (billing === "monthly" ? .8 : 1.2) * count), format = pricing.querySelector('input[name="deliveryFormat"]:checked')?.value || "Vertical 9:16"; localStorage.setItem("cx_checkout", JSON.stringify({ id: `${billing}-${quality}-${count}`, name: `${quality} · ${count} videos`, price: total, unit: billing === "monthly" ? "month" : "project", badge: billing === "monthly" ? "20% monthly saving" : "20% one-off premium", features: [`${count} ${quality} videos`, `${format} delivery`, `${formatMoney(Math.round(total / count))} effective per video`, "2 revision rounds per video"] })); location.hash = "checkout"; });
+  const oldCheckout = pricing.querySelector("[data-calculator-checkout]");
+  if (oldCheckout) {
+    const checkout = oldCheckout.cloneNode(true); oldCheckout.replaceWith(checkout);
+    checkout.addEventListener("click", () => { const billing = pricing.querySelector("[data-billing].active")?.dataset.billing || "monthly", quality = pricing.querySelector('input[name="quality"]:checked')?.value || "Enhanced", bases = { Basic: 1500, Enhanced: 2500, "Premium Motion": 3500 }, count = Number(slider.value), total = Math.round(bases[quality] * (billing === "monthly" ? .8 : 1.2) * count), format = pricing.querySelector('input[name="deliveryFormat"]:checked')?.value || "Vertical 9:16"; localStorage.setItem("cx_checkout", JSON.stringify({ id: `${billing}-${quality}-${count}`, name: `${quality} · ${count} videos`, price: total, unit: billing === "monthly" ? "month" : "project", badge: billing === "monthly" ? "20% monthly saving" : "20% one-off premium", features: [`${count} ${quality} videos`, `${format} delivery`, `${formatMoney(Math.round(total / count))} effective per video`, "2 revision rounds per video"] })); location.hash = "checkout"; });
+  }
   pricing.querySelector('input[name="quality"]:checked')?.dispatchEvent(new Event("change", { bubbles: true })); updater();
 }
 
 function simplifyShortFormPricing(root) {
   const pricing = root.querySelector("#pricing"); if (!pricing || pricing.dataset.shortFormPricing) return;
+  if (!pricing.querySelector(".pricing-calculator")) return;
   pricing.dataset.shortFormPricing = "true";
   pricing.querySelector(".delivery-format-step")?.remove();
   pricing.querySelector(".pricing-service-tiles")?.remove();
@@ -147,8 +152,11 @@ function simplifyShortFormPricing(root) {
   pricing.querySelectorAll("[data-billing]").forEach(control => control.addEventListener("click", () => setTimeout(resetBillingQuantity, 0)));
   pricing.querySelectorAll('input[name="quality"],[data-volume]').forEach(control => control.addEventListener("click", () => setTimeout(() => { finalUpdate(); renderBillingPresets(); }, 0)));
   slider.addEventListener("input", () => { finalUpdate(); renderBillingPresets(); });
-  const oldCheckout = pricing.querySelector("[data-calculator-checkout]"), checkout = oldCheckout.cloneNode(true); oldCheckout.replaceWith(checkout);
-  checkout.addEventListener("click", () => { const billing = pricing.querySelector("[data-billing].active")?.dataset.billing || "monthly", quality = pricing.querySelector('input[name="quality"]:checked')?.value || "Better Edit", count = Math.max(billing === "monthly" ? 10 : 1, Number(slider.value) || 1), total = Math.round(bases[quality] * (billing === "monthly" ? 1 : 1.2) * count), captionPass = quality === "Basic" ? "Clean captions included" : "1 Roman Hinglish caption pass per reel"; localStorage.setItem("cx_checkout", JSON.stringify({ id:`${billing}-${quality.toLowerCase().replaceAll(" ", "-")}-${count}`, name:`${quality} · ${count} reel${count === 1 ? "" : "s"}`, price:total, unit:billing === "monthly" ? "month" : "project", badge:billing === "monthly" ? "Standard monthly pricing" : "20% one-off premium", features:[`${count} ${quality} reel${count === 1 ? "" : "s"}`, "Vertical 9:16 delivery", `${formatMoney(Math.round(total / count))} effective per reel`, captionPass, "2 revision rounds per reel"] })); location.hash = "checkout"; });
+  const oldCheckout = pricing.querySelector("[data-calculator-checkout]");
+  if (oldCheckout) {
+    const checkout = oldCheckout.cloneNode(true); oldCheckout.replaceWith(checkout);
+    checkout.addEventListener("click", () => { const billing = pricing.querySelector("[data-billing].active")?.dataset.billing || "monthly", quality = pricing.querySelector('input[name="quality"]:checked')?.value || "Better Edit", count = Math.max(billing === "monthly" ? 10 : 1, Number(slider.value) || 1), total = Math.round(bases[quality] * (billing === "monthly" ? 1 : 1.2) * count), captionPass = quality === "Basic" ? "Clean captions included" : "1 Roman Hinglish caption pass per reel"; localStorage.setItem("cx_checkout", JSON.stringify({ id:`${billing}-${quality.toLowerCase().replaceAll(" ", "-")}-${count}`, name:`${quality} · ${count} reel${count === 1 ? "" : "s"}`, price:total, unit:billing === "monthly" ? "month" : "project", badge:billing === "monthly" ? "Standard monthly pricing" : "20% one-off premium", features:[`${count} ${quality} reel${count === 1 ? "" : "s"}`, "Vertical 9:16 delivery", `${formatMoney(Math.round(total / count))} effective per reel`, captionPass, "2 revision rounds per reel"] })); location.hash = "checkout"; });
+  }
   resetBillingQuantity(); pricing.querySelector('input[name="quality"]:checked')?.dispatchEvent(new Event("change", { bubbles:true })); finalUpdate();
 }
 
