@@ -5,6 +5,7 @@ import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplac
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js";
 import { initProductPolish, polishRoute } from "./polish.js?v=core-features-2";
 import { enhanceCreatorTools } from "./creator-tools.js?v=restored-features-1";
+import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=project-storage-1";
 
 const root = document.getElementById("app");
 const loader = document.querySelector("[data-loader]");
@@ -36,7 +37,8 @@ function renderRoute() {
     canvas.hidden = true;
     overlay.hidden = true;
     progress.hidden = route !== "home";
-    if (route === "workspace") { if (!canAccessWorkspace()) renderAccess(root, actions); else { renderDashboard(root, actions); enhanceDashboard(root, actions); enhanceMarketplaceDashboard(root, actions); enhanceDashboardSuite(root, actions); } }
+    if (route.startsWith("upload?")) renderClientUpload(root, actions, route);
+    else if (route === "workspace") { if (!canAccessWorkspace()) renderAccess(root, actions); else { renderDashboard(root, actions); enhanceDashboard(root, actions); enhanceMarketplaceDashboard(root, actions); enhanceDashboardSuite(root, actions); } }
     else if (route === "project") { if (!canAccessWorkspace()) renderAccess(root, actions); else { renderProject(root, actions); enhanceProject(root, actions); enhanceProjectSuite(root, actions); } }
     else if (route === "review") { if (!canAccessWorkspace()) renderAccess(root, actions); else { renderReview(root, actions); enhanceReview(root, actions); enhanceReviewSuite(root, actions); } }
     else if (route === "access") renderAccess(root, actions);
@@ -45,7 +47,7 @@ function renderRoute() {
     else if (route === "talent") renderTalentProfile(root, actions);
     else if (route === "offer-services") renderProviderOnboarding(root, actions);
     else if (route === "provider-workspace") renderProviderWorkspace(root, actions);
-    else if (route === "owner") { renderAdmin(root, actions); enhanceMarketplaceAdmin(root); enhanceAdminSuite(root, actions); }
+    else if (route === "owner") { renderAdmin(root, actions); enhanceMarketplaceAdmin(root); enhanceAdminSuite(root, actions); enhanceUploadAdmin(root); }
     else { renderMarketing(root, studio, actions); enhanceMarketing(root, actions); enhanceMarketplaceMarketing(root, actions); }
     polishRoute(root, route);
     enhanceCreatorTools(root, route);

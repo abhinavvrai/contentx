@@ -20,3 +20,16 @@ If an automatic build is delayed:
 3. Run `npm run deploy:cloudflare` from this folder.
 
 Secrets stay in `.env.local` and Cloudflare Worker Secrets. They are excluded from GitHub and must never be pasted into source files or commits.
+
+## File-storage setup
+
+The project upload service uses the private R2 bucket bound as `UPLOADS` and D1 metadata tables created by the checked-in migration.
+
+Before the first file-storage deployment:
+
+1. Create the Cloudflare R2 bucket named `contentx-uploads` if it does not already exist.
+2. Add a long, random Worker secret named `CONTENTX_OWNER_TOKEN`.
+3. Apply the latest D1 migrations to `contentx-payments`.
+4. Deploy the Worker, open Owner workspace → Project files, and enter the owner token.
+
+Client upload links contain a high-entropy project token. Creating a new link invalidates the previous link. Never put the owner token inside a link or frontend source.

@@ -19,6 +19,7 @@ The public website includes:
 - A managed-services marketplace and private provider onboarding experience.
 - Client workspace, project, review, version, feedback, and owner-dashboard demos.
 - Razorpay checkout backed by Cloudflare APIs and a D1 payment database.
+- Durable project upload spaces backed by R2, with D1 file metadata and private client links.
 
 ## 2. Production Architecture
 
@@ -29,7 +30,7 @@ The project has two connected application layers.
 - `app/page.tsx` renders the full website inside an iframe at `/site/index.html`.
 - `app/api/` contains server-side caption and Razorpay endpoints.
 - `worker/index.ts` is the Cloudflare Worker entry point and redirects `www.contentx.co.in` to `contentx.co.in`.
-- `wrangler.jsonc` defines the Worker routes, static assets, and D1 binding.
+- `wrangler.jsonc` defines the Worker routes, static assets, D1, and private R2 upload binding.
 
 ### Full website experience
 
@@ -43,7 +44,8 @@ The canonical website source is `public/site/`.
 - `public/site/src/marketplace.js` contains managed-service and provider flows.
 - `public/site/src/advanced.js` contains advanced project and review interactions.
 - `public/site/src/polish.js` contains UI polish and accessibility behavior.
-- CSS is split across `styles.css`, `advanced.css`, `creator-tools.css`, `polish.css`, and `services.css`.
+- `public/site/src/uploads.js` contains client project uploads and owner file management.
+- CSS is split across `styles.css`, `advanced.css`, `creator-tools.css`, `polish.css`, `services.css`, and `uploads.css`.
 
 Do not treat the root-level `index.html`, `src/`, `videos/`, `vendor/`, or temporary folders as the live website unless the architecture is intentionally changed. The production website currently comes from `public/site/`.
 
@@ -88,6 +90,7 @@ Required variable names are documented in `.env.example`:
 - `RAZORPAY_KEY_SECRET`
 - `RAZORPAY_WEBHOOK_SECRET`
 - `OPENAI_API_KEY`
+- `CONTENTX_OWNER_TOKEN`
 
 Rules:
 
@@ -163,10 +166,11 @@ These areas look functional in the interface but are not yet complete production
 
 ### File storage
 
-- The R2 bucket is not currently used by the website.
-- Workspace, provider, and marketplace upload controls store file metadata in browser `localStorage`.
-- Selected files are not uploaded to durable cloud storage.
-- Real uploads require signed server-side R2 upload endpoints, authorization, object metadata, download controls, and cleanup rules.
+- The dedicated project-upload portal stores file bytes in the private `UPLOADS` R2 bucket and searchable metadata in D1.
+- Owner-created client links support chunked uploads up to 50 GB per file and 250 GB per project, project file listings, protected downloads, link rotation, upload pausing, and permanent removal.
+- The owner file area requires the server-side `CONTENTX_OWNER_TOKEN`; client links use separate high-entropy project tokens stored only as hashes.
+- Legacy workspace attachments, review-comment attachments, provider portfolios, and marketplace upload controls still store only file metadata in browser `localStorage` and are not yet connected to R2.
+- Production still needs user accounts and role-based authorization before the wider workspace can be described as a fully secure multi-user collaboration system.
 
 ### Authentication and permissions
 
@@ -257,4 +261,3 @@ Update this guide whenever any of these change:
 - Authentication model.
 - A listed limitation becomes fully implemented.
 - A major feature is added, removed, or renamed.
-

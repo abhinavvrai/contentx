@@ -1,0 +1,2 @@
+CREATE INDEX `idx_upload_files_project_status` ON `upload_files` (`project_id`,`status`);--> statement-breakpoint
+CREATE INDEX `idx_upload_projects_status_updated` ON `upload_projects` (`status`,`updated_at`);
