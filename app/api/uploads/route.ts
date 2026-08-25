@@ -26,6 +26,8 @@ import {
 import { AccountError, getSessionUser, requireSameOrigin } from "../../../lib/auth";
 
 type JsonInput = Record<string, unknown>;
+const RECYCLE_BIN_DAYS = 30;
+const RECYCLE_BIN_MS = RECYCLE_BIN_DAYS * 24 * 60 * 60 * 1000;
 
 export async function GET(request: Request) {
   return handle(async () => {
@@ -34,7 +36,7 @@ export async function GET(request: Request) {
     const action = url.searchParams.get("action") || "project";
     if (action === "project") return getClientProject(request, url.searchParams.get("projectId") || "");
     if (action === "admin-projects") return getAdminProjects(request);
-    if (action === "admin-files") return getAdminFiles(request, url.searchParams.get("projectId") || "");
+    if (action === "admin-files") return getAdminFiles(request, url.searchParams);
     if (action === "versions") return getAssetVersions(request, url.searchParams);
     if (action === "shares") return getProjectShares(request, url.searchParams.get("projectId") || "");
     if (action === "download") return downloadAdminFile(request, url.searchParams);
@@ -74,6 +76,7 @@ export async function PATCH(request: Request) {
     const input = await readJson<JsonInput>(request);
     const action = cleanText(input.action, 40);
     if (action === "share-link") return updateProjectShareLink(request, input);
+    if (action === "admin-file-restore") return restoreAdminFile(request, input);
     if (action !== "admin-project-status") throw new ClientError("Unknown file action.", 404);
     await requireOwner(request);
     const projectId = cleanText(input.projectId, 80);
@@ -92,19 +95,29 @@ export async function DELETE(request: Request) {
     await ensureUploadSchema();
     await requireOwner(request);
     const url = new URL(request.url);
-    if (url.searchParams.get("action") !== "admin-file") throw new ClientError("Unknown file action.", 404);
+    const action = url.searchParams.get("action");
+    if (action !== "admin-file" && action !== "admin-file-purge") throw new ClientError("Unknown file action.", 404);
     const fileId = url.searchParams.get("fileId") || "";
     const { db, bucket } = getUploadBindings();
-    const file = await db.prepare("SELECT * FROM upload_files WHERE id = ? AND status != 'deleted' LIMIT 1")
+    const file = await db.prepare("SELECT * FROM upload_files WHERE id = ? LIMIT 1")
       .bind(fileId).first<UploadFile>();
     if (!file) throw new ClientError("File not found.", 404);
+    if (action === "admin-file") {
+      if (file.status === "deleted") return json({ ok: true, recycleBinDays: RECYCLE_BIN_DAYS });
+      if (file.status === "uploading" && file.multipart_upload_id) {
+        await bucket.resumeMultipartUpload(file.object_key, file.multipart_upload_id).abort().catch(() => undefined);
+      }
+      await db.prepare("UPDATE upload_files SET status = 'deleted', deleted_at = ? WHERE id = ?")
+        .bind(Date.now(), file.id).run();
+      return json({ ok: true, recycleBinDays: RECYCLE_BIN_DAYS });
+    }
+    if (file.status !== "deleted") throw new ClientError("Move this file to the recycle bin before permanent removal.");
     if (file.status === "uploading" && file.multipart_upload_id) {
       await bucket.resumeMultipartUpload(file.object_key, file.multipart_upload_id).abort().catch(() => undefined);
     } else {
       await bucket.delete(file.object_key);
     }
-    await db.prepare("UPDATE upload_files SET status = 'deleted', deleted_at = ? WHERE id = ?")
-      .bind(Date.now(), file.id).run();
+    await db.prepare("DELETE FROM upload_files WHERE id = ?").bind(file.id).run();
     return json({ ok: true });
   });
 }
@@ -144,8 +157,10 @@ async function getAdminProjects(request: Request): Promise<Response> {
   return json({ projects: projects.results });
 }
 
-async function getAdminFiles(request: Request, projectId: string): Promise<Response> {
+async function getAdminFiles(request: Request, params: URLSearchParams): Promise<Response> {
   await requireOwner(request);
+  const projectId = params.get("projectId") || "";
+  const includeDeleted = params.get("deleted") === "1";
   const { db } = getUploadBindings();
   const project = await db.prepare(
     "SELECT id, name, client_name, client_email, status, max_file_size, created_at, updated_at FROM upload_projects WHERE id = ? LIMIT 1"
@@ -153,10 +168,35 @@ async function getAdminFiles(request: Request, projectId: string): Promise<Respo
   if (!project) throw new ClientError("Project not found.", 404);
   const files = await db.prepare(
     `SELECT id, project_id, original_name, content_type, size_bytes, status, uploader_name, uploader_email,
-      created_at, completed_at, COALESCE(asset_id, id) AS asset_id, COALESCE(version_number, 1) AS version_number
-     FROM upload_files WHERE project_id = ? AND status != 'deleted' ORDER BY created_at DESC LIMIT 500`
+      created_at, completed_at, deleted_at, COALESCE(asset_id, id) AS asset_id, COALESCE(version_number, 1) AS version_number
+     FROM upload_files WHERE project_id = ? AND ${includeDeleted ? "status = 'deleted'" : "status != 'deleted'"} ORDER BY ${includeDeleted ? "deleted_at" : "created_at"} DESC LIMIT 500`
   ).bind(projectId).all();
-  return json({ project: publicProject(project), files: files.results });
+  await purgeExpiredDeletedFiles(db, null);
+  return json({ project: publicProject(project), files: files.results, recycleBinDays: RECYCLE_BIN_DAYS, deleted: includeDeleted });
+}
+
+async function restoreAdminFile(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  await requireOwner(request);
+  const fileId = cleanText(input.fileId, 80);
+  const { db } = getUploadBindings();
+  const file = await db.prepare("SELECT id FROM upload_files WHERE id = ? AND status = 'deleted' LIMIT 1")
+    .bind(fileId).first<{ id: string }>();
+  if (!file) throw new ClientError("Deleted file not found.", 404);
+  await db.prepare("UPDATE upload_files SET status = 'ready', deleted_at = NULL WHERE id = ?").bind(file.id).run();
+  return json({ ok: true });
+}
+
+async function purgeExpiredDeletedFiles(db: D1Database, bucketOverride: R2Bucket | null): Promise<void> {
+  const cutoff = Date.now() - RECYCLE_BIN_MS;
+  const expired = await db.prepare("SELECT * FROM upload_files WHERE status = 'deleted' AND deleted_at IS NOT NULL AND deleted_at < ? LIMIT 25")
+    .bind(cutoff).all<UploadFile>();
+  if (!expired.results.length) return;
+  const { bucket } = bucketOverride ? { bucket: bucketOverride } : getUploadBindings();
+  for (const file of expired.results) {
+    await bucket.delete(file.object_key).catch(() => undefined);
+    await db.prepare("DELETE FROM upload_files WHERE id = ?").bind(file.id).run();
+  }
 }
 
 async function getAssetVersions(request: Request, params: URLSearchParams): Promise<Response> {

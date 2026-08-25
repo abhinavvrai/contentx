@@ -41,14 +41,14 @@ export const studio = {
       note: "per short-form video",
       description: "For videos that need more visual energy.",
       featured: true,
-      features: ["Everything in Basic", "Advanced captions", "Stock footage & visual layers", "Sound design", "2 revision rounds"]
+      features: ["Better edit & sharper pacing", "B-roll direction", "Sound design", "Optional motion graphics +₹500", "2 revision rounds"]
     },
     {
       title: "Premium",
-      price: "₹3,500",
+      price: "₹3,500–₹5,000",
       note: "per short-form video",
       description: "For high-retention, flagship content.",
-      features: ["Strategy-led hook", "Premium motion graphics", "Advanced sound & colour", "Priority delivery", "2 revision rounds"]
+      features: ["Strategy-led structure", "Premium sound & colour", "Motion titles", "Optional advanced motion +₹1,500", "3 revision rounds"]
     },
     {
       title: "Custom / Monthly",
