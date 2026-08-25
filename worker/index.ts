@@ -60,7 +60,11 @@ function withSecurityHeaders(request: Request, response: Response): Response {
   const url = new URL(request.url);
   const headers = new Headers(response.headers);
   const contentType = headers.get("content-type") || "";
-  const isSiteFile = url.pathname === "/" || url.pathname === "/site/index.html" || url.pathname.startsWith("/site/src/");
+  const isSiteFile = url.pathname === "/" ||
+    url.pathname === "/site/index.html" ||
+    url.pathname === "/site-v2/index.html" ||
+    url.pathname.startsWith("/site/src/") ||
+    url.pathname.startsWith("/site-v2/src/");
   if (isSiteFile || contentType.includes("text/html")) {
     headers.set("Cache-Control", "no-store, must-revalidate");
   }

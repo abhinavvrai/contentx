@@ -1,13 +1,13 @@
 import { studio } from "./data.js";
 import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js";
-import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=pricing-tabs-3";
+import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=pricing-recycle-2";
 import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=restored-features-1";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js";
 import { initProductPolish, polishRoute } from "./polish.js?v=core-features-2";
 import { enhanceCreatorTools } from "./creator-tools.js?v=restored-features-1";
-import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=account-storage-2";
+import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=pricing-recycle-2";
 import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=accounts-1";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=workspace-v2";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=pricing-recycle-2";
 
 const root = document.getElementById("app");
 const loader = document.querySelector("[data-loader]");

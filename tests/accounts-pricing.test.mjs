@@ -35,6 +35,20 @@ test("adds browser security headers at the custom domain worker", async () => {
   assert.match(worker, /X-Content-Type-Options/);
   assert.match(worker, /frame-ancestors 'self'/);
   assert.match(worker, /no-store, must-revalidate/);
+  assert.match(worker, /site-v2\/src/);
+});
+
+test("keeps the live shell and site module versions in sync", async () => {
+  const [page, html, main] = await Promise.all([
+    load("app/page.tsx"),
+    load("public/site/index.html"),
+    load("public/site/src/main.js"),
+  ]);
+  assert.match(page, /\/site\/index\.html\?v=pricing-recycle-2/);
+  assert.match(html, /contentx-release" content="pricing-recycle-2/);
+  assert.match(html, /main\.js\?v=pricing-recycle-2/);
+  assert.match(main, /features\.js\?v=pricing-recycle-2/);
+  assert.match(main, /uploads\.js\?v=pricing-recycle-2/);
 });
 
 test("keeps payment totals server-calculated with allowlisted add-ons", async () => {
