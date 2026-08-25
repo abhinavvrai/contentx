@@ -51,6 +51,16 @@ test("keeps the live shell and site module versions in sync", async () => {
   assert.match(main, /uploads\.js\?v=pricing-recycle-2/);
 });
 
+test("passes marketing data into pricing so the homepage loader cannot crash", async () => {
+  const [features, main] = await Promise.all([
+    load("public/site/src/features.js"),
+    load("public/site/src/main.js"),
+  ]);
+  assert.match(features, /export function enhanceMarketing\(root, actions, data = \{\}\)/);
+  assert.match(features, /data\.whatsapp \|\| "#contact-form"/);
+  assert.match(main, /enhanceMarketing\(root, actions, studio\)/);
+});
+
 test("keeps payment totals server-calculated with allowlisted add-ons", async () => {
   const razorpay = await load("lib/razorpay.ts");
   const orderRoute = await load("app/api/payments/razorpay/order/route.ts");

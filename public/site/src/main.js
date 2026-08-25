@@ -64,7 +64,7 @@ async function renderRoute() {
     else if (route === "offer-services") renderProviderOnboarding(root, actions);
     else if (route === "provider-workspace") renderProviderWorkspace(root, actions);
     else if (route === "owner") { renderAdmin(root, actions); enhanceMarketplaceAdmin(root); enhanceAdminSuite(root, actions); enhanceUploadAdmin(root); }
-    else { renderMarketing(root, studio, actions); enhanceMarketing(root, actions); enhanceMarketplaceMarketing(root, actions); }
+    else { renderMarketing(root, studio, actions); enhanceMarketing(root, actions, studio); enhanceMarketplaceMarketing(root, actions); }
     polishRoute(root, route);
     enhanceCreatorTools(root, route);
   } catch (error) {

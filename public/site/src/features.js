@@ -139,7 +139,7 @@ export function toggleTheme() {
   syncThemeControls();
 }
 
-export function enhanceMarketing(root, actions) {
+export function enhanceMarketing(root, actions, data = {}) {
   const navActions = root.querySelector(".nav-actions");
   if (navActions) {
     const theme = document.createElement("button"); theme.className = "theme-toggle"; theme.dataset.themeToggle = ""; theme.setAttribute("aria-label", "Toggle dark mode"); theme.textContent = document.documentElement.dataset.theme === "dark" ? "☀" : "☾"; theme.addEventListener("click", toggleTheme); navActions.prepend(theme);
@@ -279,7 +279,7 @@ function setupUnifiedPricing(pricing, actions, data) {
     ["Social Media Management", "Manage", "Scheduling, publishing, captions, hashtag research, comment management and monthly reporting."],
     ["Full Content Team", "Full service", "Strategy, scripts, editing, covers, scheduling and one accountable Content X manager."],
     ["SaaS Product Animation", "From ₹9,000", "Up to 30 seconds of animated product UI, callouts, transitions and premium sound design."],
-  ].map(([name,label,copy]) => `<article><span>${label}</span><h4>${name}</h4><p>${copy}</p><details><summary>Know more</summary><ul>${copy.split(", ").map(item => `<li>${item}</li>`).join("")}</ul></details><a href="${data.whatsapp}" target="_blank" rel="noreferrer">Request a custom plan →</a></article>`).join("")}</div></section>`;
+  ].map(([name,label,copy]) => `<article><span>${label}</span><h4>${name}</h4><p>${copy}</p><details><summary>Know more</summary><ul>${copy.split(", ").map(item => `<li>${item}</li>`).join("")}</ul></details><a href="${data.whatsapp || "#contact-form"}" target="_blank" rel="noreferrer">Request a custom plan →</a></article>`).join("")}</div></section>`;
 
   const packageContainer = pricing.querySelector("[data-unified-packages]");
   const addOnContainer = pricing.querySelector("[data-unified-addons]");
