@@ -32,8 +32,8 @@ export const studio = {
       title: "Basic",
       price: "₹1,500",
       note: "per short-form video",
-      description: "For clean, consistent social content.",
-      features: ["Clean edit & pacing", "Basic captions", "Music & simple transitions", "2 revision rounds"]
+      description: "For clean, simple reels with captions and light engagement elements.",
+      features: ["Clean edit & pacing", "Captions and subtitles", "Stickers and emojis", "Light sound effects", "1 revision round"]
     },
     {
       title: "Standard",
@@ -41,14 +41,14 @@ export const studio = {
       note: "per short-form video",
       description: "For videos that need more visual energy.",
       featured: true,
-      features: ["Better edit & sharper pacing", "B-roll direction", "Sound design", "Optional motion graphics +₹500", "2 revision rounds"]
+      features: ["B-roll cutaways", "Sound effects", "Custom typography", "Colour grading", "Optional motion graphics +₹500"]
     },
     {
       title: "Premium",
       price: "₹3,500–₹5,000",
       note: "per short-form video",
       description: "For high-retention, flagship content.",
-      features: ["Strategy-led structure", "Premium sound & colour", "Motion titles", "Optional advanced motion +₹1,500", "3 revision rounds"]
+      features: ["Retention-led structure", "Premium B-roll and sound", "Motion titles", "Optional advanced motion +₹1,500", "3 revision rounds"]
     },
     {
       title: "Custom / Monthly",

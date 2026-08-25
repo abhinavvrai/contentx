@@ -11,14 +11,21 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   }
   for (const plan of ["Basic", "Standard", "Premium"]) assert.match(features, new RegExp(`name:"${plan}"`));
   assert.match(features, /1 video up to 60 seconds/);
-  assert.match(features, /Up to 5 relevant B-roll inserts/);
+  assert.match(features, /Stickers, emojis and simple highlights/);
+  assert.match(features, /B-roll placement and visual cutaways/);
   assert.match(features, /Up to 10 relevant B-roll inserts/);
   assert.match(features, /state\.billing === "monthly" \? Math\.max\(minimumQuantity\(\), state\.quantity\) : 1/);
   assert.match(features, /range:"₹2,000–₹2,500"/);
   assert.match(features, /range:"₹3,500–₹5,000"/);
-  assert.match(features, /B-roll \+ Sound Design", price:500/);
+  assert.match(features, /availableAddOns:\["motion_graphics", "reel_script", "cover_design", "extra_revision"\]/);
+  assert.match(features, /availableAddOns:\["advanced_motion_graphics", "reel_script", "cover_design", "rush_delivery", "extra_revision"\]/);
+  assert.match(features, /Extra B-roll \+ Sound Design", price:500/);
   assert.match(features, /Motion Graphics", price:500/);
   assert.match(features, /Advanced Motion Graphics", price:1500/);
+  assert.match(features, /Customize this \$\{plan\.name\} package/);
+  assert.match(features, /No paid upgrade needed for Basic/);
+  assert.doesNotMatch(features, /Package upgrade option/);
+  assert.doesNotMatch(features, /data-addons-step/);
   assert.match(features, /data-plan-tab/);
   assert.match(features, />Per video</);
   assert.match(features, /if \(false && pricing\)/);
