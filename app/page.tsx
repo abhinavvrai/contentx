@@ -3,7 +3,7 @@ export default function Home() {
     <main className="site-frame-shell">
       <iframe
         className="site-frame"
-        src="/site/index.html?v=pricing-recycle-2"
+        src="/site/index.html?v=package-addons-1"
         title="Content X"
       />
     </main>

@@ -51,11 +51,11 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=pricing-recycle-2/);
-  assert.match(html, /contentx-release" content="pricing-recycle-2/);
-  assert.match(html, /main\.js\?v=pricing-recycle-2/);
-  assert.match(main, /features\.js\?v=pricing-recycle-2/);
-  assert.match(main, /uploads\.js\?v=pricing-recycle-2/);
+  assert.match(page, /\/site\/index\.html\?v=package-addons-1/);
+  assert.match(html, /contentx-release" content="package-addons-1/);
+  assert.match(html, /main\.js\?v=package-addons-1/);
+  assert.match(main, /features\.js\?v=package-addons-1/);
+  assert.match(main, /uploads\.js\?v=package-addons-1/);
 });
 
 test("passes marketing data into pricing so the homepage loader cannot crash", async () => {
