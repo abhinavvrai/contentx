@@ -104,3 +104,14 @@ html[data-theme="dark"] .audience-switch button.active,html[data-theme="dark"] .
 @media(max-width:1120px){.site-nav nav{gap:18px}.nav-actions{gap:10px}.audience-switch{width:196px}.nav-actions>[data-action="login"]{display:none}}
 @media(max-width:900px){.site-nav nav{display:none}}
 @media(max-width:760px){.site-nav .audience-switch{width:174px;height:39px}.site-nav .nav-actions>.theme-toggle,.site-nav .nav-actions>.pill-hot{display:none}.audience-switch button{font-size:9px}}
+
+/* Cleaner public header */
+.site-nav{grid-template-columns:minmax(150px,auto) minmax(220px,1fr) auto;gap:22px;overflow:hidden}
+.site-nav .brand{min-width:0;white-space:nowrap}
+.site-nav .brand>span:last-child{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.site-nav nav{justify-content:flex-end;gap:24px}
+.site-nav nav a[href="#work"],.site-nav nav a[href="#marketplace"],.site-nav .work-with-us,.site-nav .audience-switch,.site-nav [data-start-project]{display:none!important}
+.nav-actions{gap:10px;flex-wrap:nowrap}
+.nav-actions>.pill-hot{white-space:nowrap}
+@media(max-width:980px){.site-nav{grid-template-columns:auto 1fr auto}.site-nav nav{gap:14px}.site-nav nav a{font-size:12px}.nav-actions>[data-action="login"]{display:none}}
+@media(max-width:760px){.site-nav{grid-template-columns:1fr auto}.site-nav .brand>span:last-child{max-width:110px}.site-nav nav{display:none}.nav-actions>.pill-hot{display:inline-flex}.nav-actions .theme-toggle{display:inline-grid}}

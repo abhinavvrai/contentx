@@ -391,15 +391,8 @@ export function enhanceMarketplaceMarketing(root, actions) {
   const navActions = root.querySelector(".nav-actions");
   if (navActions && !navActions.querySelector("[data-hire-talent]")) {
     navActions.querySelector('a[target="_blank"]')?.remove();
-    const login = navActions.querySelector('[data-action="login"]');
-    login?.insertAdjacentHTML("beforebegin", '<div class="audience-switch" role="group" aria-label="Choose how you want to use Content X"><button type="button" class="active" data-hire-talent aria-pressed="true"><span>Get services</span></button><button type="button" data-offer-market aria-pressed="false"><span>Work with us</span></button></div>');
-    navActions.insertAdjacentHTML("beforeend", '<button class="pill pill-hot" data-start-project>Start a project <span>↗</span></button>');
-    navActions.querySelector("[data-hire-talent]").addEventListener("click", actions.openMarketplace);
-    navActions.querySelector("[data-offer-market]").addEventListener("click", actions.openProviderOnboarding);
-    navActions.querySelector("[data-start-project]").addEventListener("click", () => document.querySelector("#pricing")?.scrollIntoView({ behavior: "smooth" }));
   }
   const nav = root.querySelector(".site-nav nav");
-  if (nav && !nav.querySelector('[href="#marketplace"]')) nav.insertAdjacentHTML("beforeend", '<a href="#marketplace">Managed team</a>');
   const existing = root.querySelector("#network");
   if (existing) existing.outerHTML = `<section id="network" class="market-teaser block-section"><div class="section-shell"><div class="section-heading split"><div><p class="eyebrow"><span></span>Content X marketplace</p><h2>Hire a specialist.<br><em>Or become one.</em></h2></div><p>A managed place for clients and creative professionals to work through Content X—with protected briefs, private portfolios and owner-controlled assignments.</p></div><div class="market-teaser-grid"><article><span>FOR CLIENTS</span><h3>Let Content X assemble the right team.</h3><p>Submit a private brief and the owner will review suitable specialists before assigning anyone to the project.</p><div>${["Video editors", "Scriptwriters", "Social managers", "Strategists", "Thumbnail designers", "Idea creators"].map(item => `<small>✓ ${item}</small>`).join("")}</div><button class="pill pill-light" data-teaser-hire>Submit a project brief →</button></article><article><span>FOR SPECIALISTS</span><h3>List your services privately.</h3><p>Your pricing and portfolio are visible only to Content X admins. Other providers cannot browse your submission or unassigned projects.</p><ul><li>Owner-only portfolio access</li><li>15–20% commission on completed work</li><li>Only assigned projects appear in your portal</li></ul><button class="pill pill-dark" data-teaser-offer>Create private listing →</button></article></div><div class="market-teaser-foot"><span>Submit</span><i>→</i><span>Owner review</span><i>→</i><span>Assign</span><i>→</i><span>Collaborate</span><i>→</i><span>Approve</span></div></div></section>`;
   root.querySelector("[data-teaser-hire]")?.addEventListener("click", actions.openMarketplace);

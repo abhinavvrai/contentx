@@ -9,6 +9,9 @@ export const servicePlans = {
   growth_reel: { name: "Standard", amount: 2500 },
   premium_motion: { name: "Motion Plus", amount: 3500 },
   advanced_reel: { name: "Premium", amount: 5000 },
+  long_basic: { name: "Long-form Basic", amount: 5000 },
+  long_standard: { name: "Long-form Standard", amount: 8000 },
+  long_premium: { name: "Long-form Premium", amount: 12000 },
   saas_animation: { name: "SaaS Animation · up to 30 seconds", amount: 9000 },
   script_hook: { name: "Hook & Idea Script", amount: 1000 },
   script_full: { name: "Full Reel Script", amount: 1500 },
@@ -22,7 +25,13 @@ export type PlanId = keyof typeof servicePlans;
 export type BillingMode = "monthly" | "one_off";
 
 const reelPlanIds = new Set<PlanId>(["basic_reel", "better_edit", "growth_reel", "premium_motion", "advanced_reel", "saas_animation"]);
+const longformPlanIds = new Set<PlanId>(["long_basic", "long_standard", "long_premium"]);
 const podcastPlanIds = new Set<PlanId>(["podcast_30", "podcast_45", "podcast_60"]);
+const longformScope = {
+  long_basic: { includedMinutes: 10, includedRawHours: 1 },
+  long_standard: { includedMinutes: 10, includedRawHours: 2 },
+  long_premium: { includedMinutes: 10, includedRawHours: 3 },
+} satisfies Record<string, { includedMinutes: number; includedRawHours: number }>;
 
 export const serviceAddOns = {
   broll_sfx: { name: "B-roll + Sound Design", amount: 500, service: "video" },
@@ -33,6 +42,12 @@ export const serviceAddOns = {
   extra_revision: { name: "Extra Revision Round", amount: 300, service: "video" },
   rush_delivery: { name: "Priority Delivery", amount: 1000, service: "video" },
   quick_delivery: { name: "Quick Delivery", amount: 700, service: "video" },
+  long_thumbnail: { name: "Thumbnail / Cover", amount: 700, service: "longform" },
+  long_chapters: { name: "Chapters + Description", amount: 700, service: "longform" },
+  long_shorts: { name: "2 Shorts From Long Video", amount: 1500, service: "longform" },
+  long_motion: { name: "Advanced Motion Pack", amount: 2000, service: "longform" },
+  long_extra_revision: { name: "Extra Revision Round", amount: 300, service: "longform" },
+  long_rush_delivery: { name: "Priority Delivery", amount: 1000, service: "longform" },
   podcast_script: { name: "Podcast Episode Script", amount: 1500, service: "podcast" },
   podcast_notes: { name: "Show Notes & Chapters", amount: 500, service: "podcast" },
   podcast_clips: { name: "Two Short Social Clips", amount: 1500, service: "podcast" },
@@ -85,6 +100,8 @@ export function calculateOrder(input: {
   quantity: unknown;
   billing: unknown;
   addOns?: unknown;
+  durationMinutes?: unknown;
+  rawFootageHours?: unknown;
 }) {
   const plan = servicePlans[input.planId as PlanId];
   if (!plan) throw new Error("Choose a valid Content X service.");
@@ -92,15 +109,16 @@ export function calculateOrder(input: {
   const quantity = Number(input.quantity);
   const planId = input.planId as PlanId;
   const isReelPlan = reelPlanIds.has(planId);
+  const isLongformPlan = longformPlanIds.has(planId);
   const isPodcastPlan = podcastPlanIds.has(planId);
   const billing: BillingMode = input.billing === "monthly" ? "monthly" : "one_off";
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 30) {
     throw new Error("Choose between 1 and 30 items.");
   }
-  if (!isReelPlan && !isPodcastPlan && quantity !== 1) {
+  if (!isReelPlan && !isLongformPlan && !isPodcastPlan && quantity !== 1) {
     throw new Error("Each standalone script payment covers one selected service.");
   }
-  if (!isReelPlan && !isPodcastPlan && billing !== "one_off") {
+  if (!isReelPlan && !isLongformPlan && !isPodcastPlan && billing !== "one_off") {
     throw new Error("Standalone scripts use one-time pricing.");
   }
   if (isReelPlan && billing === "monthly" && quantity < 10) {
@@ -109,9 +127,18 @@ export function calculateOrder(input: {
   if (isPodcastPlan && billing === "monthly" && quantity < 4) {
     throw new Error("Monthly podcast production starts at 4 episodes.");
   }
+  if (isPodcastPlan && quantity > 12) {
+    throw new Error("Podcast packages allow up to 12 episodes per order.");
+  }
+  if (isLongformPlan && billing === "monthly" && quantity < 2) {
+    throw new Error("Monthly long-form production starts at 2 videos.");
+  }
+  if (isLongformPlan && quantity > 8) {
+    throw new Error("Long-form packages allow up to 8 videos per order.");
+  }
 
   const unitAmount = plan.amount;
-  const service = isPodcastPlan ? "podcast" : "video";
+  const service = isPodcastPlan ? "podcast" : isLongformPlan ? "longform" : "video";
   const requestedAddOns = Array.isArray(input.addOns) ? [...new Set(input.addOns.filter(value => typeof value === "string"))] : [];
   const addOns = requestedAddOns.map(value => {
     const id = value as AddOnId;
@@ -121,7 +148,24 @@ export function calculateOrder(input: {
   });
   const baseAmount = unitAmount * quantity;
   const addOnAmount = addOns.reduce((total, addOn) => total + addOn.totalAmount, 0);
-  const totalAmount = baseAmount + addOnAmount;
+  const adjustments: Array<{ id: string; name: string; unitAmount: number; totalAmount: number }> = [];
+  if (isLongformPlan) {
+    const scope = longformScope[planId as keyof typeof longformScope];
+    const durationMinutes = Number(input.durationMinutes || scope.includedMinutes);
+    const rawFootageHours = Number(input.rawFootageHours || scope.includedRawHours);
+    if (!Number.isInteger(durationMinutes) || durationMinutes < scope.includedMinutes || durationMinutes > 60) {
+      throw new Error("Long-form final length must match the selected package and stay within 60 minutes.");
+    }
+    if (!Number.isInteger(rawFootageHours) || rawFootageHours < scope.includedRawHours || rawFootageHours > 10) {
+      throw new Error("Raw footage review must match the selected long-form scope and stay within 10 hours.");
+    }
+    const extraMinutes = durationMinutes - scope.includedMinutes;
+    const extraRawHours = rawFootageHours - scope.includedRawHours;
+    if (extraMinutes) adjustments.push({ id: "longform_extra_minutes", name: `Extra final length · ${extraMinutes} min`, unitAmount: extraMinutes * 400, totalAmount: extraMinutes * 400 * quantity });
+    if (extraRawHours) adjustments.push({ id: "longform_raw_review", name: `Extra raw footage review · ${extraRawHours} hr`, unitAmount: extraRawHours * 600, totalAmount: extraRawHours * 600 * quantity });
+  }
+  const adjustmentAmount = adjustments.reduce((total, item) => total + item.totalAmount, 0);
+  const totalAmount = baseAmount + addOnAmount + adjustmentAmount;
 
   return {
     billing,
@@ -132,6 +176,8 @@ export function calculateOrder(input: {
     baseAmount,
     addOns,
     addOnAmount,
+    adjustments,
+    adjustmentAmount,
     totalAmount,
     totalAmountPaise: totalAmount * 100,
   };
@@ -183,7 +229,7 @@ export async function createRazorpayOrder(order: ReturnType<typeof calculateOrde
         plan: order.planId,
         billing: order.billing,
         quantity: String(order.quantity),
-        add_ons: order.addOns.map(addOn => addOn.id).join(",").slice(0, 240),
+        add_ons: [...order.addOns, ...order.adjustments].map(addOn => addOn.id).join(",").slice(0, 240),
       },
     }),
   });

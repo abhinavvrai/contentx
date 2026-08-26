@@ -32,7 +32,11 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   assert.match(features, />Per reel</);
   assert.match(features, /if \(false && pricing\)/);
   assert.match(features, /data-unified-service="video"/);
+  assert.match(features, /data-unified-service="longform"/);
   assert.match(features, /data-unified-service="podcast"/);
+  assert.match(features, /Long-form Basic", price:5000/);
+  assert.match(features, /Final video length/);
+  assert.match(features, /Raw footage to review/);
   assert.match(features, /Instagram Reel Script/);
   assert.match(features, /Podcast Episode Script/);
   assert.doesNotMatch(features, /setupUnifiedPricing[\s\S]*One-off flexibility premium/);
@@ -53,10 +57,10 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=team-controls-1/);
-  assert.match(html, /contentx-release" content="team-controls-1/);
-  assert.match(html, /main\.js\?v=team-controls-1/);
-  assert.match(main, /features\.js\?v=team-controls-1/);
+  assert.match(page, /\/site\/index\.html\?v=pricing-longform-1/);
+  assert.match(html, /contentx-release" content="pricing-longform-1/);
+  assert.match(html, /main\.js\?v=pricing-longform-1/);
+  assert.match(main, /features\.js\?v=pricing-longform-1/);
   assert.match(main, /uploads\.js\?v=team-controls-1/);
 });
 
@@ -78,8 +82,11 @@ test("keeps payment totals server-calculated with allowlisted add-ons", async ()
   assert.match(razorpay, /motion_graphics: \{ name: "Motion Graphics", amount: 500/);
   assert.match(razorpay, /advanced_motion_graphics: \{ name: "Advanced Motion Graphics", amount: 1500/);
   assert.match(razorpay, /quick_delivery: \{ name: "Quick Delivery", amount: 700/);
+  assert.match(razorpay, /long_basic: \{ name: "Long-form Basic", amount: 5000/);
+  assert.match(razorpay, /longform_extra_minutes/);
+  assert.match(razorpay, /longform_raw_review/);
   assert.match(razorpay, /podcast_script: \{ name: "Podcast Episode Script", amount: 1500/);
-  assert.match(razorpay, /const totalAmount = baseAmount \+ addOnAmount/);
+  assert.match(razorpay, /const totalAmount = baseAmount \+ addOnAmount \+ adjustmentAmount/);
   assert.match(orderRoute, /requireSessionUser/);
   assert.match(orderRoute, /order_selections/);
 });

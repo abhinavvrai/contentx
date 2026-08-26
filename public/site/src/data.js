@@ -7,7 +7,7 @@ export const studio = {
     eyebrow: "Video production + client review workspace",
     title: ["Create.", "Review.", "Publish."],
     copy: "Premium video editing with one organized place for footage, versions, timestamped feedback, approvals, and final delivery.",
-    primary: "Start on WhatsApp",
+    primary: "Choose a package",
     secondary: "Explore the workspace"
   },
   stats: [

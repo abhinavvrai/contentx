@@ -23,8 +23,8 @@ export function renderMarketing(root, data, actions) {
   root.innerHTML = `
     <header class="site-nav">
       <a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a>
-      <nav aria-label="Main navigation"><a href="#work">Work</a><a href="#workflow">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
-      <div class="nav-actions"><button class="text-button" data-action="login">Client login</button><a class="pill pill-hot" href="#pricing">Start a project <span>↓</span></a></div>
+      <nav aria-label="Main navigation"><a href="#workflow">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
+      <div class="nav-actions"><button class="text-button" data-action="login">Client login</button><a class="pill pill-hot" href="#pricing">Start here <span>↓</span></a></div>
     </header>
     <main id="top">
       <section class="hero section-shell">
@@ -61,7 +61,7 @@ export function renderMarketing(root, data, actions) {
     </main>
     <button class="support-fab" type="button" data-support-open>?</button>
     <aside class="support-panel" data-support-panel hidden><button type="button" data-support-close>×</button><p class="eyebrow"><span></span>Content X support</p><h3>Ask first, then start properly.</h3><p>Use the website for packages, payment, brief and uploads. WhatsApp stays available only when you need quick human help.</p><div><button class="pill pill-hot" type="button" data-support-pricing>Choose package</button><a class="pill pill-dark" href="${data.whatsapp}" target="_blank" rel="noreferrer">WhatsApp help ↗</a><a class="pill pill-outline" href="mailto:${data.email}">Email team</a></div></aside>
-    <footer class="site-footer"><div class="section-shell"><div><a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a><p>Premium video editing and a better way to review it.</p></div><div><strong>Explore</strong><a href="#work">Work</a><a href="#workflow">How it works</a><a href="#pricing">Pricing</a></div><div><strong>Connect</strong><button data-support-open>Support</button><a href="mailto:${data.email}">Email</a><button data-action="login">Client login</button></div></div><p class="copyright">© 2026 Content X. Built for better content.</p></footer>
+    <footer class="site-footer"><div class="section-shell"><div><a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a><p>Premium video editing and a better way to review it.</p></div><div><strong>Explore</strong><a href="#workflow">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></div><div><strong>Connect</strong><button data-support-open>Support</button><a href="mailto:${data.email}">Email</a><button data-action="login">Client login</button></div></div><p class="copyright">© 2026 Content X. Built for better content.</p></footer>
   `;
 
   const pricingFallback = root.querySelector("#pricing");

@@ -63,12 +63,12 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   root.querySelector("[data-upload-files]")?.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });
   root.querySelector("[data-project-drop]")?.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });
   picker.addEventListener("change", async () => {
-    await uploadSelectedFiles(root, project.id, "", [...picker.files], picker.dataset.replaceFile || "", project.maxFileSize);
+    await uploadSelectedFiles(root, project.id, "", [...picker.files], picker.dataset.replaceFile || "", project.maxFileSize, project.maxVideoSeconds || project.max_video_seconds || 0);
     picker.value = "";
     actions.refreshRoute();
   });
   bindDropTarget(root.querySelector("[data-project-drop]"), async dropped => {
-    await uploadSelectedFiles(root, project.id, "", dropped, "", project.maxFileSize);
+    await uploadSelectedFiles(root, project.id, "", dropped, "", project.maxFileSize, project.maxVideoSeconds || project.max_video_seconds || 0);
     actions.refreshRoute();
   });
   root.querySelectorAll("[data-file-card]").forEach(card => {
@@ -77,7 +77,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     card.querySelector("[data-file-open]").addEventListener("click", () => openVersions(root, project.id, assetId, ""));
     card.querySelector("[data-new-version]")?.addEventListener("click", () => { picker.dataset.replaceFile = fileId; picker.click(); });
     bindDropTarget(card, async dropped => {
-      await uploadSelectedFiles(root, project.id, "", dropped.slice(0, 1), fileId, project.maxFileSize);
+      await uploadSelectedFiles(root, project.id, "", dropped.slice(0, 1), fileId, project.maxFileSize, project.maxVideoSeconds || project.max_video_seconds || 0);
       actions.refreshRoute();
     }, "is-version-drop");
   });
@@ -167,14 +167,14 @@ export async function renderSharedWorkspace(root, actions, route) {
     const picker = root.querySelector("[data-workspace-picker]");
     if (canUpload) {
       root.querySelector("[data-project-drop]").addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });
-      bindDropTarget(root.querySelector("[data-project-drop]"), async dropped => { await uploadSelectedFiles(root, projectId, token, dropped, "", data.project.maxFileSize); await renderSharedWorkspace(root, actions, route); });
-      picker.addEventListener("change", async () => { await uploadSelectedFiles(root, projectId, token, [...picker.files], picker.dataset.replaceFile || "", data.project.maxFileSize); picker.value = ""; await renderSharedWorkspace(root, actions, route); });
+      bindDropTarget(root.querySelector("[data-project-drop]"), async dropped => { await uploadSelectedFiles(root, projectId, token, dropped, "", data.project.maxFileSize, data.project.maxVideoSeconds || data.project.max_video_seconds || 0); await renderSharedWorkspace(root, actions, route); });
+      picker.addEventListener("change", async () => { await uploadSelectedFiles(root, projectId, token, [...picker.files], picker.dataset.replaceFile || "", data.project.maxFileSize, data.project.maxVideoSeconds || data.project.max_video_seconds || 0); picker.value = ""; await renderSharedWorkspace(root, actions, route); });
     }
     root.querySelectorAll("[data-file-card]").forEach(card => {
       card.querySelector("[data-file-open]").addEventListener("click", () => openVersions(root, projectId, card.dataset.assetId, token));
       if (canUpload) {
         card.querySelector("[data-new-version]")?.addEventListener("click", () => { picker.dataset.replaceFile = card.dataset.fileId; picker.click(); });
-        bindDropTarget(card, async dropped => { await uploadSelectedFiles(root, projectId, token, dropped.slice(0,1), card.dataset.fileId, data.project.maxFileSize); await renderSharedWorkspace(root, actions, route); }, "is-version-drop");
+        bindDropTarget(card, async dropped => { await uploadSelectedFiles(root, projectId, token, dropped.slice(0,1), card.dataset.fileId, data.project.maxFileSize, data.project.maxVideoSeconds || data.project.max_video_seconds || 0); await renderSharedWorkspace(root, actions, route); }, "is-version-drop");
       }
     });
   } catch (error) { sharedError(root, error.message); }
@@ -184,7 +184,7 @@ function sharedError(root, message) {
   root.innerHTML = `<main class="workspace-error"><span>!</span><h1>Share link unavailable.</h1><p>${escapeHTML(message)}</p><a class="workspace-button" href="#home">Visit Content X</a></main>`;
 }
 
-async function uploadSelectedFiles(root, projectId, token, selected, replaceFileId, maximum) {
+async function uploadSelectedFiles(root, projectId, token, selected, replaceFileId, maximum, maxVideoSeconds = 0) {
   const files = selected.filter(file => file.size > 0 && file.size <= Number(maximum));
   if (!files.length) throw new Error(`Choose a non-empty file up to ${formatBytes(maximum)}.`);
   const queue = root.querySelector("[data-workspace-queue]");
@@ -192,8 +192,43 @@ async function uploadSelectedFiles(root, projectId, token, selected, replaceFile
     const row = document.createElement("article");
     row.innerHTML = `<span>${fileGlyph(file.type)}</span><div><b>${escapeHTML(file.name)}</b><small>Preparing secure upload…</small><i><em></em></i></div><strong>0%</strong>`;
     queue.prepend(row);
-    await uploadOne(file, row, projectId, token, replaceFileId);
+    try {
+      await verifyVideoDuration(file, Number(maxVideoSeconds || 0), row);
+      await uploadOne(file, row, projectId, token, replaceFileId);
+    } catch (error) {
+      row.classList.add("error"); row.querySelector("small").textContent = error.message; row.querySelector("strong").textContent = "!";
+      throw error;
+    }
   }
+}
+
+async function verifyVideoDuration(file, maxVideoSeconds, row) {
+  if (!file.type.startsWith("video/")) return;
+  row.querySelector("small").textContent = "Checking video length before upload…";
+  const duration = await readVideoDuration(file);
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error("We could not read this video length. Please export the video again and upload a valid file.");
+  if (maxVideoSeconds && duration > maxVideoSeconds + 1) {
+    throw new Error(`This video is ${formatDuration(duration)}, but this project allows up to ${formatDuration(maxVideoSeconds)}.`);
+  }
+  row.querySelector("small").textContent = `Video length checked · ${formatDuration(duration)}`;
+}
+
+function readVideoDuration(file) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    const cleanup = () => { URL.revokeObjectURL(url); video.removeAttribute("src"); video.load(); };
+    video.preload = "metadata";
+    video.onloadedmetadata = () => { const duration = video.duration; cleanup(); resolve(duration); };
+    video.onerror = () => { cleanup(); reject(new Error("We could not read this video length. Please upload a valid video file.")); };
+    video.src = url;
+  });
+}
+
+function formatDuration(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const rest = Math.round(seconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${rest}`;
 }
 
 async function uploadOne(file, row, projectId, token, replaceFileId) {

@@ -13,3 +13,5 @@ html[data-theme="dark"] .caption-upload-zone,html[data-theme="dark"] .caption-pr
 
 /* Advanced SaaS animation pricing tier */
 .quality-options .saas-animation-tier>span{position:relative;border-color:#c9c7f4;background:linear-gradient(145deg,#f7f5ff,#fff)}.saas-tier-badge{width:max-content;display:block;margin-bottom:11px;padding:5px 7px;border-radius:999px;background:#282348;color:#ddd7ff;font-size:6px;font-style:normal;font-weight:950;letter-spacing:.08em}.quality-options .saas-animation-tier input:checked+span{border-color:#6254d6;box-shadow:0 0 0 1px #6254d6,0 18px 40px rgba(78,64,190,.12)}html[data-theme="dark"] .quality-options .saas-animation-tier>span{border-color:#55506f;background:linear-gradient(145deg,#29263a,#202126)}
+
+.creator-card a{width:max-content;margin-top:auto;padding:16px 0 0;border:0;background:none;color:var(--orange);font-size:8px;font-weight:900;cursor:pointer}
