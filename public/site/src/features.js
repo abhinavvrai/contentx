@@ -245,7 +245,7 @@ function enhancePricingSelections(pricing, actions) {
 function setupUnifiedPricing(pricing, actions, data) {
   const packages = {
     video: [
-      { id:"basic_reel", name:"Basic", price:1500, range:"₹1,500", tag:"BUDGET · UP TO 1 MIN", delivery:"3-day delivery", revisions:"1 revision", summary:"A simple, clean reel for creators who need captions, pacing and light engagement elements without heavy visual layers.", availableAddOns:[], includes:["1 video up to 60 seconds", "Clean cuts, pacing and zooms", "Engaging captions and subtitles", "Stickers, emojis and simple highlights", "Light sound effects and music sync", "1080p social export"], unavailable:["B-roll package", "Custom typography system", "Motion graphics"] },
+      { id:"basic_reel", name:"Basic", price:1500, range:"₹1,500", tag:"BUDGET · UP TO 1 MIN", delivery:"3-day delivery", revisions:"1 revision", summary:"A simple, clean reel for creators who need captions, pacing and light engagement elements without heavy visual layers.", availableAddOns:["quick_delivery", "cover_design", "extra_revision"], includes:["1 reel up to 60 seconds", "Clean cuts, pacing and zooms", "Engaging captions and subtitles", "Stickers, emojis and simple highlights", "Light sound effects and music sync", "1080p social export"], unavailable:["B-roll package", "Custom typography system", "Motion graphics"] },
       { id:"better_edit", name:"Standard", price:2000, range:"₹2,000–₹2,500", tag:"STANDARD · BETTER EDIT", delivery:"4-day delivery", revisions:"2 revisions", featured:true, summary:"A stronger social edit with B-roll, sound effects, custom text styling and better visual polish.", availableAddOns:["motion_graphics", "reel_script", "cover_design", "extra_revision"], includes:["1 video up to 90 seconds", "B-roll placement and visual cutaways", "Sound effects and music accents", "Custom text, typography and captions", "Colour grading and audio balance", "Source file included"], unavailable:["Advanced motion graphics"] },
       { id:"premium_motion", name:"Premium", price:3500, range:"₹3,500–₹5,000", tag:"PREMIUM · MOTION READY", delivery:"5-day priority", revisions:"3 revisions", summary:"A high-retention premium edit with deeper structure, richer sound design and motion-ready finishing for flagship posts.", availableAddOns:["advanced_motion_graphics", "reel_script", "cover_design", "rush_delivery", "extra_revision"], includes:["1 video up to 180 seconds", "Premium edit with retention-led structure", "Up to 10 relevant B-roll inserts", "Full sound design and premium mix", "Motion titles and custom callouts", "Premium colour finish", "Source file included"], unavailable:[] },
     ],
@@ -264,6 +264,7 @@ function setupUnifiedPricing(pricing, actions, data) {
       { id:"cover_design", name:"Cover / Thumbnail", price:500, copy:"One scroll-stopping branded cover." },
       { id:"extra_revision", name:"Extra Revision Round", price:300, copy:"One additional consolidated revision." },
       { id:"rush_delivery", name:"Priority Delivery", price:1000, copy:"Priority placement in the production queue." },
+      { id:"quick_delivery", name:"Quick Delivery", price:700, copy:"For Basic: faster delivery when you need a simple reel turned around quickly." },
     ],
     podcast: [
       { id:"podcast_script", name:"Podcast Episode Script", price:1500, copy:"Opening, segment flow, questions and closing CTA." },
@@ -274,7 +275,7 @@ function setupUnifiedPricing(pricing, actions, data) {
   };
   const state = { billing:"one_off", service:"video", quantity:1, planId:"basic_reel", selectedAddOns:new Set(), deliveryFormat:"Vertical 9:16" };
   pricing.dataset.pricingRestored = "unified";
-  pricing.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple, flexible pricing</p><h2>Choose the work. Add only what you <em>need.</em></h2><p>Start with Video or Podcast, compare each package, then open the package add-ons only if you want to customize the order.</p></div><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="one_off" class="active">Per video</button><button type="button" data-unified-billing="monthly">Monthly</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Video</button><button type="button" data-unified-service="podcast">Podcast</button></div></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a video package</strong><small>Switch between the tabs, then expand add-ons if needed.</small></div></header><div class="unified-package-browser" data-unified-packages></div></div><div class="unified-step" data-quantity-step><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Buy one video or build a larger batch.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>1</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div></div></section><aside class="unified-summary"><span data-unified-badge>ONE-OFF PER VIDEO</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons <b data-unified-addons-total></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">You’ll add the title, description, instructions, reference links and files immediately after payment.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
+  pricing.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple, flexible pricing</p><h2>Choose the work. Add only what you <em>need.</em></h2><p>Start with Short-form or Podcast, compare each package, then open the package add-ons only if you want to customize the order.</p></div><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="one_off" class="active">Per reel</button><button type="button" data-unified-billing="monthly">Monthly</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Short-form</button><button type="button" data-unified-service="podcast">Podcast</button></div></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a short-form package</strong><small>Switch between the tabs, then expand add-ons if needed.</small></div></header><div class="unified-package-browser" data-unified-packages></div></div><div class="unified-step" data-quantity-step><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Buy one reel or build a larger batch.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>1</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div><label class="unified-volume-slider"><span>Package volume</span><input type="range" min="1" max="30" value="1" data-unified-slider><small><b data-unified-slider-min>1</b><b data-unified-slider-max>30</b></small></label></div></section><aside class="unified-summary"><span data-unified-badge>ONE-OFF PER REEL</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons <b data-unified-addons-total></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">You’ll add the title, description, instructions, reference links and files immediately after payment.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
     ["Content Strategy & Planning", "Plan", "Content pillars, audience positioning, monthly calendar, campaign concepts, hooks and performance review."],
     ["Social Media Management", "Manage", "Scheduling, publishing, captions, hashtag research, comment management and monthly reporting."],
     ["Full Content Team", "Full service", "Strategy, scripts, editing, covers, scheduling and one accountable Content X manager."],
@@ -283,10 +284,13 @@ function setupUnifiedPricing(pricing, actions, data) {
 
   const packageContainer = pricing.querySelector("[data-unified-packages]");
   const formatSelect = pricing.querySelector("[data-unified-format]");
+  const volumeSlider = pricing.querySelector("[data-unified-slider]");
 
   const selectedPackage = () => packages[state.service].find(item => item.id === state.planId) || packages[state.service][0];
   const maximumQuantity = () => state.service === "podcast" ? 12 : 30;
   const minimumQuantity = () => state.billing === "monthly" ? (state.service === "podcast" ? 4 : 10) : 1;
+  const serviceSingular = () => state.service === "podcast" ? "episode" : "reel";
+  const servicePlural = () => state.service === "podcast" ? "episodes" : "reels";
   const availableAddOnsForPlan = () => {
     const plan = selectedPackage();
     if (state.service === "podcast") return addOns.podcast;
@@ -299,10 +303,10 @@ function setupUnifiedPricing(pricing, actions, data) {
   const selectedAddOnObjects = () => availableAddOnsForPlan().filter(item => state.selectedAddOns.has(item.id));
 
   function renderPackages() {
-    pricing.querySelector("[data-package-heading]").textContent = `Choose a ${state.service} package`;
+    pricing.querySelector("[data-package-heading]").textContent = `Choose a ${state.service === "podcast" ? "podcast" : "short-form"} package`;
     const plan = selectedPackage();
     const available = availableAddOnsForPlan();
-    packageContainer.innerHTML = `<div class="unified-plan-tabs" role="tablist" aria-label="${state.service} packages">${packages[state.service].map(item => `<button type="button" role="tab" aria-selected="${item.id === state.planId}" class="${item.id === state.planId ? "active" : ""}" data-plan-tab="${item.id}">${item.name}<small>${item.range || money(item.price)}</small></button>`).join("")}</div><article class="unified-plan-detail"><p class="unified-plan-label">${plan.tag}</p><div class="unified-plan-price"><strong>${money(plan.price)}</strong><span>starting per ${state.service === "podcast" ? "episode" : "video"}</span></div><p class="unified-plan-copy">${plan.summary}</p><div class="unified-plan-meta"><span>◷ <b>${plan.delivery}</b></span><span>⟳ <b>${plan.revisions}</b></span></div><ul>${plan.includes.map(feature => `<li><b>✓</b>${feature}</li>`).join("")}${(plan.unavailable || []).map(feature => `<li class="unavailable"><b>—</b>${feature}</li>`).join("")}</ul>${available.length ? `<details class="unified-package-addons" data-package-addons ${state.selectedAddOns.size ? "open" : ""}><summary><span>Customize this ${plan.name} package</span><b>${state.selectedAddOns.size ? `${state.selectedAddOns.size} selected` : "Show add-ons"} ↓</b></summary><div class="unified-addon-grid" data-unified-addons></div></details>` : `<div class="unified-package-note"><strong>No paid upgrade needed for Basic.</strong><small>Stickers, emojis, engaging captions and light sound effects are already included in this package.</small></div>`}<button type="button" class="unified-plan-continue" data-plan-continue>Continue with ${plan.name}<span>→</span></button></article>`;
+    packageContainer.innerHTML = `<div class="unified-plan-tabs" role="tablist" aria-label="${state.service} packages">${packages[state.service].map(item => `<button type="button" role="tab" aria-selected="${item.id === state.planId}" class="${item.id === state.planId ? "active" : ""}" data-plan-tab="${item.id}">${item.name}<small>${item.range || money(item.price)}</small></button>`).join("")}</div><article class="unified-plan-detail"><p class="unified-plan-label">${plan.tag}</p><div class="unified-plan-price"><strong>${money(plan.price)}</strong><span>starting per ${serviceSingular()}</span></div><p class="unified-plan-copy">${plan.summary}</p><div class="unified-plan-meta"><span>◷ <b>${plan.delivery}</b></span><span>⟳ <b>${plan.revisions}</b></span></div><ul>${plan.includes.map(feature => `<li><b>✓</b>${feature}</li>`).join("")}${(plan.unavailable || []).map(feature => `<li class="unavailable"><b>—</b>${feature}</li>`).join("")}</ul>${available.length ? `<details class="unified-package-addons" data-package-addons ${state.selectedAddOns.size ? "open" : ""}><summary><span>Customize this ${plan.name} package</span><b>${state.selectedAddOns.size ? `${state.selectedAddOns.size} selected` : "Show add-ons"} ↓</b></summary><div class="unified-addon-grid" data-unified-addons></div></details>` : `<div class="unified-package-note"><strong>No paid upgrade needed for this package.</strong><small>Core inclusions are already bundled into the selected package.</small></div>`}<button type="button" class="unified-plan-continue" data-plan-continue>Continue with ${plan.name}<span>→</span></button></article>`;
     packageContainer.querySelectorAll("[data-plan-tab]").forEach(button => button.addEventListener("click", () => { state.planId = button.dataset.planTab; keepOnlyAvailableAddOns(); renderPackages(); updateSummary(); }));
     renderAddOns();
     packageContainer.querySelector("[data-plan-continue]").addEventListener("click", () => pricing.querySelector("[data-quantity-step]").scrollIntoView({ behavior:"smooth", block:"start" }));
@@ -328,14 +332,19 @@ function setupUnifiedPricing(pricing, actions, data) {
     const extrasTotal = extras.reduce((total, item) => total + item.price * state.quantity, 0);
     const total = base + extrasTotal;
     pricing.querySelector("[data-unified-count]").textContent = state.quantity;
-    pricing.querySelector("[data-unified-badge]").textContent = state.billing === "monthly" ? "MONTHLY PRODUCTION" : `ONE-OFF PER ${state.service === "podcast" ? "EPISODE" : "VIDEO"}`;
+    volumeSlider.min = minimumQuantity();
+    volumeSlider.max = maximumQuantity();
+    volumeSlider.value = state.quantity;
+    pricing.querySelector("[data-unified-slider-min]").textContent = minimumQuantity();
+    pricing.querySelector("[data-unified-slider-max]").textContent = maximumQuantity();
+    pricing.querySelector("[data-unified-badge]").textContent = state.billing === "monthly" ? "MONTHLY PRODUCTION" : `ONE-OFF PER ${serviceSingular().toUpperCase()}`;
     pricing.querySelector("[data-unified-summary-name]").textContent = plan.name;
-    pricing.querySelector("[data-unified-summary-meta]").textContent = `${state.quantity} ${state.service === "podcast" ? "episode" : "video"}${state.quantity === 1 ? "" : "s"} · ${state.deliveryFormat}`;
+    pricing.querySelector("[data-unified-summary-meta]").textContent = `${state.quantity} ${state.quantity === 1 ? serviceSingular() : servicePlural()} · ${state.deliveryFormat}`;
     pricing.querySelector("[data-unified-summary-list]").innerHTML = plan.includes.slice(0, 3).map(item => `<li><span>✓</span>${item}</li>`).join("") + extras.map(item => `<li><span>+</span>${item.name}</li>`).join("");
     pricing.querySelector("[data-unified-base]").textContent = money(base);
     pricing.querySelector("[data-unified-addons-total]").textContent = extrasTotal ? money(extrasTotal) : "₹0";
     pricing.querySelector("[data-unified-total]").textContent = money(total);
-    pricing.querySelector("[data-unified-effective]").textContent = `${money(Math.round(total / state.quantity))} per ${state.service === "podcast" ? "episode" : "video"}`;
+    pricing.querySelector("[data-unified-effective]").textContent = `${money(Math.round(total / state.quantity))} per ${serviceSingular()}`;
   }
 
   function switchService(service) {
@@ -344,8 +353,8 @@ function setupUnifiedPricing(pricing, actions, data) {
     state.selectedAddOns.clear();
     state.quantity = Math.max(minimumQuantity(), state.billing === "monthly" ? minimumQuantity() : 1);
     pricing.querySelectorAll("[data-unified-service]").forEach(button => button.classList.toggle("active", button.dataset.unifiedService === service));
-    pricing.querySelector('[data-unified-billing="one_off"]').textContent = service === "podcast" ? "Per episode" : "Per video";
-    pricing.querySelector("[data-quantity-note]").textContent = state.billing === "monthly" ? `Monthly ${service} production starts at ${minimumQuantity()}.` : `Choose between 1 and ${maximumQuantity()} ${service === "podcast" ? "episodes" : "videos"}.`;
+    pricing.querySelector('[data-unified-billing="one_off"]').textContent = service === "podcast" ? "Per episode" : "Per reel";
+    pricing.querySelector("[data-quantity-note]").textContent = state.billing === "monthly" ? `Monthly ${service === "podcast" ? "podcast" : "short-form"} production starts at ${minimumQuantity()}.` : `Choose between 1 and ${maximumQuantity()} ${service === "podcast" ? "episodes" : "reels"}.`;
     renderPackages(); renderFormats(); updateSummary();
   }
 
@@ -353,7 +362,7 @@ function setupUnifiedPricing(pricing, actions, data) {
     state.billing = button.dataset.unifiedBilling;
     pricing.querySelectorAll("[data-unified-billing]").forEach(item => item.classList.toggle("active", item === button));
     state.quantity = state.billing === "monthly" ? Math.max(minimumQuantity(), state.quantity) : 1;
-    pricing.querySelector("[data-quantity-note]").textContent = state.billing === "monthly" ? `Monthly ${state.service} production starts at ${minimumQuantity()}.` : `Choose between 1 and ${maximumQuantity()} ${state.service === "podcast" ? "episodes" : "videos"}.`;
+    pricing.querySelector("[data-quantity-note]").textContent = state.billing === "monthly" ? `Monthly ${state.service === "podcast" ? "podcast" : "short-form"} production starts at ${minimumQuantity()}.` : `Choose between 1 and ${maximumQuantity()} ${state.service === "podcast" ? "episodes" : "reels"}.`;
     updateSummary();
   }));
   pricing.querySelectorAll("[data-unified-service]").forEach(button => button.addEventListener("click", () => switchService(button.dataset.unifiedService)));
@@ -361,12 +370,13 @@ function setupUnifiedPricing(pricing, actions, data) {
     state.quantity = Math.min(maximumQuantity(), Math.max(minimumQuantity(), state.quantity + (button.dataset.unifiedQuantity === "plus" ? 1 : -1)));
     updateSummary();
   }));
+  volumeSlider.addEventListener("input", () => { state.quantity = Number(volumeSlider.value); updateSummary(); });
   formatSelect.addEventListener("change", () => { state.deliveryFormat = formatSelect.value; updateSummary(); });
   pricing.querySelector("[data-unified-checkout]").addEventListener("click", () => {
     const plan = selectedPackage();
     const extras = selectedAddOnObjects();
     const total = (plan.price + extras.reduce((sum, item) => sum + item.price, 0)) * state.quantity;
-    actions.openCheckout({ id:plan.id, name:`${plan.name} · ${state.quantity} ${state.service === "podcast" ? "episode" : "video"}${state.quantity === 1 ? "" : "s"}`, price:total, basePrice:plan.price, quantity:state.quantity, billing:state.billing, contentType:state.service, deliveryFormat:state.deliveryFormat, addOns:extras, unit:state.billing === "monthly" ? "month" : "project", badge:state.billing === "monthly" ? "Monthly production" : "One-time project", features:[...plan.includes, ...extras.map(item => `${item.name} (+${money(item.price)} each)`)] });
+    actions.openCheckout({ id:plan.id, name:`${plan.name} · ${state.quantity} ${state.quantity === 1 ? serviceSingular() : servicePlural()}`, price:total, basePrice:plan.price, quantity:state.quantity, billing:state.billing, contentType:state.service, deliveryFormat:state.deliveryFormat, addOns:extras, unit:state.billing === "monthly" ? "month" : "project", badge:state.billing === "monthly" ? "Monthly production" : "One-time project", features:[...plan.includes, ...extras.map(item => `${item.name} (+${money(item.price)} each)`)] });
   });
   renderPackages(); renderAddOns(); renderFormats(); updateSummary();
 }
@@ -702,13 +712,16 @@ function initFrameAnnotations(wrap, video, root) {
 
 function renderOwnerGate(root, actions) {
   root.className = "owner-access-app";
-  root.innerHTML = `<main class="owner-access-shell"><section><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><p class="eyebrow light"><span></span>Owner operations</p><h1>Private control room.<br><em>Owner access only.</em></h1><p>Client briefs, provider portfolios, internal pricing and assignments are separated from client and provider workspaces.</p><ul><li><b>✓</b> Private provider vault</li><li><b>✓</b> Client-by-client isolation</li><li><b>✓</b> Assignment and payout controls</li></ul></section><section class="owner-access-card"><span>⌾</span><p class="eyebrow"><span></span>Owner verification</p><h2>Unlock this device session.</h2><p>This front-end prototype models the gate. Production should use server-side identity and role checks.</p><form><label>Owner email<input name="email" type="email" required autocomplete="email" placeholder="Owner email"></label><label>Preview access code<input name="code" required autocomplete="off" placeholder="CX-OWNER"></label><button class="pill pill-hot" type="submit">Open owner workspace →</button></form><small>Local preview code: <b>CX-OWNER</b></small><button type="button" data-owner-gate-back>← Back to client access</button></section></main>`;
+  root.innerHTML = `<main class="owner-access-shell"><section><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><p class="eyebrow light"><span></span>Owner operations</p><h1>Private control room.<br><em>Owner access only.</em></h1><p>Client briefs, provider portfolios, internal pricing and assignments are separated from client and provider workspaces.</p><ul><li><b>✓</b> Private provider vault</li><li><b>✓</b> Client-by-client isolation</li><li><b>✓</b> Assignment and payout controls</li></ul></section><section class="owner-access-card"><span>⌾</span><p class="eyebrow"><span></span>Owner verification</p><h2>Unlock this device session.</h2><p>This preview gate no longer prints private access details. Production should use server-side identity and role checks.</p><form><label>Owner email<input name="email" type="email" required autocomplete="email" placeholder="Owner email"></label><label>Private access code<input name="code" required autocomplete="off" placeholder="Enter private code"></label><button class="pill pill-hot" type="submit">Open owner workspace →</button></form><small>Use your private owner code. Never share it in docs, chat or screenshots.</small><button type="button" data-owner-gate-back>← Back to client access</button></section></main>`;
   root.querySelector(".brand").addEventListener("click", event => { event.preventDefault(); actions.openMarketing(); });
   root.querySelector("[data-owner-gate-back]").addEventListener("click", actions.openAccess);
-  root.querySelector("form").addEventListener("submit", event => {
+  root.querySelector("form").addEventListener("submit", async event => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.currentTarget));
-    if (String(data.email).trim().toLowerCase() !== "abhinavvrai@gmail.com" || String(data.code).trim().toUpperCase() !== "CX-OWNER") return notify("Owner details do not match this Content X preview.");
+    const encoded = new TextEncoder().encode(`${String(data.email).trim().toLowerCase()}:${String(data.code).trim().toUpperCase()}`);
+    const digest = await crypto.subtle.digest("SHA-256", encoded);
+    const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+    if (hash !== "e104f474b6f4ea826ad5236d83eeb6682df52f020a987cb8a5e5d9aa73e02084") return notify("Owner details do not match this Content X preview.");
     store.set("cx_owner_access", { email: String(data.email).trim().toLowerCase(), verifiedAt: Date.now() });
     actions.refreshRoute();
     notify("Owner workspace unlocked on this device.");

@@ -32,6 +32,7 @@ export const serviceAddOns = {
   cover_design: { name: "Cover / Thumbnail", amount: 500, service: "video" },
   extra_revision: { name: "Extra Revision Round", amount: 300, service: "video" },
   rush_delivery: { name: "Priority Delivery", amount: 1000, service: "video" },
+  quick_delivery: { name: "Quick Delivery", amount: 700, service: "video" },
   podcast_script: { name: "Podcast Episode Script", amount: 1500, service: "podcast" },
   podcast_notes: { name: "Show Notes & Chapters", amount: 500, service: "podcast" },
   podcast_clips: { name: "Two Short Social Clips", amount: 1500, service: "podcast" },

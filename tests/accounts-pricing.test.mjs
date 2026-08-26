@@ -10,7 +10,9 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
     assert.match(features, new RegExp(`price:${price}`));
   }
   for (const plan of ["Basic", "Standard", "Premium"]) assert.match(features, new RegExp(`name:"${plan}"`));
-  assert.match(features, /1 video up to 60 seconds/);
+  assert.match(features, /1 reel up to 60 seconds/);
+  assert.match(features, /Quick Delivery", price:700/);
+  assert.match(features, />Short-form</);
   assert.match(features, /Stickers, emojis and simple highlights/);
   assert.match(features, /B-roll placement and visual cutaways/);
   assert.match(features, /Up to 10 relevant B-roll inserts/);
@@ -23,11 +25,11 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   assert.match(features, /Motion Graphics", price:500/);
   assert.match(features, /Advanced Motion Graphics", price:1500/);
   assert.match(features, /Customize this \$\{plan\.name\} package/);
-  assert.match(features, /No paid upgrade needed for Basic/);
+  assert.match(features, /Package volume/);
   assert.doesNotMatch(features, /Package upgrade option/);
   assert.doesNotMatch(features, /data-addons-step/);
   assert.match(features, /data-plan-tab/);
-  assert.match(features, />Per video</);
+  assert.match(features, />Per reel</);
   assert.match(features, /if \(false && pricing\)/);
   assert.match(features, /data-unified-service="video"/);
   assert.match(features, /data-unified-service="podcast"/);
@@ -51,11 +53,11 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=package-addons-1/);
-  assert.match(html, /contentx-release" content="package-addons-1/);
-  assert.match(html, /main\.js\?v=package-addons-1/);
-  assert.match(main, /features\.js\?v=package-addons-1/);
-  assert.match(main, /uploads\.js\?v=package-addons-1/);
+  assert.match(page, /\/site\/index\.html\?v=team-controls-1/);
+  assert.match(html, /contentx-release" content="team-controls-1/);
+  assert.match(html, /main\.js\?v=team-controls-1/);
+  assert.match(main, /features\.js\?v=team-controls-1/);
+  assert.match(main, /uploads\.js\?v=team-controls-1/);
 });
 
 test("passes marketing data into pricing so the homepage loader cannot crash", async () => {
@@ -75,6 +77,7 @@ test("keeps payment totals server-calculated with allowlisted add-ons", async ()
   assert.match(razorpay, /broll_sfx: \{ name: "B-roll \+ Sound Design", amount: 500/);
   assert.match(razorpay, /motion_graphics: \{ name: "Motion Graphics", amount: 500/);
   assert.match(razorpay, /advanced_motion_graphics: \{ name: "Advanced Motion Graphics", amount: 1500/);
+  assert.match(razorpay, /quick_delivery: \{ name: "Quick Delivery", amount: 700/);
   assert.match(razorpay, /podcast_script: \{ name: "Podcast Episode Script", amount: 1500/);
   assert.match(razorpay, /const totalAmount = baseAmount \+ addOnAmount/);
   assert.match(orderRoute, /requireSessionUser/);
