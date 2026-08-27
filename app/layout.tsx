@@ -16,7 +16,14 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: base,
     title,
     description,
-    icons: { icon: "/favicon.svg" },
+    icons: {
+      icon: [
+        { url: "/contentx-favicon.svg?v=contentx-tab-icon-1", type: "image/svg+xml" },
+        { url: "/favicon.svg?v=contentx-tab-icon-1", type: "image/svg+xml" },
+      ],
+      shortcut: "/contentx-favicon.svg?v=contentx-tab-icon-1",
+      apple: "/contentx-favicon.svg?v=contentx-tab-icon-1",
+    },
     openGraph: { title, description, siteName: "Content X", type: "website", url: base, images: [{ url: image, width: 1200, height: 630, alt: "Content X managed creative services" }] },
     twitter: { card: "summary_large_image", title, description, images: [image] }
   };
