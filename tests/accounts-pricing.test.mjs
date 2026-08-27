@@ -34,7 +34,12 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   assert.match(features, /data-unified-billing="monthly" class="active">Monthly/);
   assert.match(features, />Per reel</);
   assert.match(features, /USD_INR_RATE = 96/);
+  assert.match(features, /USD_DISPLAY_MARKUP = 1\.25/);
+  assert.match(features, /function roundedUsdFromInr/);
+  assert.match(features, /Math\.ceil\(converted \/ step\) \* step/);
+  assert.match(features, /US visitors see clean rounded USD/);
   assert.match(features, /data-unified-currency="USD"/);
+  assert.match(features, /Showing rounded USD for US visitors/);
   assert.match(features, /billingPremiumAmount = amount => state\.billing === "one_off" \? Math\.round\(amount \* 0\.2\) : 0/);
   assert.match(features, /if \(false && pricing\)/);
   assert.match(features, /data-unified-service="video"/);
@@ -63,10 +68,10 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=saas-hero-1/);
-  assert.match(html, /contentx-release" content="saas-hero-1/);
-  assert.match(html, /main\.js\?v=saas-hero-1/);
-  assert.match(main, /features\.js\?v=saas-hero-1/);
+  assert.match(page, /\/site\/index\.html\?v=pricing-security-dashboard-1/);
+  assert.match(html, /contentx-release" content="pricing-security-dashboard-1/);
+  assert.match(html, /main\.js\?v=pricing-security-dashboard-1/);
+  assert.match(main, /features\.js\?v=pricing-security-dashboard-1/);
   assert.match(main, /uploads\.js\?v=team-controls-1/);
 });
 
@@ -112,15 +117,31 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   assert.match(route, /verify_otp/);
   assert.match(account, /Continue with email OTP/);
   assert.match(account, /accounts\.google\.com\/gsi\/client/);
+  assert.match(account, /The browser never stores readable passwords or payment details/);
+  assert.match(account, /JSON\.stringify\(\{ paid:true, account:true \}\)/);
+  assert.doesNotMatch(account, /email:user\.email/);
+  assert.doesNotMatch(account, /name:user\.name/);
 });
 
 test("stores password hashes and server-side sessions instead of readable passwords", async () => {
-  const auth = await load("lib/auth.ts");
+  const [auth, orderRoute, verifyRoute, razorpay] = await Promise.all([
+    load("lib/auth.ts"),
+    load("app/api/payments/razorpay/order/route.ts"),
+    load("app/api/payments/razorpay/verify/route.ts"),
+    load("lib/razorpay.ts"),
+  ]);
   assert.match(auth, /PBKDF2/);
   assert.match(auth, /PASSWORD_ITERATIONS = 310_000/);
   assert.match(auth, /HttpOnly; SameSite=Lax/);
+  assert.match(auth, /requireSameOrigin/);
   assert.match(auth, /token_hash/);
   assert.doesNotMatch(auth, /password TEXT/);
+  assert.match(orderRoute, /requireSameOrigin/);
+  assert.match(orderRoute, /requireSessionUser/);
+  assert.match(orderRoute, /currency: "INR"/);
+  assert.match(verifyRoute, /requireSessionUser/);
+  assert.match(verifyRoute, /timingSafeEqual/);
+  assert.match(razorpay, /currency: "INR"/);
 });
 
 test("collects the detailed brief after verified payment and opens private uploads", async () => {
@@ -132,4 +153,19 @@ test("collects the detailed brief after verified payment and opens private uploa
   assert.match(account, /Video or episode title/);
   assert.match(account, /Editing and creative instructions/);
   assert.match(account, /Reference link/);
+});
+
+test("shows owner permission controls and Frame-style review flow", async () => {
+  const [features, account, data] = await Promise.all([
+    load("public/site/src/features.js"),
+    load("public/site/src/account.js"),
+    load("public/site/src/data.js"),
+  ]);
+  assert.match(data, /Managed content production · private review workspace/);
+  assert.match(features, /teamPermissionsView/);
+  assert.match(features, /Owner can view every client/);
+  assert.match(features, /Create share links/);
+  assert.match(features, /owner-review-flow/);
+  assert.match(account, /account-review-panel/);
+  assert.match(account, /Control comments, downloads, uploads, passcode and expiry/);
 });

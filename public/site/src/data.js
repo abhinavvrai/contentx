@@ -4,7 +4,7 @@ export const studio = {
   email: "abhinavvrai@gmail.com",
   whatsapp: "https://wa.me/917987909860?text=Hi%20Abhinav%2C%20I%27d%20like%20to%20start%20a%20video%20project%20with%20Content%20X.",
   hero: {
-    eyebrow: "Video production + client review workspace",
+    eyebrow: "Managed content production · private review workspace",
     title: ["Create.", "Review.", "Publish."],
     copy: "Premium video editing with one organized place for footage, versions, timestamped feedback, approvals, and final delivery.",
     primary: "Choose a package",
