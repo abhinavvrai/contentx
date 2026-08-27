@@ -41,7 +41,7 @@ export function renderMarketing(root, data, actions) {
             <div class="window-bar"><span class="brand-mark mini">CX</span><span>Apex Fitness Launch</span><div><i></i><i></i><i></i></div></div>
             <div class="product-body">
               <aside><span>⌂</span><span class="active">▱</span><span>◌</span><span>✓</span></aside>
-              <div class="video-preview"><video src="videos/premium1.mp4" muted loop playsinline autoplay></video><span class="version-chip">V3 · Ready for review</span><div class="fake-controls"><b>▶</b><i><em></em></i><small>00:18 / 00:32</small></div></div>
+              <div class="video-preview"><video src="videos/landscape1.mp4" muted loop playsinline autoplay></video><span class="version-chip">V3 · Ready for review</span><div class="fake-controls"><b>▶</b><i><em></em></i><small>00:18 / 00:32</small></div></div>
               <div class="comment-preview"><strong>Comments <span>3</span></strong><article><b>MK</b><p><span>00:04</span> Could we start with this shot?</p></article><article><b>AR</b><p><span>00:12</span> Updated in the next version.</p></article><div class="fake-input">Add feedback at 00:18…</div></div>
             </div>
           </div>
