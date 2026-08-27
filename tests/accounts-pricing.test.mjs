@@ -34,12 +34,10 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   assert.match(features, /data-unified-billing="monthly" class="active">Monthly/);
   assert.match(features, />Per reel</);
   assert.match(features, /USD_INR_RATE = 96/);
-  assert.match(features, /USD_DISPLAY_MARKUP = 1\.1/);
   assert.match(features, /function roundedUsdFromInr/);
-  assert.match(features, /Math\.ceil\(converted \/ step\) \* step/);
-  assert.match(features, /Visitors outside India see clean rounded USD/);
-  assert.match(features, /data-currency-auto-label/);
-  assert.match(features, /Razorpay checkout is created in USD/);
+  assert.match(features, /Math\.ceil\(amount \/ USD_INR_RATE \/ 5\) \* 5/);
+  assert.match(features, /pricing switches automatically by visitor region/);
+  assert.doesNotMatch(features, /data-currency-auto-label/);
   assert.match(features, /billingPremiumAmount = amount => state\.billing === "one_off" \? Math\.round\(amount \* 0\.2\) : 0/);
   assert.match(features, /if \(false && pricing\)/);
   assert.match(features, /data-unified-service="video"/);
@@ -68,10 +66,10 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=demo-share-usd-1/);
-  assert.match(html, /contentx-release" content="demo-share-usd-1/);
-  assert.match(html, /main\.js\?v=demo-share-usd-1/);
-  assert.match(main, /features\.js\?v=demo-share-usd-1/);
+  assert.match(page, /\/site\/index\.html\?v=clean-placeholders-otp-usd-1/);
+  assert.match(html, /contentx-release" content="clean-placeholders-otp-usd-1/);
+  assert.match(html, /main\.js\?v=clean-placeholders-otp-usd-1/);
+  assert.match(main, /features\.js\?v=clean-placeholders-otp-usd-1/);
   assert.match(main, /uploads\.js\?v=team-controls-1/);
 });
 
@@ -130,9 +128,9 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   assert.match(auth, /RSASSA-PKCS1-v1_5/);
   assert.match(route, /request_otp/);
   assert.match(route, /verify_otp/);
-  assert.match(account, /Continue with email OTP/);
+  assert.match(account, /Continue with email code/);
   assert.match(account, /accounts\.google\.com\/gsi\/client/);
-  assert.match(account, /The browser never stores readable passwords or payment details/);
+  assert.match(account, /Payment details are handled by Razorpay/);
   assert.match(account, /JSON\.stringify\(\{ paid:true, account:true \}\)/);
   assert.doesNotMatch(account, /email:user\.email/);
   assert.doesNotMatch(account, /name:user\.name/);

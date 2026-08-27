@@ -2,7 +2,6 @@ import { env } from "cloudflare:workers";
 
 const RAZORPAY_API_BASE = "https://api.razorpay.com/v1";
 const USD_INR_RATE = 96;
-const USD_DISPLAY_MARKUP = 1.1;
 let paymentSchemaPromise: Promise<void> | null = null;
 
 export const servicePlans = {
@@ -198,9 +197,7 @@ export function calculateOrder(input: {
 
 function roundedUsdFromInr(amount: number) {
   if (!amount) return 0;
-  const converted = (amount / USD_INR_RATE) * USD_DISPLAY_MARKUP;
-  const step = converted >= 100 ? 10 : 5;
-  return Math.max(5, Math.ceil(converted / step) * step);
+  return Math.max(5, Math.ceil(amount / USD_INR_RATE / 5) * 5);
 }
 
 export function json(body: unknown, status = 200) {

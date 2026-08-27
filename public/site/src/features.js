@@ -72,7 +72,6 @@ const talentRoles = [
 ];
 
 const USD_INR_RATE = 96;
-const USD_DISPLAY_MARKUP = 1.1;
 const currencyStoreKey = "cx_currency_v2";
 function detectCurrency() {
   const saved = store.get(currencyStoreKey, "");
@@ -87,9 +86,7 @@ let activeCurrency = detectCurrency();
 function roundedUsdFromInr(value) {
   const amount = Number(value || 0);
   if (!amount) return 0;
-  const converted = (amount / USD_INR_RATE) * USD_DISPLAY_MARKUP;
-  const step = converted >= 100 ? 10 : 5;
-  return Math.max(5, Math.ceil(converted / step) * step);
+  return Math.max(5, Math.ceil(amount / USD_INR_RATE / 5) * 5);
 }
 function money(value, currency = activeCurrency) {
   const amount = Number(value || 0);
@@ -314,7 +311,7 @@ function setupUnifiedPricing(pricing, actions, data) {
   };
   const state = { billing:"monthly", service:"video", quantity:10, planId:"basic_reel", selectedAddOns:new Set(), addOnsRevealed:false, deliveryFormat:"Vertical 9:16", durationMinutes:10, rawFootageHours:1 };
   pricing.dataset.pricingRestored = "unified";
-  pricing.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple, flexible pricing</p><h2>Choose the work. Add only what you <em>need.</em></h2><p>Start with monthly production first, or switch to one-off work with a 20% flexibility premium. India sees INR. Visitors outside India see clean rounded USD.</p></div><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="monthly" class="active">Monthly</button><button type="button" data-unified-billing="one_off">Per reel</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Short-form</button><button type="button" data-unified-service="longform">Long-form</button><button type="button" data-unified-service="podcast">Podcast</button></div></div><div class="currency-toggle auto-currency"><small>Auto currency</small><strong data-currency-auto-label></strong><em data-currency-note>Detected from your browser region.</em></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a short-form package</strong><small>Switch between the tabs, then expand add-ons if needed.</small></div></header><div class="unified-package-browser" data-unified-packages></div></div><div class="unified-step" data-quantity-step><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Monthly short-form production starts at 10.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>10</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div><label class="unified-volume-slider"><span>Package volume</span><input type="range" min="10" max="30" value="10" data-unified-slider><small><b data-unified-slider-min>10</b><b data-unified-slider-max>30</b></small></label><div class="longform-controls" data-longform-controls hidden><label><span>Final video length</span><input type="range" min="10" max="60" step="5" value="10" data-duration-slider><small><b data-duration-value>10 min</b><em data-duration-note>Long-form starts at ₹5,000 for 10 minutes.</em></small></label><label><span>Raw footage to review</span><input type="range" min="1" max="10" step="1" value="1" data-raw-slider><small><b data-raw-value>1 hr</b><em>More raw footage increases review/editing time.</em></small></label></div></div></section><aside class="unified-summary"><span data-unified-badge>MONTHLY PRODUCTION</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons / scope <b data-unified-addons-total></b></span><span data-unified-premium-line hidden>One-off +20% <b data-unified-premium></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">You’ll add the title, description, instructions, reference links and files immediately after payment.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
+  pricing.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple, flexible pricing</p><h2>Choose the work. Add only what you <em>need.</em></h2><p>Monthly production is shown first. One-off work stays available with a 20% flexibility premium, and pricing switches automatically by visitor region.</p></div><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="monthly" class="active">Monthly</button><button type="button" data-unified-billing="one_off">Per reel</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Short-form</button><button type="button" data-unified-service="longform">Long-form</button><button type="button" data-unified-service="podcast">Podcast</button></div></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a short-form package</strong><small>Switch between the tabs, then expand add-ons if needed.</small></div></header><div class="unified-package-browser" data-unified-packages></div></div><div class="unified-step" data-quantity-step><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Monthly short-form production starts at 10.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>10</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div><label class="unified-volume-slider"><span>Package volume</span><input type="range" min="10" max="30" value="10" data-unified-slider><small><b data-unified-slider-min>10</b><b data-unified-slider-max>30</b></small></label><div class="longform-controls" data-longform-controls hidden><label><span>Final video length</span><input type="range" min="10" max="60" step="5" value="10" data-duration-slider><small><b data-duration-value>10 min</b><em data-duration-note>Long-form starts at ₹5,000 for 10 minutes.</em></small></label><label><span>Raw footage to review</span><input type="range" min="1" max="10" step="1" value="1" data-raw-slider><small><b data-raw-value>1 hr</b><em>More raw footage increases review/editing time.</em></small></label></div></div></section><aside class="unified-summary"><span data-unified-badge>MONTHLY PRODUCTION</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons / scope <b data-unified-addons-total></b></span><span data-unified-premium-line hidden>One-off +20% <b data-unified-premium></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">You’ll add the title, description, instructions, reference links and files immediately after payment.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
     ["Content Strategy & Planning", "Plan", "Content pillars, audience positioning, monthly calendar, campaign concepts, hooks and performance review."],
     ["Social Media Management", "Manage", "Scheduling, publishing, captions, hashtag research, comment management and monthly reporting."],
     ["Full Content Team", "Full service", "Strategy, scripts, editing, covers, scheduling and one accountable Content X manager."],
@@ -365,14 +362,6 @@ function setupUnifiedPricing(pricing, actions, data) {
     if (String(item.range || "").endsWith("+")) return `${money(start)}+`;
     return money(start);
   };
-  const updateCurrencyButtons = () => {
-    pricing.querySelectorAll("[data-unified-currency]").forEach(button => button.classList.toggle("active", button.dataset.unifiedCurrency === activeCurrency));
-    const note = pricing.querySelector("[data-currency-note]");
-    const label = pricing.querySelector("[data-currency-auto-label]");
-    if (label) label.textContent = activeCurrency === "USD" ? "$ USD" : "₹ INR";
-    if (note) note.textContent = activeCurrency === "USD" ? "Outside India: Razorpay checkout is created in USD and settles to your Razorpay account in INR when international payments are enabled." : "India: checkout stays in INR.";
-  };
-
   function renderPackages() {
     pricing.querySelector("[data-package-heading]").textContent = `Choose a ${serviceLabel()} package`;
     const plan = selectedPackage();
@@ -470,11 +459,6 @@ function setupUnifiedPricing(pricing, actions, data) {
     renderPackages(); updateSummary();
   }));
   pricing.querySelectorAll("[data-unified-service]").forEach(button => button.addEventListener("click", () => switchService(button.dataset.unifiedService)));
-  pricing.querySelectorAll("[data-unified-currency]").forEach(button => button.addEventListener("click", () => {
-    activeCurrency = button.dataset.unifiedCurrency;
-    store.set(currencyStoreKey, activeCurrency);
-    updateCurrencyButtons(); renderPackages(); updateSummary();
-  }));
   pricing.querySelectorAll("[data-unified-quantity]").forEach(button => button.addEventListener("click", () => {
     state.quantity = Math.min(maximumQuantity(), Math.max(minimumQuantity(), state.quantity + (button.dataset.unifiedQuantity === "plus" ? 1 : -1)));
     updateSummary();
@@ -491,7 +475,7 @@ function setupUnifiedPricing(pricing, actions, data) {
     const total = subtotal + premium;
     actions.openCheckout({ id:plan.id, name:`${plan.name} · ${state.quantity} ${state.quantity === 1 ? serviceSingular() : servicePlural()}`, price:total, basePrice:plan.price, quantity:state.quantity, billing:state.billing, contentType:state.service, deliveryFormat:state.deliveryFormat, durationMinutes:state.service === "longform" ? state.durationMinutes : undefined, rawFootageHours:state.service === "longform" ? state.rawFootageHours : undefined, addOns:extras, unit:state.billing === "monthly" ? "month" : "project", badge:state.billing === "monthly" ? "Monthly production" : "One-time project +20%", features:[...plan.includes, ...(state.service === "longform" ? [`Final length selected: ${state.durationMinutes} minutes`, `Raw footage selected: ${state.rawFootageHours} hour${state.rawFootageHours === 1 ? "" : "s"}`] : []), ...(premium ? [`One-off flexibility premium: ${money(premium)}`] : []), ...extras.map(item => `${item.name} (+${money(item.price)} each)`)] });
   });
-  updateCurrencyButtons(); renderPackages(); renderAddOns(); renderFormats(); updateSummary();
+  renderPackages(); renderAddOns(); renderFormats(); updateSummary();
 }
 
 function openWorkMenu() {

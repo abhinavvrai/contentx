@@ -69,11 +69,11 @@ function addMarketingSuite(root) {
 
 function addPrePaymentTutorials(root) {
   if (root.querySelector(".prepay-tutorials")) return; const pricing = root.querySelector("#pricing"); if (!pricing) return;
-  pricing.insertAdjacentHTML("beforebegin", `<section class="prepay-tutorials section-shell"><div class="section-heading split"><div><p class="eyebrow"><span></span>See it before you pay</p><h2>Preview the workflow in <em>60 seconds.</em></h2></div><p>Short demo clips show how clients upload files, review versions, create share links and approve final edits before they choose a package.</p></div><div class="tutorial-video-grid">${[
-    ["Review comments", "videos/video3.mp4", "Click the timeline, leave a timestamped note and keep feedback attached to the version."],
-    ["Version workflow", "videos/premium1.mp4", "Drop a replacement on the same file so V2, V3 and final delivery stay together."],
-    ["Shareable links", "videos/standard3.mp4", "Create a secure link, copy it instantly, then send it by WhatsApp, email or social."],
-  ].map(([title,src,copy]) => `<article><video src="${src}" muted loop playsinline autoplay></video><div><span>Demo</span><h3>${title}</h3><p>${copy}</p></div></article>`).join("")}</div><div class="tutorial-actions"><a class="pill pill-hot" href="#workspace">Explore demo dashboard →</a><a class="pill pill-dark" href="#access">Login / create account</a></div></section>`);
+  pricing.insertAdjacentHTML("beforebegin", `<section class="prepay-tutorials section-shell"><div class="section-heading split"><div><p class="eyebrow"><span></span>See it before you pay</p><h2>Preview the workspace flow <em>before checkout.</em></h2></div><p>Video walkthroughs will be added here later. For now, these quick cards explain what clients can do inside the Content X workspace after payment.</p></div><div class="tutorial-video-grid">${[
+    ["Review comments", "01", "Click the timeline, leave a timestamped note and keep feedback attached to the correct version."],
+    ["Version workflow", "02", "Drop a replacement on the same file so V2, V3 and final delivery stay together."],
+    ["Shareable links", "03", "Create a review link, copy it instantly, then share it by WhatsApp, email or social."],
+  ].map(([title,index,copy]) => `<article><div class="tutorial-placeholder"><span>${index}</span><strong>Coming soon</strong><small>Demo video placeholder</small></div><div><span>Workflow</span><h3>${title}</h3><p>${copy}</p></div></article>`).join("")}</div><div class="tutorial-actions"><a class="pill pill-hot" href="#workspace">Explore demo dashboard →</a><a class="pill pill-dark" href="#access">Login / create account</a></div></section>`);
 }
 
 function openHookPlanner() {

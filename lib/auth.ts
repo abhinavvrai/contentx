@@ -73,6 +73,7 @@ export async function requestEmailOtp(request: Request, input: Record<string, un
   const db = getAccountDatabase();
   const attemptKey = await otpAttemptKey(request, email);
   await enforceOtpRequestLimit(db, attemptKey);
+  const name = cleanText(input.name, 100);
   const response = await fetch(`${url}/auth/v1/otp`, {
     method: "POST",
     headers: {
@@ -80,7 +81,7 @@ export async function requestEmailOtp(request: Request, input: Record<string, un
       Authorization: `Bearer ${anonKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ email, create_user: true }),
+    body: JSON.stringify({ email, create_user: true, data: name ? { full_name: name, name } : undefined }),
   });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({})) as { msg?: string; message?: string };
@@ -106,11 +107,13 @@ export async function verifyEmailOtp(request: Request, input: Record<string, unk
     body: JSON.stringify({ email, token: otp, type: "email" }),
   });
   const payload = await response.json().catch(() => ({})) as {
-    user?: { id?: string; email?: string; email_confirmed_at?: string; user_metadata?: { full_name?: string; name?: string } };
+    user?: { id?: string; email?: string; email_confirmed_at?: string | null; confirmed_at?: string | null; user_metadata?: { full_name?: string; name?: string } };
+    access_token?: string;
+    session?: { access_token?: string };
     msg?: string;
     message?: string;
   };
-  if (!response.ok || !payload.user?.id || !payload.user.email_confirmed_at) {
+  if (!response.ok || !payload.user?.id || !payload.user.email) {
     throw new AccountError(payload.msg || payload.message || "That verification code is invalid or expired.", 401);
   }
   const verifiedEmail = cleanEmail(payload.user.email || email);

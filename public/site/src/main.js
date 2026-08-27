@@ -1,13 +1,13 @@
 import { studio } from "./data.js";
-import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=demo-share-usd-1";
-import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=demo-share-usd-1";
+import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=clean-placeholders-otp-usd-1";
+import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=clean-placeholders-otp-usd-1";
 import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=restored-features-1";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js";
 import { initProductPolish, polishRoute } from "./polish.js?v=core-features-2";
-import { enhanceCreatorTools } from "./creator-tools.js?v=demo-share-usd-1";
+import { enhanceCreatorTools } from "./creator-tools.js?v=clean-placeholders-otp-usd-1";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=team-controls-1";
-import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=demo-share-usd-1";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=demo-share-usd-1";
+import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=clean-placeholders-otp-usd-1";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=clean-placeholders-otp-usd-1";
 
 const root = document.getElementById("app");
 const loader = document.querySelector("[data-loader]");
