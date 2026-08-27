@@ -24,7 +24,9 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   assert.match(features, /Extra B-roll \+ Sound Design", price:500/);
   assert.match(features, /Motion Graphics", price:500/);
   assert.match(features, /Advanced Motion Graphics", price:1500/);
-  assert.match(features, /Customize this \$\{plan\.name\} package/);
+  assert.match(features, /Optional upgrades for \$\{plan\.name\}/);
+  assert.match(features, /addOnsRevealed:false/);
+  assert.match(features, /Show add-ons for \$\{plan\.name\}/);
   assert.match(features, /Package volume/);
   assert.doesNotMatch(features, /Package upgrade option/);
   assert.doesNotMatch(features, /data-addons-step/);
@@ -61,10 +63,10 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=monthly-currency-1/);
-  assert.match(html, /contentx-release" content="monthly-currency-1/);
-  assert.match(html, /main\.js\?v=monthly-currency-1/);
-  assert.match(main, /features\.js\?v=monthly-currency-1/);
+  assert.match(page, /\/site\/index\.html\?v=visual-flow-1/);
+  assert.match(html, /contentx-release" content="visual-flow-1/);
+  assert.match(html, /main\.js\?v=visual-flow-1/);
+  assert.match(main, /features\.js\?v=visual-flow-1/);
   assert.match(main, /uploads\.js\?v=team-controls-1/);
 });
 
