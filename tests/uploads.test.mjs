@@ -19,12 +19,18 @@ test("ships durable, private project uploads instead of browser-only metadata", 
   assert.match(route, /downloadAdminFile/);
   assert.match(storage, /CONTENTX_OWNER_TOKEN/);
   assert.match(storage, /SHA-256/);
+  assert.match(storage, /ALLOWED_UPLOAD_EXTENSIONS/);
+  assert.match(storage, /BLOCKED_UPLOAD_EXTENSIONS/);
+  assert.match(storage, /validateUploadFileMetadata/);
+  assert.match(storage, /validateUploadPartSignature/);
+  assert.match(route, /validateUploadPartSignature\(file, bytes, partNumber\)/);
   assert.match(storage, /idx_upload_files_project_status/);
   assert.match(schema, /uploadProjects/);
   assert.match(schema, /uploadFiles/);
   assert.match(main, /route\.startsWith\("upload\?"\)/);
   assert.match(uploads, /Drop files here/);
   assert.match(uploads, /Promise\.all/);
+  assert.match(uploads, /Blocked file type for safety/);
   assert.equal(JSON.parse(hosting).r2, "UPLOADS");
   assert.match(wrangler, /"binding": "UPLOADS"/);
   assert.match(wrangler, /"bucket_name": "contentx"/);
@@ -60,6 +66,7 @@ test("groups replacement uploads into versions and supports controlled share lin
   assert.match(schema, /projectShareLinks/);
   assert.match(workspace, /Drop replacement here/);
   assert.match(workspace, /Allow uploads/);
+  assert.match(workspace, /Executables, archives, scripts, HTML and SVG are blocked/);
   assert.match(workspace, /Create & copy share link/);
   assert.match(workspace, /shareIntent\("whatsapp"/);
   assert.match(workspace, /data-share-status/);

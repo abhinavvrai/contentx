@@ -175,10 +175,12 @@ These areas look functional in the interface but are not yet complete production
 
 - The dedicated project-upload portal stores file bytes in the private `UPLOADS` R2 bucket and searchable metadata in D1.
 - Owner-created client links support chunked uploads up to 50 GB per file and 250 GB per project, project file listings, protected downloads, link rotation, upload pausing, and permanent removal.
+- Server-backed uploads allowlist business-needed formats only: video, audio, image, PDF, text, CSV, SRT, and VTT. Executables, scripts, HTML/SVG, archives, installers, and dangerous filenames are blocked before storage; first upload chunks are checked for common file signatures.
 - Paid clients can submit a D1-backed project brief and receive a session-authorized R2 upload space without handling a separate project token.
 - The owner file area requires the server-side `CONTENTX_OWNER_TOKEN`; client links use separate high-entropy project tokens stored only as hashes.
 - Legacy workspace attachments, review-comment attachments, provider portfolios, and marketplace upload controls still store only file metadata in browser `localStorage` and are not yet connected to R2.
 - The wider marketplace, provider, review, and owner workspace still needs complete role-based authorization before it can be described as a fully secure multi-user collaboration system.
+- The upload service does not yet run a dedicated antivirus or sandbox scan. Add a private malware-scanning service before accepting higher-risk document/archive formats or advertising malware scanning.
 
 ### Authentication and permissions
 
@@ -186,6 +188,7 @@ These areas look functional in the interface but are not yet complete production
 - Passwords are salted and hashed with PBKDF2-SHA-256 at 310,000 iterations; plaintext passwords are never stored.
 - Session tokens are random, stored only as SHA-256 hashes in D1, and sent through secure HTTP-only SameSite cookies.
 - Repeated failed logins are rate-limited and temporarily blocked.
+- The account screen defaults signed-in users into the workspace/account area and offers Google, email OTP, or password access. OTP requests are rate-limited through the server.
 - Provider, marketplace, review-demo, and visible owner-preview permissions still include browser-local demonstration behavior and need role-based server authorization before being treated as production multi-user collaboration.
 
 ### Project and marketplace data

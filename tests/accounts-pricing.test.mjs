@@ -55,6 +55,8 @@ test("adds browser security headers at the custom domain worker", async () => {
   const worker = await load("worker/index.ts");
   assert.match(worker, /Content-Security-Policy/);
   assert.match(worker, /X-Content-Type-Options/);
+  assert.match(worker, /Strict-Transport-Security/);
+  assert.match(worker, /Cross-Origin-Opener-Policy/);
   assert.match(worker, /frame-ancestors 'self'/);
   assert.match(worker, /no-store, must-revalidate/);
   assert.match(worker, /site-v2\/src/);
@@ -66,11 +68,11 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=clean-placeholders-otp-usd-1/);
-  assert.match(html, /contentx-release" content="clean-placeholders-otp-usd-1/);
-  assert.match(html, /main\.js\?v=clean-placeholders-otp-usd-1/);
-  assert.match(main, /features\.js\?v=clean-placeholders-otp-usd-1/);
-  assert.match(main, /uploads\.js\?v=team-controls-1/);
+  assert.match(page, /\/site\/index\.html\?v=security-upload-login-1/);
+  assert.match(html, /contentx-release" content="security-upload-login-1/);
+  assert.match(html, /main\.js\?v=security-upload-login-1/);
+  assert.match(main, /features\.js\?v=security-upload-login-1/);
+  assert.match(main, /uploads\.js\?v=security-upload-login-1/);
 });
 
 test("lets visitors explore a demo dashboard before login", async () => {
@@ -129,6 +131,9 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   assert.match(route, /request_otp/);
   assert.match(route, /verify_otp/);
   assert.match(account, /Continue with email code/);
+  assert.match(account, /otp-box-grid/);
+  assert.match(account, /bindOtpBoxes/);
+  assert.match(account, /location\.hash = returningTo/);
   assert.match(account, /accounts\.google\.com\/gsi\/client/);
   assert.match(account, /Payment details are handled by Razorpay/);
   assert.match(account, /JSON\.stringify\(\{ paid:true, account:true \}\)/);

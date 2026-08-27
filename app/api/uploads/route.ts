@@ -19,6 +19,8 @@ import {
   requireOwner,
   requireProject,
   validateFileSize,
+  validateUploadFileMetadata,
+  validateUploadPartSignature,
   verifyDownloadSignature,
   type UploadFile,
   type UploadProject,
@@ -359,10 +361,10 @@ async function startUpload(request: Request, input: JsonInput): Promise<Response
   requireSameOrigin(request);
   const projectId = cleanText(input.projectId, 80);
   const project = await requireProject(request, projectId, "upload");
-  const originalName = cleanText(input.fileName, 240);
-  if (!originalName) throw new ClientError("The file name is missing.");
+  const validatedFile = validateUploadFileMetadata(input.fileName, input.contentType);
+  const originalName = validatedFile.fileName;
   const sizeBytes = validateFileSize(input.fileSize, project.max_file_size);
-  const contentType = cleanText(input.contentType, 160) || "application/octet-stream";
+  const contentType = validatedFile.contentType;
   const uploaderName = cleanText(input.uploaderName, 120);
   const uploaderEmail = input.uploaderEmail ? cleanEmail(input.uploaderEmail) : "";
   if (input.uploaderEmail && !uploaderEmail) throw new ClientError("Enter a valid uploader email.");
@@ -425,6 +427,7 @@ async function uploadPart(request: Request, params: URLSearchParams): Promise<Re
   if (!file) throw new ClientError("This upload session is no longer available.", 404);
   const bytes = await request.arrayBuffer();
   if (!bytes.byteLength || bytes.byteLength > UPLOAD_PART_BYTES) throw new ClientError("Invalid upload chunk.", 413);
+  validateUploadPartSignature(file, bytes, partNumber);
   const part = await bucket.resumeMultipartUpload(file.object_key, uploadId).uploadPart(partNumber, bytes);
   return json({ partNumber: part.partNumber, etag: part.etag });
 }

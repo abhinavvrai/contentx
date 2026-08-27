@@ -11,6 +11,7 @@ const formatBytes = bytes => {
 };
 const fileGlyph = type => String(type || "").startsWith("video/") ? "▶" : String(type || "").startsWith("image/") ? "▧" : String(type || "").startsWith("audio/") ? "♫" : "◇";
 const formatDate = value => value ? new Date(Number(value)).toLocaleDateString([], { dateStyle:"medium" }) : "—";
+const SAFE_WORKSPACE_EXTENSIONS = new Set(["mp4","mov","m4v","webm","mkv","avi","mp3","wav","m4a","aac","flac","ogg","jpg","jpeg","png","webp","gif","heic","heif","pdf","txt","md","csv","srt","vtt"]);
 
 async function api(url, options = {}) {
   const response = await fetch(url, { credentials:"same-origin", ...options });
@@ -87,6 +88,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
 function projectSurface(project, files, canUpload) {
   return `<section class="workspace-project-head"><div><p>PROJECT</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle"><button class="active" type="button">Grid</button><button type="button">List</button></div></section>
     <section class="workspace-dropbar ${canUpload ? "" : "disabled"}" data-project-drop><span>↑</span><div><b>${canUpload ? "Drop files anywhere here" : "This link is view-only"}</b><small>${canUpload ? "Upload new assets, or drop directly on a file to create its next version." : "Ask the owner to enable uploads on this share link."}</small></div></section>
+    ${canUpload ? `<p class="workspace-upload-rules">Allowed uploads: video, audio, image, PDF, text, CSV and subtitle files. Executables, archives, scripts, HTML and SVG are blocked.</p>` : ""}
     <section class="workspace-revision-flow"><article><span>01</span><b>Upload cut</b><small>Raw files and edits land in one project.</small></article><article><span>02</span><b>Drop replacement</b><small>Dropping on a card creates the next version.</small></article><article><span>03</span><b>Share review link</b><small>Send one link with multiple videos, expiry and upload controls.</small></article><article><span>04</span><b>Approve final</b><small>Comments, downloads and decisions stay attached.</small></article></section>
     <section class="workspace-files"><header><div><h2>Files</h2><span>Latest versions</span></div><p>${canUpload ? "Drop a replacement onto a card to keep every version together." : "Open a file to review and download its version history."}</p></header><div class="workspace-file-grid">${files.length ? files.map(file => fileCard(file, canUpload)).join("") : `<div class="workspace-empty-files"><span>↑</span><h3>No files yet</h3><p>${canUpload ? "Upload raw footage, references, audio or working files." : "The project owner has not shared any files yet."}</p></div>`}</div></section>
     <section class="workspace-queue" data-workspace-queue></section>`;
@@ -204,6 +206,7 @@ async function uploadSelectedFiles(root, projectId, token, selected, replaceFile
     row.innerHTML = `<span>${fileGlyph(file.type)}</span><div><b>${escapeHTML(file.name)}</b><small>Preparing secure upload…</small><i><em></em></i></div><strong>0%</strong>`;
     queue.prepend(row);
     try {
+      if (!fileLooksSafe(file)) throw new Error("This file type is blocked for safety. Use video, audio, image, PDF, text, CSV or subtitle files.");
       await verifyVideoDuration(file, Number(maxVideoSeconds || 0), row);
       await uploadOne(file, row, projectId, token, replaceFileId);
     } catch (error) {
@@ -211,6 +214,11 @@ async function uploadSelectedFiles(root, projectId, token, selected, replaceFile
       throw error;
     }
   }
+}
+
+function fileLooksSafe(file) {
+  const extension = String(file.name || "").toLowerCase().split(".").pop() || "";
+  return SAFE_WORKSPACE_EXTENSIONS.has(extension) && !/[\u0000-\u001f\\\/]/.test(file.name);
 }
 
 async function verifyVideoDuration(file, maxVideoSeconds, row) {

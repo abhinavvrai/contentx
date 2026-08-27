@@ -33,13 +33,13 @@ export function accountUser() {
 }
 
 export function rememberProtectedRoute(route) {
-  localStorage.setItem("cx_return_route", route || "account");
+  localStorage.setItem("cx_return_route", route || "workspace");
 }
 
 export function renderAccountAccess(root, actions) {
-  const returningTo = localStorage.getItem("cx_return_route") || "account";
+  const returningTo = localStorage.getItem("cx_return_route") || "workspace";
   root.className = "account-app";
-  root.innerHTML = `<main class="account-access"><section class="account-story"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><div><p class="eyebrow light"><span></span>Client workspace</p><h1>Files, versions and feedback in one account.</h1><p>Sign in once to manage every order, project brief, share link and upload.</p><ul><li><b>✓</b> Verified email and Google sign-in</li><li><b>✓</b> Frame-style project workspace</li><li><b>✓</b> Private, versioned file delivery</li></ul></div><small>Your private login details stay protected.</small></section><section class="account-card"><button class="account-close" type="button" aria-label="Return home">×</button><div class="account-toggle" role="tablist" aria-label="Account action"><button class="active" type="button" data-account-tab="login">Sign in</button><button type="button" data-account-tab="register">Create account</button></div><div data-account-panel></div><div class="dashboard-help-strip account-help-strip"><article><span>1</span><strong>Choose package</strong><small>Pay first so your workspace opens with the right scope.</small></article><article><span>2</span><strong>Add brief & files</strong><small>Share instructions, references and footage after payment.</small></article><article><span>3</span><strong>Review versions</strong><small>Comment, approve or request changes in one place.</small></article></div><aside class="account-security"><span>✓</span><p><strong>Safe client login</strong><small>Use email, Google, or a password to open your workspace. Payment details are handled by Razorpay.</small></p></aside></section></main>`;
+  root.innerHTML = `<main class="account-access account-access-frame"><section class="account-story"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><div><span class="account-orbit-mark">CX</span><p class="eyebrow light"><span></span>Client review workspace</p><h1>Welcome to your production room.</h1><p>Open projects, upload safe files, compare versions, create share links and keep feedback away from scattered WhatsApp threads.</p><ul><li><b>✓</b> Email OTP, Google or password sign-in</li><li><b>✓</b> Private project files and version stacks</li><li><b>✓</b> Share links with expiry and upload controls</li></ul></div><small>Passwords are never shown to users or stored in readable form.</small></section><section class="account-card account-card-frame"><button class="account-close" type="button" aria-label="Return home">×</button><div class="account-card-logo"><span>CX</span><small>Content X Workspace</small></div><div class="account-toggle" role="tablist" aria-label="Account action"><button class="active" type="button" data-account-tab="login">Sign in</button><button type="button" data-account-tab="register">Create account</button></div><div data-account-panel></div><div class="dashboard-help-strip account-help-strip"><article><span>1</span><strong>Pay package</strong><small>Checkout creates the correct workspace.</small></article><article><span>2</span><strong>Brief & upload</strong><small>Add instructions, footage and references.</small></article><article><span>3</span><strong>Review delivery</strong><small>Comment, approve and download final files.</small></article></div><aside class="account-security"><span>✓</span><p><strong>Protected account access</strong><small>Login stays server-side. Payment details are handled by Razorpay, not stored on this page.</small></p></aside></section></main>`;
   root.querySelector(".account-close").addEventListener("click", actions.openMarketing);
   root.querySelector(".account-story .brand").addEventListener("click", event => { event.preventDefault(); actions.openMarketing(); });
   const panel = root.querySelector("[data-account-panel]");
@@ -48,7 +48,7 @@ export function renderAccountAccess(root, actions) {
   function show(mode) {
     tabs.forEach(button => button.classList.toggle("active", button.dataset.accountTab === mode));
     const register = mode === "register";
-    panel.innerHTML = `<p class="eyebrow"><span></span>${register ? "New client account" : "Welcome back"}</p><h2>${register ? "Create your account." : "Sign in to continue."}</h2><p>${register ? "Verify your email or connect Google, then use the same address at checkout." : "Open projects, file versions and private share links."}</p><div class="account-provider-actions">${accountProviders.google?.available ? `<div data-google-button></div>` : ""}${accountProviders.emailOtp?.available ? `<button type="button" data-account-otp>✉ Continue with email code</button>` : ""}</div>${(accountProviders.google?.available || accountProviders.emailOtp?.available) ? '<div class="account-divider"><span>or use a password</span></div>' : ""}<form data-password-form>${register ? '<label>Full name<input name="name" autocomplete="name" required placeholder="Your full name"></label>' : ""}<label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><label>Password<input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="10" maxlength="128" required placeholder="At least 10 characters"></label>${register ? '<small class="password-tip">Use a long phrase with at least 10 characters.</small>' : ""}<p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Create account →" : "Sign in →"}</button></form>`;
+    panel.innerHTML = `<p class="eyebrow"><span></span>${register ? "New client account" : "Welcome back"}</p><h2>${register ? "Create your account." : "Sign in to continue."}</h2><p>${register ? "Use Google or verify your email, then keep the same email for checkout and project files." : "Open your workspace, project files, versions and private share links."}</p><div class="account-provider-actions">${accountProviders.google?.available ? `<div data-google-button></div>` : ""}${accountProviders.emailOtp?.available ? `<button type="button" data-account-otp>✉ Continue with email code</button>` : ""}</div>${(accountProviders.google?.available || accountProviders.emailOtp?.available) ? '<div class="account-divider"><span>or continue with password</span></div>' : ""}<form data-password-form>${register ? '<label>Full name<input name="name" autocomplete="name" required placeholder="Your full name"></label>' : ""}<label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><label>Password<input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="10" maxlength="128" required placeholder="10+ character passphrase"></label>${register ? '<small class="password-tip">A long phrase is better than a short complex password.</small>' : ""}<p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Create account →" : "Sign in →"}</button></form>`;
     panel.querySelector("[data-password-form]").addEventListener("submit", async event => {
       event.preventDefault();
       const button = event.currentTarget.querySelector("button[type=submit]");
@@ -84,7 +84,7 @@ function finishAccountAccess(user, returningTo) {
 }
 
 function renderOtpAccess(panel, returningTo, register) {
-  panel.innerHTML = `<button class="account-inline-back" type="button">← Other sign-in options</button><p class="eyebrow"><span></span>Verified email</p><h2>${register ? "Create with email code." : "Sign in with email code."}</h2><p>We’ll send a short one-time code to your email.</p><form data-otp-request><label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">Send verification code →</button></form>`;
+  panel.innerHTML = `<button class="account-inline-back" type="button">← Other sign-in options</button><p class="eyebrow"><span></span>Email verification</p><h2>${register ? "Create with an email code." : "Sign in with an email code."}</h2><p>Enter your email and we’ll send a short one-time code.</p><form data-otp-request><label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">Send verification code →</button></form>`;
   panel.querySelector(".account-inline-back").addEventListener("click", () => panel.closest(".account-card").querySelector(`[data-account-tab="${register ? "register" : "login"}"]`).click());
   panel.querySelector("[data-otp-request]").addEventListener("submit", async event => {
     event.preventDefault();
@@ -101,8 +101,20 @@ function renderOtpAccess(panel, returningTo, register) {
 
 function renderOtpVerification(panel, returningTo, register, pending) {
   const email = String(pending.email || "");
-  panel.innerHTML = `<button class="account-inline-back" type="button">← Change details</button><p class="eyebrow"><span></span>Check your inbox</p><h2>Enter the email code.</h2><p>We sent a verification code to <strong>${escapeHTML(email)}</strong>. If you do not see a code, use Google or password sign-in for now.</p><form data-otp-verify><input type="hidden" name="email" value="${escapeHTML(email)}"><label>Verification code<input name="otp" inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="8" required placeholder="000000"></label><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Verify & create account" : "Verify & continue"} →</button></form>`;
+  panel.innerHTML = `<button class="account-inline-back" type="button">← Change details</button><p class="eyebrow"><span></span>Verify your identity</p><h2>Enter the code.</h2><p>We sent a 6-digit code to <strong>${escapeHTML(email)}</strong>.</p><form data-otp-verify><input type="hidden" name="email" value="${escapeHTML(email)}"><input type="hidden" name="otp" data-otp-value><div class="otp-box-grid" aria-label="Verification code">${Array.from({ length:6 }, (_, index) => `<input data-otp-box inputmode="numeric" autocomplete="${index === 0 ? "one-time-code" : "off"}" maxlength="1" aria-label="Digit ${index + 1}">`).join("")}</div><p class="account-form-error" role="alert" hidden></p><div class="otp-actions"><button type="button" class="account-inline-back" data-otp-resend>Resend code</button><button class="pill pill-hot" type="submit">${register ? "Verify & create account" : "Verify & continue"} →</button></div></form>`;
   panel.querySelector(".account-inline-back").addEventListener("click", () => renderOtpAccess(panel, returningTo, register));
+  bindOtpBoxes(panel.querySelector("[data-otp-verify]"));
+  panel.querySelector("[data-otp-resend]").addEventListener("click", async event => {
+    const button = event.currentTarget;
+    button.disabled = true; button.textContent = "Sending…";
+    try {
+      await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"request_otp", email }) });
+      button.textContent = "Code sent ✓";
+    } catch (failure) {
+      button.textContent = failure.message;
+    }
+    setTimeout(() => { button.disabled = false; button.textContent = "Resend code"; }, 3000);
+  });
   panel.querySelector("[data-otp-verify]").addEventListener("submit", async event => {
     event.preventDefault();
     const button = event.currentTarget.querySelector("button[type=submit]");
@@ -114,6 +126,30 @@ function renderOtpVerification(panel, returningTo, register, pending) {
       finishAccountAccess(result.user, returningTo);
     } catch (failure) { error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = `${register ? "Verify & create account" : "Verify & continue"} →`; }
   });
+}
+
+function bindOtpBoxes(form) {
+  const boxes = [...form.querySelectorAll("[data-otp-box]")];
+  const hidden = form.querySelector("[data-otp-value]");
+  const sync = () => { hidden.value = boxes.map(input => input.value.replace(/\D/g, "")).join(""); };
+  boxes.forEach((input, index) => {
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/\D/g, "").slice(0, 1);
+      sync();
+      if (input.value && boxes[index + 1]) boxes[index + 1].focus();
+    });
+    input.addEventListener("keydown", event => {
+      if (event.key === "Backspace" && !input.value && boxes[index - 1]) boxes[index - 1].focus();
+    });
+    input.addEventListener("paste", event => {
+      event.preventDefault();
+      const digits = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, boxes.length).split("");
+      digits.forEach((digit, offset) => { if (boxes[index + offset]) boxes[index + offset].value = digit; });
+      sync();
+      boxes[Math.min(index + digits.length, boxes.length - 1)]?.focus();
+    });
+  });
+  boxes[0]?.focus();
 }
 
 async function renderGoogleAccess(panel, returningTo) {

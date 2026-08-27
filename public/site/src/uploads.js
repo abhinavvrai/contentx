@@ -11,6 +11,9 @@ const formatBytes = bytes => {
 };
 const formatDate = value => value ? new Date(Number(value)).toLocaleString([], { dateStyle:"medium", timeStyle:"short" }) : "—";
 const fileIcon = type => String(type || "").startsWith("video/") ? "▶" : String(type || "").startsWith("image/") ? "▧" : String(type || "").startsWith("audio/") ? "♫" : "◇";
+const SAFE_UPLOAD_EXTENSIONS = new Set(["mp4","mov","m4v","webm","mkv","avi","mp3","wav","m4a","aac","flac","ogg","jpg","jpeg","png","webp","gif","heic","heif","pdf","txt","md","csv","srt","vtt"]);
+const BLOCKED_UPLOAD_EXTENSIONS = new Set(["exe","msi","bat","cmd","com","scr","ps1","vbs","js","jar","dll","php","html","htm","svg","sh","zip","rar","7z","iso","dmg"]);
+const safeUploadHelp = "Allowed: video, audio, image, PDF, text, CSV and subtitle files. Executables, archives, scripts, HTML and SVG are blocked.";
 
 async function apiRequest(url, options = {}) {
   const response = await fetch(url, options);
@@ -59,7 +62,7 @@ function renderUploadError(root, actions, message) {
 }
 
 function renderUploadWorkspace(root, actions, project, files, projectId, token) {
-  root.innerHTML = uploadShell(`<section class="upload-hero"><div><p class="eyebrow"><span></span>Client delivery portal</p><h1>Send files for<br><em>${escapeHTML(project.name)}</em></h1><p>Drop raw footage, audio, images, documents or project files here. You can keep this page open while large uploads finish.</p><dl><div><dt>Project</dt><dd>${escapeHTML(project.name)}</dd></div><div><dt>Per-file limit</dt><dd>${formatBytes(project.maxFileSize)}</dd></div><div><dt>Storage</dt><dd>Private Content X workspace</dd></div></dl></div><aside class="upload-panel"><div class="upload-identity"><label>Your name <span>optional</span><input data-uploader-name value="${escapeHTML(project.clientName || "")}" autocomplete="name" placeholder="Your name"></label><label>Email <span>optional</span><input data-uploader-email type="email" value="${escapeHTML(project.clientEmail || "")}" autocomplete="email" placeholder="you@example.com"></label></div><button class="upload-drop" type="button" data-upload-drop><span>↑</span><strong>Drop files here</strong><small>or click to choose files · up to ${formatBytes(project.maxFileSize)} each</small></button><input data-upload-picker type="file" multiple hidden><div class="upload-queue" data-upload-queue></div></aside></section><section class="upload-history"><div><p class="eyebrow"><span></span>Delivered files</p><h2>Your project uploads</h2></div><div data-client-files>${clientFileList(files)}</div></section>`, actions);
+  root.innerHTML = uploadShell(`<section class="upload-hero"><div><p class="eyebrow"><span></span>Client delivery portal</p><h1>Send files for<br><em>${escapeHTML(project.name)}</em></h1><p>Drop footage, audio, images, PDFs, text notes or subtitle files here. You can keep this page open while large uploads finish.</p><dl><div><dt>Project</dt><dd>${escapeHTML(project.name)}</dd></div><div><dt>Per-file limit</dt><dd>${formatBytes(project.maxFileSize)}</dd></div><div><dt>Safety</dt><dd>Private + type-checked</dd></div></dl><small class="upload-security-note">${safeUploadHelp}</small></div><aside class="upload-panel"><div class="upload-identity"><label>Your name <span>optional</span><input data-uploader-name value="${escapeHTML(project.clientName || "")}" autocomplete="name" placeholder="Your name"></label><label>Email <span>optional</span><input data-uploader-email type="email" value="${escapeHTML(project.clientEmail || "")}" autocomplete="email" placeholder="you@example.com"></label></div><button class="upload-drop" type="button" data-upload-drop><span>↑</span><strong>Drop files here</strong><small>or click to choose files · up to ${formatBytes(project.maxFileSize)} each</small></button><input data-upload-picker type="file" multiple hidden><div class="upload-queue" data-upload-queue></div></aside></section><section class="upload-history"><div><p class="eyebrow"><span></span>Delivered files</p><h2>Your project uploads</h2></div><div data-client-files>${clientFileList(files)}</div></section>`, actions);
   bindUploadShell(root, actions);
   const picker = root.querySelector("[data-upload-picker]");
   const drop = root.querySelector("[data-upload-drop]");
@@ -72,9 +75,9 @@ function renderUploadWorkspace(root, actions, project, files, projectId, token) 
   async function beginFiles(selected) {
     if (!selected.length) return;
     const maximum = Number(project.maxFileSize);
-    const allowed = selected.filter(file => file.size > 0 && file.size <= maximum);
+    const allowed = selected.filter(file => file.size > 0 && file.size <= maximum && fileLooksSafe(file));
     const rejected = selected.filter(file => !allowed.includes(file));
-    rejected.forEach(file => addQueueRow(file, file.size ? `Larger than ${formatBytes(maximum)}` : "Empty file", "error"));
+    rejected.forEach(file => addQueueRow(file, rejectedReason(file, maximum), "error"));
     drop.disabled = true;
     for (const file of allowed) await uploadFile(file).catch(() => undefined);
     drop.disabled = false;
@@ -132,6 +135,21 @@ function renderUploadWorkspace(root, actions, project, files, projectId, token) 
     const data = await apiRequest(`${API_PATH}?action=project&projectId=${encodeURIComponent(projectId)}`, { headers:clientHeaders(token, false) });
     root.querySelector("[data-client-files]").innerHTML = clientFileList(data.files);
   }
+}
+
+function fileExtension(fileName) {
+  return String(fileName || "").toLowerCase().split(".").pop() || "";
+}
+
+function fileLooksSafe(file) {
+  const extension = fileExtension(file.name);
+  return SAFE_UPLOAD_EXTENSIONS.has(extension) && !BLOCKED_UPLOAD_EXTENSIONS.has(extension) && !/[\u0000-\u001f\\\/]/.test(file.name);
+}
+
+function rejectedReason(file, maximum) {
+  if (!file.size) return "Empty file";
+  if (file.size > maximum) return `Larger than ${formatBytes(maximum)}`;
+  return "Blocked file type for safety";
 }
 
 function clientFileList(files = []) {

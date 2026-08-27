@@ -69,8 +69,13 @@ function withSecurityHeaders(request: Request, response: Response): Response {
     headers.set("Cache-Control", "no-store, must-revalidate");
   }
   headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-XSS-Protection", "0");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   headers.set("X-Frame-Options", "SAMEORIGIN");
+  headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  headers.set("Origin-Agent-Cluster", "?1");
+  headers.set("X-Permitted-Cross-Domain-Policies", "none");
+  if (url.protocol === "https:") headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self)");
   headers.set(
     "Content-Security-Policy",
@@ -85,6 +90,8 @@ function withSecurityHeaders(request: Request, response: Response): Response {
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "media-src 'self' blob:",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
       "connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://accounts.google.com https://www.googleapis.com https://*.supabase.co",
       "form-action 'self'",
       "upgrade-insecure-requests",
