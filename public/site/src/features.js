@@ -71,7 +71,23 @@ const talentRoles = [
   ["Cover / Thumbnail Designer", "Design scroll-stopping Instagram and YouTube covers.", "◇"]
 ];
 
-function money(value) { return `₹${Number(value).toLocaleString("en-IN")}`; }
+const USD_INR_RATE = 96;
+const currencyStoreKey = "cx_currency";
+function detectCurrency() {
+  const saved = store.get(currencyStoreKey, "");
+  if (saved === "USD" || saved === "INR") return saved;
+  const locale = (navigator.language || "").toLowerCase();
+  const countryLocales = (navigator.languages || []).join(" ").toLowerCase();
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  if (locale.endsWith("-us") || countryLocales.includes("-us") || timezone.startsWith("America/")) return "USD";
+  return "INR";
+}
+let activeCurrency = detectCurrency();
+function money(value, currency = activeCurrency) {
+  const amount = Number(value || 0);
+  if (currency === "USD") return `$${(amount ? Math.max(1, Math.round(amount / USD_INR_RATE)) : 0).toLocaleString("en-US")}`;
+  return `₹${Math.round(amount).toLocaleString("en-IN")}`;
+}
 function escapeHTML(value = "") { const d = document.createElement("div"); d.textContent = value; return d.innerHTML; }
 function screenMessage(text = "") {
   const directContact = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(text) || /(?:\+?\d[\s().-]*){9,}/.test(text) || /(^|\s)@[a-z0-9_.]{2,}/i.test(text) || /\b(whatsapp|telegram|instagram|insta|snapchat|my\s+(?:account|profile|channel)|username|phone\s+number|email\s+me)\b/i.test(text);
@@ -248,12 +264,12 @@ function setupUnifiedPricing(pricing, actions, data) {
   const packages = {
     video: [
       { id:"basic_reel", name:"Basic", price:1500, range:"₹1,500", tag:"BUDGET · UP TO 1 MIN", delivery:"3-day delivery", revisions:"1 revision", summary:"A simple, clean reel for creators who need captions, pacing and light engagement elements without heavy visual layers.", availableAddOns:["quick_delivery", "cover_design", "extra_revision"], includes:["1 reel up to 60 seconds", "Clean cuts, pacing and zooms", "Engaging captions and subtitles", "Stickers, emojis and simple highlights", "Light sound effects and music sync", "1080p social export"], unavailable:["B-roll package", "Custom typography system", "Motion graphics"] },
-      { id:"better_edit", name:"Standard", price:2000, range:"₹2,000–₹2,500", tag:"STANDARD · BETTER EDIT", delivery:"4-day delivery", revisions:"2 revisions", featured:true, summary:"A stronger social edit with B-roll, sound effects, custom text styling and better visual polish.", availableAddOns:["motion_graphics", "reel_script", "cover_design", "extra_revision"], includes:["1 video up to 90 seconds", "B-roll placement and visual cutaways", "Sound effects and music accents", "Custom text, typography and captions", "Colour grading and audio balance", "Source file included"], unavailable:["Advanced motion graphics"] },
-      { id:"premium_motion", name:"Premium", price:3500, range:"₹3,500–₹5,000", tag:"PREMIUM · MOTION READY", delivery:"5-day priority", revisions:"3 revisions", summary:"A high-retention premium edit with deeper structure, richer sound design and motion-ready finishing for flagship posts.", availableAddOns:["advanced_motion_graphics", "reel_script", "cover_design", "rush_delivery", "extra_revision"], includes:["1 video up to 180 seconds", "Premium edit with retention-led structure", "Up to 10 relevant B-roll inserts", "Full sound design and premium mix", "Motion titles and custom callouts", "Premium colour finish", "Source file included"], unavailable:[] },
+      { id:"better_edit", name:"Standard", price:2000, maxPrice:2500, range:"₹2,000–₹2,500", tag:"STANDARD · BETTER EDIT", delivery:"4-day delivery", revisions:"2 revisions", featured:true, summary:"A stronger social edit with B-roll, sound effects, custom text styling and better visual polish.", availableAddOns:["motion_graphics", "reel_script", "cover_design", "extra_revision"], includes:["1 video up to 90 seconds", "B-roll placement and visual cutaways", "Sound effects and music accents", "Custom text, typography and captions", "Colour grading and audio balance", "Source file included"], unavailable:["Advanced motion graphics"] },
+      { id:"premium_motion", name:"Premium", price:3500, maxPrice:5000, range:"₹3,500–₹5,000", tag:"PREMIUM · MOTION READY", delivery:"5-day priority", revisions:"3 revisions", summary:"A high-retention premium edit with deeper structure, richer sound design and motion-ready finishing for flagship posts.", availableAddOns:["advanced_motion_graphics", "reel_script", "cover_design", "rush_delivery", "extra_revision"], includes:["1 video up to 180 seconds", "Premium edit with retention-led structure", "Up to 10 relevant B-roll inserts", "Full sound design and premium mix", "Motion titles and custom callouts", "Premium colour finish", "Source file included"], unavailable:[] },
     ],
     longform: [
       { id:"long_basic", name:"Long-form Basic", price:5000, range:"from ₹5,000", tag:"LONG-FORM · 10 MIN", delivery:"5-day delivery", revisions:"1 revision", includedMinutes:10, includedRawHours:1, summary:"A clean long-form edit for talking-head, tutorial or simple YouTube videos up to 10 minutes.", availableAddOns:["long_thumbnail", "long_chapters", "long_extra_revision"], includes:["Final video up to 10 minutes", "Clean cuts and pacing", "Audio cleanup and level balance", "Basic titles and lower thirds", "1080p export"], unavailable:["Advanced B-roll package", "Motion graphics system"] },
-      { id:"long_standard", name:"Long-form Standard", price:8000, range:"₹8,000–₹10,000", tag:"LONG-FORM · BETTER FINISH", delivery:"7-day delivery", revisions:"2 revisions", featured:true, includedMinutes:10, includedRawHours:2, summary:"A stronger YouTube-style edit with B-roll support, better story structure and richer sound polish.", availableAddOns:["long_thumbnail", "long_chapters", "long_shorts", "long_extra_revision"], includes:["Final video up to 10 minutes", "Story cleanup and pacing", "B-roll placement and cutaways", "Sound design and music bed", "Colour and audio balance", "Thumbnail-ready frame suggestions"], unavailable:["Advanced motion graphics"] },
+      { id:"long_standard", name:"Long-form Standard", price:8000, maxPrice:10000, range:"₹8,000–₹10,000", tag:"LONG-FORM · BETTER FINISH", delivery:"7-day delivery", revisions:"2 revisions", featured:true, includedMinutes:10, includedRawHours:2, summary:"A stronger YouTube-style edit with B-roll support, better story structure and richer sound polish.", availableAddOns:["long_thumbnail", "long_chapters", "long_shorts", "long_extra_revision"], includes:["Final video up to 10 minutes", "Story cleanup and pacing", "B-roll placement and cutaways", "Sound design and music bed", "Colour and audio balance", "Thumbnail-ready frame suggestions"], unavailable:["Advanced motion graphics"] },
       { id:"long_premium", name:"Long-form Premium", price:12000, range:"₹12,000+", tag:"LONG-FORM · PREMIUM", delivery:"9-day priority", revisions:"3 revisions", includedMinutes:10, includedRawHours:3, summary:"Premium long-form editing for flagship YouTube videos, courses, launch films and content with heavier visual treatment.", availableAddOns:["long_thumbnail", "long_chapters", "long_shorts", "long_motion", "long_rush_delivery", "long_extra_revision"], includes:["Final video up to 10 minutes", "Retention-led structure", "Premium B-roll and sound design", "Motion titles and branded callouts", "Chapter-ready pacing", "Premium master export"], unavailable:[] },
     ],
     podcast: [
@@ -269,8 +285,8 @@ function setupUnifiedPricing(pricing, actions, data) {
       { id:"advanced_motion_graphics", name:"Advanced Motion Graphics", price:1500, copy:"For Premium: tracked graphics, custom animated scenes and premium transitions. Premium becomes ₹5,000." },
       { id:"reel_script", name:"Instagram Reel Script", price:500, copy:"Hook, complete short-form script and CTA." },
       { id:"cover_design", name:"Cover / Thumbnail", price:500, copy:"One scroll-stopping branded cover." },
-      { id:"long_extra_revision", name:"Extra Revision Round", price:300, copy:"One additional consolidated revision." },
-      { id:"long_rush_delivery", name:"Priority Delivery", price:1000, copy:"Priority placement in the production queue." },
+      { id:"extra_revision", name:"Extra Revision Round", price:300, copy:"One additional consolidated revision." },
+      { id:"rush_delivery", name:"Priority Delivery", price:1000, copy:"Priority placement in the production queue." },
       { id:"quick_delivery", name:"Quick Delivery", price:700, copy:"For Basic: faster delivery when you need a simple reel turned around quickly." },
     ],
     podcast: [
@@ -284,13 +300,13 @@ function setupUnifiedPricing(pricing, actions, data) {
       { id:"long_chapters", name:"Chapters + Description", price:700, copy:"Chapter timestamps, video description and upload-ready structure." },
       { id:"long_shorts", name:"2 Shorts From Long Video", price:1500, copy:"Two vertical cutdowns from the edited long-form video." },
       { id:"long_motion", name:"Advanced Motion Pack", price:2000, copy:"Extra animated callouts, tracked labels and branded transitions." },
-      { id:"extra_revision", name:"Extra Revision Round", price:300, copy:"One additional consolidated revision." },
-      { id:"rush_delivery", name:"Priority Delivery", price:1000, copy:"Priority placement in the production queue." },
+      { id:"long_extra_revision", name:"Extra Revision Round", price:300, copy:"One additional consolidated revision." },
+      { id:"long_rush_delivery", name:"Priority Delivery", price:1000, copy:"Priority placement in the production queue." },
     ],
   };
-  const state = { billing:"one_off", service:"video", quantity:1, planId:"basic_reel", selectedAddOns:new Set(), deliveryFormat:"Vertical 9:16", durationMinutes:10, rawFootageHours:1 };
+  const state = { billing:"monthly", service:"video", quantity:10, planId:"basic_reel", selectedAddOns:new Set(), deliveryFormat:"Vertical 9:16", durationMinutes:10, rawFootageHours:1 };
   pricing.dataset.pricingRestored = "unified";
-  pricing.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple, flexible pricing</p><h2>Choose the work. Add only what you <em>need.</em></h2><p>Start with Short-form, Long-form or Podcast, compare each package, then open add-ons only if you want to customize the order.</p></div><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="one_off" class="active">Per reel</button><button type="button" data-unified-billing="monthly">Monthly</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Short-form</button><button type="button" data-unified-service="longform">Long-form</button><button type="button" data-unified-service="podcast">Podcast</button></div></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a short-form package</strong><small>Switch between the tabs, then expand add-ons if needed.</small></div></header><div class="unified-package-browser" data-unified-packages></div></div><div class="unified-step" data-quantity-step><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Buy one reel or build a larger batch.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>1</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div><label class="unified-volume-slider"><span>Package volume</span><input type="range" min="1" max="30" value="1" data-unified-slider><small><b data-unified-slider-min>1</b><b data-unified-slider-max>30</b></small></label><div class="longform-controls" data-longform-controls hidden><label><span>Final video length</span><input type="range" min="10" max="60" step="5" value="10" data-duration-slider><small><b data-duration-value>10 min</b><em>Long-form starts at ₹5,000 for 10 minutes.</em></small></label><label><span>Raw footage to review</span><input type="range" min="1" max="10" step="1" value="1" data-raw-slider><small><b data-raw-value>1 hr</b><em>More raw footage increases review/editing time.</em></small></label></div></div></section><aside class="unified-summary"><span data-unified-badge>ONE-OFF PER REEL</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons / scope <b data-unified-addons-total></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">You’ll add the title, description, instructions, reference links and files immediately after payment.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
+  pricing.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple, flexible pricing</p><h2>Choose the work. Add only what you <em>need.</em></h2><p>Start with monthly production first, or switch to one-off work with a 20% flexibility premium. Prices auto-adjust between INR and USD.</p></div><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="monthly" class="active">Monthly</button><button type="button" data-unified-billing="one_off">Per reel</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Short-form</button><button type="button" data-unified-service="longform">Long-form</button><button type="button" data-unified-service="podcast">Podcast</button></div></div><div class="currency-toggle"><small>Currency</small><div class="billing-toggle currency-buttons" role="tablist" aria-label="Currency"><button type="button" data-unified-currency="INR">₹ INR</button><button type="button" data-unified-currency="USD">$ USD</button></div><em data-currency-note>Auto-detected from your browser region.</em></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a short-form package</strong><small>Switch between the tabs, then expand add-ons if needed.</small></div></header><div class="unified-package-browser" data-unified-packages></div></div><div class="unified-step" data-quantity-step><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Monthly short-form production starts at 10.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>10</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div><label class="unified-volume-slider"><span>Package volume</span><input type="range" min="10" max="30" value="10" data-unified-slider><small><b data-unified-slider-min>10</b><b data-unified-slider-max>30</b></small></label><div class="longform-controls" data-longform-controls hidden><label><span>Final video length</span><input type="range" min="10" max="60" step="5" value="10" data-duration-slider><small><b data-duration-value>10 min</b><em data-duration-note>Long-form starts at ₹5,000 for 10 minutes.</em></small></label><label><span>Raw footage to review</span><input type="range" min="1" max="10" step="1" value="1" data-raw-slider><small><b data-raw-value>1 hr</b><em>More raw footage increases review/editing time.</em></small></label></div></div></section><aside class="unified-summary"><span data-unified-badge>MONTHLY PRODUCTION</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons / scope <b data-unified-addons-total></b></span><span data-unified-premium-line hidden>One-off +20% <b data-unified-premium></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">You’ll add the title, description, instructions, reference links and files immediately after payment.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
     ["Content Strategy & Planning", "Plan", "Content pillars, audience positioning, monthly calendar, campaign concepts, hooks and performance review."],
     ["Social Media Management", "Manage", "Scheduling, publishing, captions, hashtag research, comment management and monthly reporting."],
     ["Full Content Team", "Full service", "Strategy, scripts, editing, covers, scheduling and one accountable Content X manager."],
@@ -332,12 +348,26 @@ function setupUnifiedPricing(pricing, actions, data) {
     [...state.selectedAddOns].forEach(id => { if (!allowed.has(id)) state.selectedAddOns.delete(id); });
   };
   const selectedAddOnObjects = () => availableAddOnsForPlan().filter(item => state.selectedAddOns.has(item.id));
+  const billingPremiumAmount = amount => state.billing === "one_off" ? Math.round(amount * 0.2) : 0;
+  const amountWithBilling = amount => amount + billingPremiumAmount(amount);
+  const packageRange = item => {
+    const start = amountWithBilling(item.price);
+    if (item.maxPrice) return `${money(start)}–${money(amountWithBilling(item.maxPrice))}`;
+    if (String(item.range || "").toLowerCase().startsWith("from")) return `from ${money(start)}`;
+    if (String(item.range || "").endsWith("+")) return `${money(start)}+`;
+    return money(start);
+  };
+  const updateCurrencyButtons = () => {
+    pricing.querySelectorAll("[data-unified-currency]").forEach(button => button.classList.toggle("active", button.dataset.unifiedCurrency === activeCurrency));
+    const note = pricing.querySelector("[data-currency-note]");
+    if (note) note.textContent = activeCurrency === "USD" ? `Showing USD using approx. ₹${USD_INR_RATE} = $1. Payments are settled securely in INR.` : "Showing INR for India. Change currency anytime.";
+  };
 
   function renderPackages() {
     pricing.querySelector("[data-package-heading]").textContent = `Choose a ${serviceLabel()} package`;
     const plan = selectedPackage();
     const available = availableAddOnsForPlan();
-    packageContainer.innerHTML = `<div class="unified-plan-tabs" role="tablist" aria-label="${state.service} packages">${packages[state.service].map(item => `<button type="button" role="tab" aria-selected="${item.id === state.planId}" class="${item.id === state.planId ? "active" : ""}" data-plan-tab="${item.id}">${item.name}<small>${item.range || money(item.price)}</small></button>`).join("")}</div><article class="unified-plan-detail"><p class="unified-plan-label">${plan.tag}</p><div class="unified-plan-price"><strong>${money(plan.price)}</strong><span>starting per ${serviceSingular()}</span></div><p class="unified-plan-copy">${plan.summary}</p><div class="unified-plan-meta"><span>◷ <b>${plan.delivery}</b></span><span>⟳ <b>${plan.revisions}</b></span></div><ul>${plan.includes.map(feature => `<li><b>✓</b>${feature}</li>`).join("")}${(plan.unavailable || []).map(feature => `<li class="unavailable"><b>—</b>${feature}</li>`).join("")}</ul>${available.length ? `<details class="unified-package-addons" data-package-addons ${state.selectedAddOns.size ? "open" : ""}><summary><span>Customize this ${plan.name} package</span><b>${state.selectedAddOns.size ? `${state.selectedAddOns.size} selected` : "Show add-ons"} ↓</b></summary><div class="unified-addon-grid" data-unified-addons></div></details>` : `<div class="unified-package-note"><strong>No paid upgrade needed for this package.</strong><small>Core inclusions are already bundled into the selected package.</small></div>`}<button type="button" class="unified-plan-continue" data-plan-continue>Continue with ${plan.name}<span>→</span></button></article>`;
+    packageContainer.innerHTML = `<div class="unified-plan-tabs" role="tablist" aria-label="${state.service} packages">${packages[state.service].map(item => `<button type="button" role="tab" aria-selected="${item.id === state.planId}" class="${item.id === state.planId ? "active" : ""}" data-plan-tab="${item.id}">${item.name}<small>${packageRange(item)}</small></button>`).join("")}</div><article class="unified-plan-detail"><p class="unified-plan-label">${plan.tag}</p><div class="unified-plan-price"><strong>${money(amountWithBilling(plan.price))}</strong><span>starting per ${serviceSingular()}${state.billing === "one_off" ? " · one-off +20%" : ""}</span></div><p class="unified-plan-copy">${plan.summary}</p><div class="unified-plan-meta"><span>◷ <b>${plan.delivery}</b></span><span>⟳ <b>${plan.revisions}</b></span></div><ul>${plan.includes.map(feature => `<li><b>✓</b>${feature}</li>`).join("")}${(plan.unavailable || []).map(feature => `<li class="unavailable"><b>—</b>${feature}</li>`).join("")}</ul>${available.length ? `<details class="unified-package-addons" data-package-addons ${state.selectedAddOns.size ? "open" : ""}><summary><span>Customize this ${plan.name} package</span><b>${state.selectedAddOns.size ? `${state.selectedAddOns.size} selected` : "Show add-ons"} ↓</b></summary><div class="unified-addon-grid" data-unified-addons></div></details>` : `<div class="unified-package-note"><strong>No paid upgrade needed for this package.</strong><small>Core inclusions are already bundled into the selected package.</small></div>`}<button type="button" class="unified-plan-continue" data-plan-continue>Continue with ${plan.name}<span>→</span></button></article>`;
     packageContainer.querySelectorAll("[data-plan-tab]").forEach(button => button.addEventListener("click", () => { state.planId = button.dataset.planTab; keepOnlyAvailableAddOns(); renderPackages(); updateSummary(); }));
     renderAddOns();
     packageContainer.querySelector("[data-plan-continue]").addEventListener("click", () => pricing.querySelector("[data-quantity-step]").scrollIntoView({ behavior:"smooth", block:"start" }));
@@ -365,7 +395,9 @@ function setupUnifiedPricing(pricing, actions, data) {
     const extras = [...selectedAddOnObjects(), ...scopeAdjustments()];
     const base = plan.price * state.quantity;
     const extrasTotal = extras.reduce((total, item) => total + item.price * state.quantity, 0);
-    const total = base + extrasTotal;
+    const subtotal = base + extrasTotal;
+    const premium = billingPremiumAmount(subtotal);
+    const total = subtotal + premium;
     pricing.querySelector("[data-unified-count]").textContent = state.quantity;
     volumeSlider.min = minimumQuantity();
     volumeSlider.max = maximumQuantity();
@@ -380,13 +412,17 @@ function setupUnifiedPricing(pricing, actions, data) {
       rawSlider.value = state.rawFootageHours;
       pricing.querySelector("[data-duration-value]").textContent = `${state.durationMinutes} min`;
       pricing.querySelector("[data-raw-value]").textContent = `${state.rawFootageHours} hr${state.rawFootageHours === 1 ? "" : "s"}`;
+      pricing.querySelector("[data-duration-note]").textContent = `Long-form starts at ${money(5000)} for 10 minutes.`;
     }
     pricing.querySelector("[data-unified-badge]").textContent = state.billing === "monthly" ? "MONTHLY PRODUCTION" : `ONE-OFF PER ${serviceSingular().toUpperCase()}`;
     pricing.querySelector("[data-unified-summary-name]").textContent = plan.name;
     pricing.querySelector("[data-unified-summary-meta]").textContent = `${state.quantity} ${state.quantity === 1 ? serviceSingular() : servicePlural()} · ${state.deliveryFormat}${state.service === "longform" ? ` · ${state.durationMinutes} min final · ${state.rawFootageHours} hr raw` : ""}`;
     pricing.querySelector("[data-unified-summary-list]").innerHTML = plan.includes.slice(0, 3).map(item => `<li><span>✓</span>${item}</li>`).join("") + extras.map(item => `<li><span>+</span>${item.name}</li>`).join("");
     pricing.querySelector("[data-unified-base]").textContent = money(base);
-    pricing.querySelector("[data-unified-addons-total]").textContent = extrasTotal ? money(extrasTotal) : "₹0";
+    pricing.querySelector("[data-unified-addons-total]").textContent = extrasTotal ? money(extrasTotal) : money(0);
+    const premiumLine = pricing.querySelector("[data-unified-premium-line]");
+    premiumLine.hidden = !premium;
+    pricing.querySelector("[data-unified-premium]").textContent = premium ? money(premium) : money(0);
     pricing.querySelector("[data-unified-total]").textContent = money(total);
     pricing.querySelector("[data-unified-effective]").textContent = `${money(Math.round(total / state.quantity))} per ${serviceSingular()}`;
   }
@@ -409,9 +445,14 @@ function setupUnifiedPricing(pricing, actions, data) {
     pricing.querySelectorAll("[data-unified-billing]").forEach(item => item.classList.toggle("active", item === button));
     state.quantity = state.billing === "monthly" ? Math.max(minimumQuantity(), state.quantity) : 1;
     pricing.querySelector("[data-quantity-note]").textContent = state.billing === "monthly" ? `Monthly ${serviceLabel()} production starts at ${minimumQuantity()}.` : `Choose between 1 and ${maximumQuantity()} ${servicePlural()}.`;
-    updateSummary();
+    renderPackages(); updateSummary();
   }));
   pricing.querySelectorAll("[data-unified-service]").forEach(button => button.addEventListener("click", () => switchService(button.dataset.unifiedService)));
+  pricing.querySelectorAll("[data-unified-currency]").forEach(button => button.addEventListener("click", () => {
+    activeCurrency = button.dataset.unifiedCurrency;
+    store.set(currencyStoreKey, activeCurrency);
+    updateCurrencyButtons(); renderPackages(); updateSummary();
+  }));
   pricing.querySelectorAll("[data-unified-quantity]").forEach(button => button.addEventListener("click", () => {
     state.quantity = Math.min(maximumQuantity(), Math.max(minimumQuantity(), state.quantity + (button.dataset.unifiedQuantity === "plus" ? 1 : -1)));
     updateSummary();
@@ -423,10 +464,12 @@ function setupUnifiedPricing(pricing, actions, data) {
   pricing.querySelector("[data-unified-checkout]").addEventListener("click", () => {
     const plan = selectedPackage();
     const extras = [...selectedAddOnObjects(), ...scopeAdjustments()];
-    const total = (plan.price + extras.reduce((sum, item) => sum + item.price, 0)) * state.quantity;
-    actions.openCheckout({ id:plan.id, name:`${plan.name} · ${state.quantity} ${state.quantity === 1 ? serviceSingular() : servicePlural()}`, price:total, basePrice:plan.price, quantity:state.quantity, billing:state.billing, contentType:state.service, deliveryFormat:state.deliveryFormat, durationMinutes:state.service === "longform" ? state.durationMinutes : undefined, rawFootageHours:state.service === "longform" ? state.rawFootageHours : undefined, addOns:extras, unit:state.billing === "monthly" ? "month" : "project", badge:state.billing === "monthly" ? "Monthly production" : "One-time project", features:[...plan.includes, ...(state.service === "longform" ? [`Final length selected: ${state.durationMinutes} minutes`, `Raw footage selected: ${state.rawFootageHours} hour${state.rawFootageHours === 1 ? "" : "s"}`] : []), ...extras.map(item => `${item.name} (+${money(item.price)} each)`)] });
+    const subtotal = (plan.price + extras.reduce((sum, item) => sum + item.price, 0)) * state.quantity;
+    const premium = billingPremiumAmount(subtotal);
+    const total = subtotal + premium;
+    actions.openCheckout({ id:plan.id, name:`${plan.name} · ${state.quantity} ${state.quantity === 1 ? serviceSingular() : servicePlural()}`, price:total, basePrice:plan.price, quantity:state.quantity, billing:state.billing, contentType:state.service, deliveryFormat:state.deliveryFormat, durationMinutes:state.service === "longform" ? state.durationMinutes : undefined, rawFootageHours:state.service === "longform" ? state.rawFootageHours : undefined, addOns:extras, unit:state.billing === "monthly" ? "month" : "project", badge:state.billing === "monthly" ? "Monthly production" : "One-time project +20%", features:[...plan.includes, ...(state.service === "longform" ? [`Final length selected: ${state.durationMinutes} minutes`, `Raw footage selected: ${state.rawFootageHours} hour${state.rawFootageHours === 1 ? "" : "s"}`] : []), ...(premium ? [`One-off flexibility premium: ${money(premium)}`] : []), ...extras.map(item => `${item.name} (+${money(item.price)} each)`)] });
   });
-  renderPackages(); renderAddOns(); renderFormats(); updateSummary();
+  updateCurrencyButtons(); renderPackages(); renderAddOns(); renderFormats(); updateSummary();
 }
 
 function openWorkMenu() {

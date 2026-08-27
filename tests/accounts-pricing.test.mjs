@@ -29,7 +29,11 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   assert.doesNotMatch(features, /Package upgrade option/);
   assert.doesNotMatch(features, /data-addons-step/);
   assert.match(features, /data-plan-tab/);
+  assert.match(features, /data-unified-billing="monthly" class="active">Monthly/);
   assert.match(features, />Per reel</);
+  assert.match(features, /USD_INR_RATE = 96/);
+  assert.match(features, /data-unified-currency="USD"/);
+  assert.match(features, /billingPremiumAmount = amount => state\.billing === "one_off" \? Math\.round\(amount \* 0\.2\) : 0/);
   assert.match(features, /if \(false && pricing\)/);
   assert.match(features, /data-unified-service="video"/);
   assert.match(features, /data-unified-service="longform"/);
@@ -39,7 +43,7 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   assert.match(features, /Raw footage to review/);
   assert.match(features, /Instagram Reel Script/);
   assert.match(features, /Podcast Episode Script/);
-  assert.doesNotMatch(features, /setupUnifiedPricing[\s\S]*One-off flexibility premium/);
+  assert.match(features, /One-off \+20%/);
 });
 
 test("adds browser security headers at the custom domain worker", async () => {
@@ -57,10 +61,10 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=pricing-longform-1/);
-  assert.match(html, /contentx-release" content="pricing-longform-1/);
-  assert.match(html, /main\.js\?v=pricing-longform-1/);
-  assert.match(main, /features\.js\?v=pricing-longform-1/);
+  assert.match(page, /\/site\/index\.html\?v=monthly-currency-1/);
+  assert.match(html, /contentx-release" content="monthly-currency-1/);
+  assert.match(html, /main\.js\?v=monthly-currency-1/);
+  assert.match(main, /features\.js\?v=monthly-currency-1/);
   assert.match(main, /uploads\.js\?v=team-controls-1/);
 });
 
@@ -86,7 +90,9 @@ test("keeps payment totals server-calculated with allowlisted add-ons", async ()
   assert.match(razorpay, /longform_extra_minutes/);
   assert.match(razorpay, /longform_raw_review/);
   assert.match(razorpay, /podcast_script: \{ name: "Podcast Episode Script", amount: 1500/);
-  assert.match(razorpay, /const totalAmount = baseAmount \+ addOnAmount \+ adjustmentAmount/);
+  assert.match(razorpay, /const subtotalAmount = baseAmount \+ addOnAmount \+ adjustmentAmount/);
+  assert.match(razorpay, /const billingPremiumAmount = billing === "one_off" && usesBillingPremium \? Math\.round\(subtotalAmount \* 0\.2\) : 0/);
+  assert.match(razorpay, /const totalAmount = subtotalAmount \+ billingPremiumAmount/);
   assert.match(orderRoute, /requireSessionUser/);
   assert.match(orderRoute, /order_selections/);
 });

@@ -111,6 +111,7 @@ export function calculateOrder(input: {
   const isReelPlan = reelPlanIds.has(planId);
   const isLongformPlan = longformPlanIds.has(planId);
   const isPodcastPlan = podcastPlanIds.has(planId);
+  const usesBillingPremium = ((isReelPlan && planId !== "saas_animation") || isLongformPlan || isPodcastPlan);
   const billing: BillingMode = input.billing === "monthly" ? "monthly" : "one_off";
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 30) {
     throw new Error("Choose between 1 and 30 items.");
@@ -165,7 +166,9 @@ export function calculateOrder(input: {
     if (extraRawHours) adjustments.push({ id: "longform_raw_review", name: `Extra raw footage review · ${extraRawHours} hr`, unitAmount: extraRawHours * 600, totalAmount: extraRawHours * 600 * quantity });
   }
   const adjustmentAmount = adjustments.reduce((total, item) => total + item.totalAmount, 0);
-  const totalAmount = baseAmount + addOnAmount + adjustmentAmount;
+  const subtotalAmount = baseAmount + addOnAmount + adjustmentAmount;
+  const billingPremiumAmount = billing === "one_off" && usesBillingPremium ? Math.round(subtotalAmount * 0.2) : 0;
+  const totalAmount = subtotalAmount + billingPremiumAmount;
 
   return {
     billing,
@@ -178,6 +181,8 @@ export function calculateOrder(input: {
     addOnAmount,
     adjustments,
     adjustmentAmount,
+    subtotalAmount,
+    billingPremiumAmount,
     totalAmount,
     totalAmountPaise: totalAmount * 100,
   };
