@@ -67,6 +67,15 @@ function addMarketingSuite(root) {
   root.querySelectorAll("[data-open-caption]").forEach(button => button.addEventListener("click", openAICaptionStudio)); root.querySelectorAll("[data-open-scan]").forEach(button => button.addEventListener("click", openSmartScan));
 }
 
+function addPrePaymentTutorials(root) {
+  if (root.querySelector(".prepay-tutorials")) return; const pricing = root.querySelector("#pricing"); if (!pricing) return;
+  pricing.insertAdjacentHTML("beforebegin", `<section class="prepay-tutorials section-shell"><div class="section-heading split"><div><p class="eyebrow"><span></span>See it before you pay</p><h2>Preview the workflow in <em>60 seconds.</em></h2></div><p>Short demo clips show how clients upload files, review versions, create share links and approve final edits before they choose a package.</p></div><div class="tutorial-video-grid">${[
+    ["Review comments", "videos/video3.mp4", "Click the timeline, leave a timestamped note and keep feedback attached to the version."],
+    ["Version workflow", "videos/premium1.mp4", "Drop a replacement on the same file so V2, V3 and final delivery stay together."],
+    ["Shareable links", "videos/standard3.mp4", "Create a secure link, copy it instantly, then send it by WhatsApp, email or social."],
+  ].map(([title,src,copy]) => `<article><video src="${src}" muted loop playsinline autoplay></video><div><span>Demo</span><h3>${title}</h3><p>${copy}</p></div></article>`).join("")}</div><div class="tutorial-actions"><a class="pill pill-hot" href="#workspace">Explore demo dashboard →</a><a class="pill pill-dark" href="#access">Login / create account</a></div></section>`);
+}
+
 function openHookPlanner() {
   mountLayer(`<section class="creator-tool-modal hook-planner" role="dialog" aria-modal="true" aria-labelledby="hook-planner-title"><button class="advanced-close" data-close-tool aria-label="Close hook planner">×</button><p class="eyebrow"><span></span>Short-form planning</p><h2 id="hook-planner-title">Build the first three seconds.</h2><p class="creator-tool-intro">A clean planning prompt for the moment that decides whether someone keeps watching.</p><div class="hook-formula"><article><span>01</span><strong>Pattern interrupt</strong><p>Start with the surprise, result, or opinion—not the introduction.</p></article><article><span>02</span><strong>Specific promise</strong><p>Tell viewers exactly what they will get before the first cut.</p></article><article><span>03</span><strong>Visual proof</strong><p>Match the first line with the strongest relevant shot or B-roll.</p></article></div><label class="creator-field">Your hook<textarea rows="3" placeholder="Example: I stopped wasting hours editing reels with this one change."></textarea></label><button class="pill pill-hot" data-save-hook>Save hook draft</button><small class="creator-tool-note">Saved locally as a planning draft. It does not create or publish content automatically.</small></section>`);
   const layer = document.body.lastElementChild;
@@ -180,4 +189,4 @@ function addPremiumInteractions(root) {
   root.querySelector(".hero h1")?.classList.add("rb-shiny-heading");
 }
 
-export function enhanceCreatorTools(root, route) { if (route === "home") { addMarketingSuite(root); addShortFormBento(root); upgradePricing(root); simplifyShortFormPricing(root); addPremiumInteractions(root); } if (["workspace", "project", "review"].includes(route)) addWorkspaceSupport(root, route); }
+export function enhanceCreatorTools(root, route) { if (route === "home") { addMarketingSuite(root); addShortFormBento(root); addPrePaymentTutorials(root); upgradePricing(root); simplifyShortFormPricing(root); addPremiumInteractions(root); } if (["workspace", "project", "review"].includes(route)) addWorkspaceSupport(root, route); }

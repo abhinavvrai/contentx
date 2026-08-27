@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     requireSameOrigin(request);
     await Promise.all([ensureAccountSchema(), ensurePaymentSchema()]);
     const user = await requireSessionUser(request);
-    const input = await request.json() as { planId?: string; quantity?: number; billing?: string; addOns?: string[]; durationMinutes?: number; rawFootageHours?: number; contentType?: string; deliveryFormat?: string; name?: string; email?: string; phone?: string };
+    const input = await request.json() as { planId?: string; quantity?: number; billing?: string; addOns?: string[]; durationMinutes?: number; rawFootageHours?: number; currency?: string; contentType?: string; deliveryFormat?: string; name?: string; email?: string; phone?: string };
     const order = calculateOrder({
       planId: input.planId || "",
       quantity: input.quantity,
@@ -16,6 +16,7 @@ export async function POST(request: Request) {
       addOns: input.addOns,
       durationMinutes: input.durationMinutes,
       rawFootageHours: input.rawFootageHours,
+      currency: input.currency,
     });
     const razorpay = await createRazorpayOrder(order);
     const now = new Date();
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
       billing: order.billing,
       quantity: order.quantity,
       amountPaise: order.totalAmountPaise,
-      currency: "INR",
+      currency: order.currency,
       status: "created",
       customerName: input.name?.trim().slice(0, 120) || user.name,
       customerEmail: input.email?.trim().toLowerCase().slice(0, 254) || user.email,
@@ -45,7 +46,8 @@ export async function POST(request: Request) {
     return json({
       orderId: razorpay.orderId,
       amount: order.totalAmountPaise,
-      currency: "INR",
+      currency: order.currency,
+      settlementCurrency: order.settlementCurrency,
       plan: order,
     });
   } catch (error) {

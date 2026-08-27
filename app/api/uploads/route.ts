@@ -258,11 +258,15 @@ async function updateProjectShareLink(request: Request, input: JsonInput): Promi
   if (!projectId || !shareId || !["active", "revoked"].includes(status)) throw new ClientError("Choose a valid share link.");
   await requireProjectManager(request, projectId);
   const allowUploads = input.allowUploads === true;
+  const name = cleanText(input.name, 100) || "Client review link";
+  const expiryDays = input.expiryDays == null || input.expiryDays === "" ? 0 : Number(input.expiryDays);
+  if (!Number.isInteger(expiryDays) || expiryDays < 0 || expiryDays > 90) throw new ClientError("Choose an expiry between 1 and 90 days.");
+  const expiresAt = expiryDays ? Date.now() + expiryDays * 24 * 60 * 60 * 1000 : null;
   const { db } = getUploadBindings();
-  const result = await db.prepare(`UPDATE project_share_links SET allow_uploads = ?, status = ?, updated_at = ?
-    WHERE id = ? AND project_id = ?`).bind(allowUploads ? 1 : 0, status, Date.now(), shareId, projectId).run();
+  const result = await db.prepare(`UPDATE project_share_links SET name = ?, allow_uploads = ?, status = ?, expires_at = ?, updated_at = ?
+    WHERE id = ? AND project_id = ?`).bind(name, allowUploads ? 1 : 0, status, expiresAt, Date.now(), shareId, projectId).run();
   if (!result.meta.changes) throw new ClientError("Share link not found.", 404);
-  return json({ ok: true, share: { id: shareId, allowUploads, status } });
+  return json({ ok: true, share: { id: shareId, name, allowUploads, status, expiresAt } });
 }
 
 async function createProjectDownloadLink(request: Request, input: JsonInput): Promise<Response> {

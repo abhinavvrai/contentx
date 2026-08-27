@@ -87,6 +87,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
 function projectSurface(project, files, canUpload) {
   return `<section class="workspace-project-head"><div><p>PROJECT</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle"><button class="active" type="button">Grid</button><button type="button">List</button></div></section>
     <section class="workspace-dropbar ${canUpload ? "" : "disabled"}" data-project-drop><span>↑</span><div><b>${canUpload ? "Drop files anywhere here" : "This link is view-only"}</b><small>${canUpload ? "Upload new assets, or drop directly on a file to create its next version." : "Ask the owner to enable uploads on this share link."}</small></div></section>
+    <section class="workspace-revision-flow"><article><span>01</span><b>Upload cut</b><small>Raw files and edits land in one project.</small></article><article><span>02</span><b>Drop replacement</b><small>Dropping on a card creates the next version.</small></article><article><span>03</span><b>Share review link</b><small>Send one link with multiple videos, expiry and upload controls.</small></article><article><span>04</span><b>Approve final</b><small>Comments, downloads and decisions stay attached.</small></article></section>
     <section class="workspace-files"><header><div><h2>Files</h2><span>Latest versions</span></div><p>${canUpload ? "Drop a replacement onto a card to keep every version together." : "Open a file to review and download its version history."}</p></header><div class="workspace-file-grid">${files.length ? files.map(file => fileCard(file, canUpload)).join("") : `<div class="workspace-empty-files"><span>↑</span><h3>No files yet</h3><p>${canUpload ? "Upload raw footage, references, audio or working files." : "The project owner has not shared any files yet."}</p></div>`}</div></section>
     <section class="workspace-queue" data-workspace-queue></section>`;
 }
@@ -118,7 +119,7 @@ async function openVersions(root, projectId, assetId, token) {
 
 async function openSharePanel(root, project, shares) {
   const layer = root.querySelector("[data-workspace-layer]");
-  layer.innerHTML = `<div class="workspace-modal-backdrop"><section class="workspace-share-modal"><button type="button" data-close-share>×</button><p class="workspace-kicker">SHARE PROJECT</p><h2>Create a client link</h2><p>Clients can review and download the latest files. Turn on uploads when you also want them to add references or replacements.</p><form><label>Link name<input name="name" value="Client review" maxlength="100"></label><label class="workspace-switch"><span><b>Allow uploads</b><small>People with the link can add files and create new versions.</small></span><input type="checkbox" name="allowUploads"><i></i></label><label>Link expiry<select name="expiryDays"><option value="0">Never expires</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option></select></label><p role="alert" data-share-error hidden></p><button class="workspace-button primary" type="submit">Create share link</button></form><div class="workspace-existing-shares"><h3>Existing links</h3>${shares.length ? shares.map(shareRow).join("") : `<p>No share links created yet.</p>`}</div></section></div>`;
+  layer.innerHTML = `<div class="workspace-modal-backdrop"><section class="workspace-share-modal"><button type="button" data-close-share>×</button><p class="workspace-kicker">SHARE PROJECT</p><h2>Create a review link</h2><p>One secure link can include every current project video, plus future versions. The random secret URL is copied immediately when created.</p><form><label>Link label<input name="name" value="Client review" maxlength="100" placeholder="Client review, agency review, final approval..."></label><label class="workspace-switch"><span><b>Allow uploads</b><small>People with the link can add files and create new versions.</small></span><input type="checkbox" name="allowUploads"><i></i></label><label>Link expiry<select name="expiryDays"><option value="0">Never expires</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option></select></label><p role="alert" data-share-error hidden></p><button class="workspace-button primary" type="submit">Create & copy share link</button></form><div class="workspace-existing-shares"><h3>Manage links</h3><small class="workspace-share-safe-note">Secret URLs are only shown at creation. If a client loses one, disable it and create a fresh random link.</small>${shares.length ? shares.map(shareRow).join("") : `<p>No share links created yet.</p>`}</div></section></div>`;
   const close = () => { layer.innerHTML = ""; };
   layer.querySelector("[data-close-share]").addEventListener("click", close);
   layer.querySelector(".workspace-modal-backdrop").addEventListener("click", event => { if (event.target === event.currentTarget) close(); });
@@ -130,27 +131,37 @@ async function openSharePanel(root, project, shares) {
     button.disabled = true; button.textContent = "Creating link…"; error.hidden = true;
     try {
       const result = await api(UPLOAD_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"create-share-link", projectId:project.id, name:values.name, expiryDays:values.expiryDays, allowUploads:Boolean(values.allowUploads) }) });
-      layer.querySelector(".workspace-share-modal").innerHTML = `<span class="workspace-share-success">✓</span><p class="workspace-kicker">LINK READY</p><h2>${escapeHTML(result.share.name)}</h2><p>${result.share.allowUploads ? "This link accepts downloads, new files and replacement versions." : "This link is view and download only."}</p><label>Shareable project link<input data-created-share value="${escapeHTML(result.shareUrl)}" readonly></label><button class="workspace-button primary" type="button" data-copy-share>Copy link</button><button class="workspace-button" type="button" data-done-share>Done</button>`;
-      layer.querySelector("[data-copy-share]").addEventListener("click", async event => { await navigator.clipboard.writeText(result.shareUrl); event.currentTarget.textContent = "Copied ✓"; });
+      await copyShareUrl(result.shareUrl);
+      layer.querySelector(".workspace-share-modal").innerHTML = `<span class="workspace-share-success">✓</span><p class="workspace-kicker">LINK READY</p><h2>${escapeHTML(result.share.name)}</h2><p>${result.share.allowUploads ? "This link accepts downloads, new files and replacement versions." : "This link is view and download only."}</p><label>Shareable project link<input data-created-share value="${escapeHTML(result.shareUrl)}" readonly></label><div class="workspace-share-actions"><button class="workspace-button primary" type="button" data-copy-share>Copied to clipboard ✓</button><a class="workspace-button" href="${shareIntent("whatsapp", result.shareUrl, result.share.name)}" target="_blank" rel="noreferrer">WhatsApp</a><a class="workspace-button" href="${shareIntent("email", result.shareUrl, result.share.name)}">Email</a><a class="workspace-button" href="${shareIntent("facebook", result.shareUrl, result.share.name)}" target="_blank" rel="noreferrer">Facebook</a></div><button class="workspace-button" type="button" data-done-share>Done</button>`;
+      layer.querySelector("[data-copy-share]").addEventListener("click", async event => { await copyShareUrl(result.shareUrl); event.currentTarget.textContent = "Copied again ✓"; });
       layer.querySelector("[data-done-share]").addEventListener("click", close);
     } catch (failure) {
       error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Create share link";
     }
   });
-  layer.querySelectorAll("[data-share-toggle]").forEach(button => button.addEventListener("click", async () => {
-    await api(UPLOAD_API, { method:"PATCH", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"share-link", projectId:project.id, shareId:button.dataset.shareToggle, status:"active", allowUploads:button.dataset.uploads !== "true" }) });
-    button.dataset.uploads = button.dataset.uploads === "true" ? "false" : "true";
-    button.textContent = button.dataset.uploads === "true" ? "Uploads on" : "View only";
-  }));
-  layer.querySelectorAll("[data-share-revoke]").forEach(button => button.addEventListener("click", async () => {
-    await api(UPLOAD_API, { method:"PATCH", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"share-link", projectId:project.id, shareId:button.dataset.shareRevoke, status:"revoked", allowUploads:false }) });
-    button.closest("article").remove();
+  layer.querySelectorAll("[data-share-save]").forEach(button => button.addEventListener("click", async () => {
+    const row = button.closest("[data-share-row]");
+    button.disabled = true; button.textContent = "Saving…";
+    await api(UPLOAD_API, { method:"PATCH", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"share-link", projectId:project.id, shareId:row.dataset.shareRow, status:row.querySelector("[data-share-status]").value, allowUploads:row.querySelector("[data-share-uploads]").checked, name:row.querySelector("[data-share-name]").value, expiryDays:row.querySelector("[data-share-expiry]").value }) });
+    button.textContent = "Saved ✓"; setTimeout(() => { button.disabled = false; button.textContent = "Save"; }, 1200);
   }));
 }
 
 function shareRow(share) {
   const active = share.status === "active";
-  return `<article><div><b>${escapeHTML(share.name)}</b><small>${active ? (share.allow_uploads ? "Uploads enabled" : "View and download") : "Revoked"} · ${share.expires_at ? `Expires ${formatDate(share.expires_at)}` : "No expiry"}</small></div>${active ? `<button type="button" data-share-toggle="${escapeHTML(share.id)}" data-uploads="${Boolean(share.allow_uploads)}">${share.allow_uploads ? "Uploads on" : "View only"}</button><button type="button" data-share-revoke="${escapeHTML(share.id)}">Revoke</button>` : ""}</article>`;
+  return `<article data-share-row="${escapeHTML(share.id)}" class="workspace-share-row"><div><label>Label<input data-share-name value="${escapeHTML(share.name)}"></label><small>${active ? (share.allow_uploads ? "Uploads enabled" : "View and download") : "Disabled"} · ${share.expires_at ? `Expires ${formatDate(share.expires_at)}` : "No expiry"}</small></div><label class="mini-check"><input type="checkbox" data-share-uploads ${share.allow_uploads ? "checked" : ""}>Uploads</label><select data-share-expiry><option value="0">No expiry</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option></select><select data-share-status><option value="active" ${active ? "selected" : ""}>Active</option><option value="revoked" ${!active ? "selected" : ""}>Disabled</option></select><button type="button" data-share-save>Save</button></article>`;
+}
+
+async function copyShareUrl(url) {
+  try { await navigator.clipboard.writeText(url); } catch { /* clipboard can be blocked in some browsers */ }
+}
+
+function shareIntent(channel, url, name) {
+  const encodedUrl = encodeURIComponent(url);
+  const text = encodeURIComponent(`Review ${name || "this Content X project"}: ${url}`);
+  if (channel === "whatsapp") return `https://wa.me/?text=${text}`;
+  if (channel === "facebook") return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+  return `mailto:?subject=${encodeURIComponent(`Review ${name || "Content X project"}`)}&body=${text}`;
 }
 
 export async function renderSharedWorkspace(root, actions, route) {

@@ -1,13 +1,13 @@
 import { studio } from "./data.js";
-import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=pricing-security-dashboard-1";
-import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=pricing-security-dashboard-1";
+import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=demo-share-usd-1";
+import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=demo-share-usd-1";
 import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=restored-features-1";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js";
 import { initProductPolish, polishRoute } from "./polish.js?v=core-features-2";
-import { enhanceCreatorTools } from "./creator-tools.js?v=pricing-security-dashboard-1";
+import { enhanceCreatorTools } from "./creator-tools.js?v=demo-share-usd-1";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=team-controls-1";
-import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=pricing-security-dashboard-1";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=pricing-security-dashboard-1";
+import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=demo-share-usd-1";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=demo-share-usd-1";
 
 const root = document.getElementById("app");
 const loader = document.querySelector("[data-loader]");
@@ -43,7 +43,7 @@ async function renderRoute() {
     progress.hidden = route !== "home";
     const uploadRoute = route.startsWith("upload?");
     const uploadHasToken = uploadRoute && Boolean(new URLSearchParams(route.split("?")[1] || "").get("token"));
-    const protectedRoute = ["project", "review", "account", "checkout"].includes(route) || route.startsWith("brief") || route.startsWith("workspace") || (uploadRoute && !uploadHasToken);
+    const protectedRoute = ["account", "checkout"].includes(route) || route.startsWith("brief") || (uploadRoute && !uploadHasToken);
     if (protectedRoute || route === "access") await refreshAccountSession();
     if (protectedRoute && !accountUser()) {
       rememberProtectedRoute(route);
@@ -52,7 +52,11 @@ async function renderRoute() {
     else if (route.startsWith("share?")) await renderSharedWorkspace(root, actions, route);
     else if (uploadRoute && uploadHasToken) await renderClientUpload(root, actions, route);
     else if (uploadRoute) await renderClientWorkspace(root, actions, route.replace(/^upload/, "workspace"));
-    else if (route.startsWith("workspace")) await renderClientWorkspace(root, actions, route);
+    else if (route.startsWith("workspace")) {
+      await refreshAccountSession();
+      if (accountUser()) await renderClientWorkspace(root, actions, route);
+      else { renderDashboard(root, actions, { demo:true }); enhanceDashboard(root, actions, { demo:true }); enhanceDashboardSuite(root, actions); }
+    }
     else if (route === "project") { renderProject(root, actions); enhanceProject(root, actions); enhanceProjectSuite(root, actions); }
     else if (route === "review") { renderReview(root, actions); enhanceReview(root, actions); enhanceReviewSuite(root, actions); }
     else if (route === "access") { if (accountUser()) await renderAccountDashboard(root, actions); else renderAccountAccess(root, actions); }

@@ -34,12 +34,12 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   assert.match(features, /data-unified-billing="monthly" class="active">Monthly/);
   assert.match(features, />Per reel</);
   assert.match(features, /USD_INR_RATE = 96/);
-  assert.match(features, /USD_DISPLAY_MARKUP = 1\.25/);
+  assert.match(features, /USD_DISPLAY_MARKUP = 1\.1/);
   assert.match(features, /function roundedUsdFromInr/);
   assert.match(features, /Math\.ceil\(converted \/ step\) \* step/);
-  assert.match(features, /US visitors see clean rounded USD/);
-  assert.match(features, /data-unified-currency="USD"/);
-  assert.match(features, /Showing rounded USD for US visitors/);
+  assert.match(features, /Visitors outside India see clean rounded USD/);
+  assert.match(features, /data-currency-auto-label/);
+  assert.match(features, /Razorpay checkout is created in USD/);
   assert.match(features, /billingPremiumAmount = amount => state\.billing === "one_off" \? Math\.round\(amount \* 0\.2\) : 0/);
   assert.match(features, /if \(false && pricing\)/);
   assert.match(features, /data-unified-service="video"/);
@@ -68,11 +68,22 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=pricing-security-dashboard-1/);
-  assert.match(html, /contentx-release" content="pricing-security-dashboard-1/);
-  assert.match(html, /main\.js\?v=pricing-security-dashboard-1/);
-  assert.match(main, /features\.js\?v=pricing-security-dashboard-1/);
+  assert.match(page, /\/site\/index\.html\?v=demo-share-usd-1/);
+  assert.match(html, /contentx-release" content="demo-share-usd-1/);
+  assert.match(html, /main\.js\?v=demo-share-usd-1/);
+  assert.match(main, /features\.js\?v=demo-share-usd-1/);
   assert.match(main, /uploads\.js\?v=team-controls-1/);
+});
+
+test("lets visitors explore a demo dashboard before login", async () => {
+  const [main, ui] = await Promise.all([
+    load("public/site/src/main.js"),
+    load("public/site/src/ui.js"),
+  ]);
+  assert.doesNotMatch(main, /route\.startsWith\("workspace"\) \|\|/);
+  assert.match(main, /renderDashboard\(root, actions, \{ demo:true \}\)/);
+  assert.match(ui, /Explore the dashboard before paying/);
+  assert.match(ui, /data-demo-login/);
 });
 
 test("passes marketing data into pricing so the homepage loader cannot crash", async () => {
@@ -100,7 +111,11 @@ test("keeps payment totals server-calculated with allowlisted add-ons", async ()
   assert.match(razorpay, /const subtotalAmount = baseAmount \+ addOnAmount \+ adjustmentAmount/);
   assert.match(razorpay, /const billingPremiumAmount = billing === "one_off" && usesBillingPremium \? Math\.round\(subtotalAmount \* 0\.2\) : 0/);
   assert.match(razorpay, /const totalAmount = subtotalAmount \+ billingPremiumAmount/);
+  assert.match(razorpay, /currency = input\.currency === "USD" \? "USD" : "INR"/);
+  assert.match(razorpay, /settlementCurrency: "INR"/);
+  assert.match(razorpay, /currency: order\.currency/);
   assert.match(orderRoute, /requireSessionUser/);
+  assert.match(orderRoute, /currency: input\.currency/);
   assert.match(orderRoute, /order_selections/);
 });
 
@@ -138,10 +153,10 @@ test("stores password hashes and server-side sessions instead of readable passwo
   assert.doesNotMatch(auth, /password TEXT/);
   assert.match(orderRoute, /requireSameOrigin/);
   assert.match(orderRoute, /requireSessionUser/);
-  assert.match(orderRoute, /currency: "INR"/);
+  assert.match(orderRoute, /currency: order\.currency/);
   assert.match(verifyRoute, /requireSessionUser/);
   assert.match(verifyRoute, /timingSafeEqual/);
-  assert.match(razorpay, /currency: "INR"/);
+  assert.match(razorpay, /currency: order\.currency/);
 });
 
 test("collects the detailed brief after verified payment and opens private uploads", async () => {
@@ -149,10 +164,25 @@ test("collects the detailed brief after verified payment and opens private uploa
   const account = await load("public/site/src/account.js");
   assert.match(briefs, /\["verified", "captured"\]/);
   assert.match(briefs, /project_briefs/);
+  assert.match(briefs, /p\.currency/);
   assert.match(briefs, /user_upload_projects/);
   assert.match(account, /Video or episode title/);
+  assert.match(account, /currency === "USD"/);
   assert.match(account, /Editing and creative instructions/);
   assert.match(account, /Reference link/);
+});
+
+test("shows pre-payment tutorials and a safe rollback note", async () => {
+  const [creatorTools, releaseHistory] = await Promise.all([
+    load("public/site/src/creator-tools.js"),
+    load("docs/release-history.md"),
+  ]);
+  assert.match(creatorTools, /prepay-tutorials/);
+  assert.match(creatorTools, /See it before you pay/);
+  assert.match(creatorTools, /Explore demo dashboard/);
+  assert.match(releaseHistory, /demo-share-usd-1/);
+  assert.match(releaseHistory, /pricing-security-dashboard-1/);
+  assert.doesNotMatch(releaseHistory, /password|token|secret/i);
 });
 
 test("shows owner permission controls and Frame-style review flow", async () => {

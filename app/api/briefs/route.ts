@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     const user = await requireSessionUser(request);
     const db = getAccountDatabase();
     const orders = await db.prepare(`SELECT p.razorpay_order_id, p.plan_id, p.plan_name, p.billing,
-      p.quantity, p.amount_paise, p.status, p.created_at, s.content_type, s.delivery_format,
+      p.quantity, p.amount_paise, p.currency, p.status, p.created_at, s.content_type, s.delivery_format,
       s.add_ons_json, b.id AS brief_id, b.title, b.description, b.instructions,
       b.reference_url, b.status AS brief_status, u.project_id
       FROM order_selections s

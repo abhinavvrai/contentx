@@ -52,6 +52,7 @@ test("groups replacement uploads into versions and supports controlled share lin
   ]);
   assert.match(route, /replaceFileId/);
   assert.match(route, /create-share-link/);
+  assert.match(route, /expires_at = \?/);
   assert.match(route, /version_count/);
   assert.match(storage, /project_share_links/);
   assert.match(storage, /authorizeProject/);
@@ -59,4 +60,8 @@ test("groups replacement uploads into versions and supports controlled share lin
   assert.match(schema, /projectShareLinks/);
   assert.match(workspace, /Drop replacement here/);
   assert.match(workspace, /Allow uploads/);
+  assert.match(workspace, /Create & copy share link/);
+  assert.match(workspace, /shareIntent\("whatsapp"/);
+  assert.match(workspace, /data-share-status/);
+  assert.match(workspace, /workspace-revision-flow/);
 });

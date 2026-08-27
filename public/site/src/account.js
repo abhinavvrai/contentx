@@ -6,7 +6,7 @@ let accountProviders = { google:{ available:false, clientId:"" }, emailOtp:{ ava
 let googleScriptPromise = null;
 
 const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" })[character]);
-const money = value => `₹${Math.round(Number(value || 0) / 100).toLocaleString("en-IN")}`;
+const money = (value, currency = "INR") => currency === "USD" ? `$${Math.round(Number(value || 0) / 100).toLocaleString("en-US")}` : `₹${Math.round(Number(value || 0) / 100).toLocaleString("en-IN")}`;
 
 async function api(url, options = {}) {
   const response = await fetch(url, { credentials:"same-origin", ...options });
@@ -180,7 +180,7 @@ function orderCard(order) {
   const paid = ["verified", "captured"].includes(order.status);
   const hasBrief = Boolean(order.brief_id);
   const addOns = Array.isArray(order.add_ons) ? order.add_ons : [];
-  return `<article class="account-order-card"><header><div><span>${escapeHTML(order.content_type || "video")}</span><small>${new Date(Number(order.created_at)).toLocaleDateString([], { dateStyle:"medium" })}</small></div><b class="${paid ? "paid" : "pending"}">${paid ? "Paid" : "Payment pending"}</b></header><h3>${escapeHTML(order.plan_name)}</h3><p>${Number(order.quantity)} ${contentUnit(order.content_type, Number(order.quantity))} · ${escapeHTML(order.billing === "monthly" ? "Monthly" : "One-time")}</p>${addOns.length ? `<ul>${addOns.map(item => `<li>+ ${escapeHTML(item.name)}</li>`).join("")}</ul>` : ""}<footer><strong>${money(order.amount_paise)}</strong><div>${paid ? `<a class="pill pill-dark" href="#brief?order=${encodeURIComponent(order.razorpay_order_id)}">${hasBrief ? "Edit brief" : "Add project brief"}</a>${order.project_id ? `<a class="pill pill-hot" href="#workspace?project=${encodeURIComponent(order.project_id)}">Open workspace</a>` : ""}` : `<span>Finish payment to add the brief</span>`}</div></footer></article>`;
+  return `<article class="account-order-card"><header><div><span>${escapeHTML(order.content_type || "video")}</span><small>${new Date(Number(order.created_at)).toLocaleDateString([], { dateStyle:"medium" })}</small></div><b class="${paid ? "paid" : "pending"}">${paid ? "Paid" : "Payment pending"}</b></header><h3>${escapeHTML(order.plan_name)}</h3><p>${Number(order.quantity)} ${contentUnit(order.content_type, Number(order.quantity))} · ${escapeHTML(order.billing === "monthly" ? "Monthly" : "One-time")}</p>${addOns.length ? `<ul>${addOns.map(item => `<li>+ ${escapeHTML(item.name)}</li>`).join("")}</ul>` : ""}<footer><strong>${money(order.amount_paise, order.currency)}</strong><div>${paid ? `<a class="pill pill-dark" href="#brief?order=${encodeURIComponent(order.razorpay_order_id)}">${hasBrief ? "Edit brief" : "Add project brief"}</a>${order.project_id ? `<a class="pill pill-hot" href="#workspace?project=${encodeURIComponent(order.project_id)}">Open workspace</a>` : ""}` : `<span>Finish payment to add the brief</span>`}</div></footer></article>`;
 }
 
 export async function renderProjectBrief(root, actions, route) {

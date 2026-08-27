@@ -1,6 +1,8 @@
 import { env } from "cloudflare:workers";
 
 const RAZORPAY_API_BASE = "https://api.razorpay.com/v1";
+const USD_INR_RATE = 96;
+const USD_DISPLAY_MARKUP = 1.1;
 let paymentSchemaPromise: Promise<void> | null = null;
 
 export const servicePlans = {
@@ -102,6 +104,7 @@ export function calculateOrder(input: {
   addOns?: unknown;
   durationMinutes?: unknown;
   rawFootageHours?: unknown;
+  currency?: unknown;
 }) {
   const plan = servicePlans[input.planId as PlanId];
   if (!plan) throw new Error("Choose a valid Content X service.");
@@ -169,6 +172,8 @@ export function calculateOrder(input: {
   const subtotalAmount = baseAmount + addOnAmount + adjustmentAmount;
   const billingPremiumAmount = billing === "one_off" && usesBillingPremium ? Math.round(subtotalAmount * 0.2) : 0;
   const totalAmount = subtotalAmount + billingPremiumAmount;
+  const currency = input.currency === "USD" ? "USD" : "INR";
+  const totalAmountMinor = currency === "USD" ? roundedUsdFromInr(totalAmount) * 100 : totalAmount * 100;
 
   return {
     billing,
@@ -184,8 +189,18 @@ export function calculateOrder(input: {
     subtotalAmount,
     billingPremiumAmount,
     totalAmount,
-    totalAmountPaise: totalAmount * 100,
+    currency,
+    settlementCurrency: "INR",
+    totalAmountPaise: totalAmountMinor,
+    totalAmountInrPaise: totalAmount * 100,
   };
+}
+
+function roundedUsdFromInr(amount: number) {
+  if (!amount) return 0;
+  const converted = (amount / USD_INR_RATE) * USD_DISPLAY_MARKUP;
+  const step = converted >= 100 ? 10 : 5;
+  return Math.max(5, Math.ceil(converted / step) * step);
 }
 
 export function json(body: unknown, status = 200) {
@@ -228,12 +243,13 @@ export async function createRazorpayOrder(order: ReturnType<typeof calculateOrde
     },
     body: JSON.stringify({
       amount: order.totalAmountPaise,
-      currency: "INR",
+      currency: order.currency,
       receipt,
       notes: {
         plan: order.planId,
         billing: order.billing,
         quantity: String(order.quantity),
+        settlement_currency: order.settlementCurrency,
         add_ons: [...order.addOns, ...order.adjustments].map(addOn => addOn.id).join(",").slice(0, 240),
       },
     }),
