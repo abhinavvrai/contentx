@@ -10,9 +10,155 @@ Live site:
 
 Current live release label:
 
-- `no-video-placeholders-1`
+- `auth-health-1`
 
 Important: do not write private passwords, OTPs, API keys, Razorpay secrets, Google client secrets, access codes or owner credentials in this file. Keep secrets in the proper environment variable system only.
+
+## Production Deployment — Read Before Publishing
+
+This section is the source of truth for every future developer, assistant and deployment. Read it together with `DEPLOY.md` before changing production.
+
+### Canonical production architecture
+
+- GitHub repository: `abhinavvrai/contentx`.
+- Production branch: `main`.
+- GitHub stores the code; a push to `main` starts Cloudflare Builds.
+- Cloudflare Builds runs `npm run build` and deploys with `npx wrangler deploy`.
+- The production Cloudflare Worker is named `contentx`.
+- Both `contentx.co.in` and `www.contentx.co.in` must resolve to that same Worker. The Worker redirects `www` to the apex domain.
+- Cloudflare is the only production runtime for the custom domain. Do not attach `contentx.co.in` to the OpenAI Sites project during a normal deployment.
+- OpenAI Sites metadata may remain in `.openai/hosting.json` for development/preview compatibility, but it is not the production owner of the custom domain.
+- Production secrets and bindings live in Cloudflare, not GitHub and not OpenAI Sites. Environment variables do not automatically move between deployment systems.
+- Production data uses the Cloudflare D1 binding `DB` and R2 binding `UPLOADS`.
+
+Required Cloudflare variable names (values must never be written here or committed):
+
+- `CONTENTX_EMAIL_FROM`
+- `CONTENTX_OWNER_EMAIL`
+- `CONTENTX_OWNER_TOKEN`
+- `GOOGLE_CLIENT_ID`
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `RAZORPAY_WEBHOOK_SECRET`
+- `RESEND_API_KEY`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_URL`
+
+### Safe publishing checklist
+
+1. Confirm the intended code is committed and that the local branch can be fast-forwarded to GitHub `main`. Never overwrite newer remote work.
+2. Confirm the OpenAI Sites project has no `contentx.co.in` custom-domain attachment.
+3. Confirm Cloudflare Worker `contentx` still has the required variable names, D1 `DB` binding and R2 `UPLOADS` binding. Inspect names and binding targets only; never reveal, copy or replace secret values unnecessarily.
+4. Confirm `wrangler.jsonc` contains the apex custom domain and the `www` route.
+5. Run `npm test` and `npm run build` locally.
+6. Push the intended commit to GitHub `main`. Do not publish the custom domain separately through OpenAI Sites.
+7. Watch the Cloudflare build until both the build and deploy steps report success. A successful Git push alone does not prove production was updated.
+8. Open both `https://contentx.co.in/` and `https://www.contentx.co.in/`. The `www` address must redirect to the apex address.
+9. Verify the current release/cache-buster in the root page and the direct `/site/` route so stale static assets are not mistaken for a failed deployment.
+10. Verify `GET /api/auth` returns Google, email OTP and password reset as available. Verify `GET /api/payments/razorpay/config` returns HTTP 200.
+
+Expected authentication availability:
+
+```json
+{
+  "google": { "available": true },
+  "emailOtp": { "available": true },
+  "passwordReset": { "available": true }
+}
+```
+
+Configuration checks do not send a real email and do not charge a payment method. Actual email delivery and payment flows require separate, intentional end-to-end tests.
+
+Useful read-only production checks in PowerShell:
+
+```powershell
+Invoke-WebRequest https://contentx.co.in/ -UseBasicParsing
+Invoke-WebRequest https://contentx.co.in/api/auth -UseBasicParsing
+Invoke-WebRequest https://contentx.co.in/api/payments/razorpay/config -UseBasicParsing
+```
+
+### Never do this
+
+- Never attach the same apex domain to both OpenAI Sites and the Cloudflare Worker.
+- Never assume GitHub, Cloudflare and OpenAI Sites share environment variables or secrets.
+- Never use OpenAI Sites to publish `contentx.co.in` during the normal production workflow.
+- Never delete MX, SPF, DKIM, DMARC, Resend, Google Workspace or verification DNS records while fixing website routing.
+- Never commit secret values, paste them into documentation or expose them in frontend code.
+- Never replace the complete Cloudflare variable list to change one value. Update only the intended key and preserve every existing secret and binding.
+- Never declare a deployment successful until the Cloudflare build succeeds and the live release plus API-provider checks pass.
+- Never point production at a preview deployment merely because the preview looks correct.
+
+### Incident record — 29 August 2026
+
+Symptoms:
+
+- Recent website changes were visible in one deployment but not consistently on `contentx.co.in`.
+- Google login was missing.
+- Password reset was unavailable.
+- The live authentication check reported Google and password reset unavailable, while email OTP had different availability.
+
+Root cause:
+
+- Two independent deployments were serving the product. The apex domain was attached to an OpenAI Sites Worker, while Cloudflare Worker `contentx` had the GitHub integration and the complete production variables.
+- The Sites runtime did not inherit the Cloudflare Google, Resend, Supabase or payment configuration. A deployment can contain the same code and still behave differently when its runtime variables and bindings differ.
+- GitHub connectivity was not the problem; the custom domain was routed to the wrong runtime.
+
+First recovery attempt and exact error:
+
+- After the Sites custom domain was removed and GitHub `main` was updated, the Cloudflare deployment failed with API error `100117`:
+  `Hostname 'contentx.co.in' already has externally managed DNS records (A, CNAME, etc). Delete them first or try a different hostname.`
+- The conflict came from two obsolete apex A records left by the former Sites attachment: `172.66.3.26` and `162.159.143.30`.
+- Only those two obsolete apex A records were deleted. Email, DKIM, SPF, DMARC, Resend, Google verification and other unrelated DNS records were preserved.
+
+Resolution:
+
+1. Removed the `contentx.co.in` custom domain from OpenAI Sites.
+2. Confirmed the Cloudflare Worker contained the required secrets and D1/R2 bindings.
+3. Fast-forwarded GitHub `main` to the validated website commit.
+4. Deleted only the two obsolete Sites apex A records after confirming their exact names and values.
+5. Retried the Cloudflare build and confirmed a successful Worker deployment.
+6. Confirmed apex HTTP 200, the `www` redirect, the current release, all three authentication-provider flags, Razorpay configuration and the local test/build suite.
+
+Successful recovery references:
+
+- Git commit deployed: `94a88a49374ba0db86acfc43a3990bbe31f96b55`.
+- Cloudflare build: `6e7a133a-4009-4920-ad2c-c7b1038b6c52`.
+- Cloudflare Worker version: `717f517f-a204-4b8d-91e5-3af8b8c0b0cd`.
+
+### Recovery and rollback
+
+- If a future Cloudflare build fails, keep production on the last successful Worker version. Fix the failing commit or revert GitHub `main` to a known-good commit, then allow Cloudflare Builds to deploy it.
+- Cloudflare can also promote a previously successful Worker version when an urgent rollback is needed.
+- If a deliberate emergency migration back to Sites is ever required, first remove the Cloudflare custom-domain ownership, then attach the domain to Sites and use the DNS targets reported by Sites at that time.
+- Do not blindly restore the old A-record IP addresses from this incident. They are recorded only for diagnosis and may become stale.
+- After any rollback, repeat the live domain, release, `/api/auth` and Razorpay configuration checks above.
+
+### Authentication UI incident — 29 August 2026
+
+Symptoms:
+
+- Submitting the normal Create account form showed the upstream message `Invalid API key`.
+- The official Google sign-in control could appear clipped, doubled or visually unstable inside the dark account card.
+
+Root cause:
+
+- The password registration form incorrectly called the optional Supabase email-OTP endpoint whenever email OTP was marked available. This made ordinary password registration depend on the separate Supabase credential.
+- The Google Identity Services iframe was placed inside a second element styled as a complete custom button. The competing borders, backgrounds, hover transforms and early width measurement made the control appear to glitch.
+
+Resolution and prevention:
+
+- Password registration now always uses the `register` action and the D1-backed account system. Email-code registration is used only when the visitor explicitly chooses **Continue with email code**.
+- Authentication-provider failures no longer expose raw API-key messages. If the email-code provider rejects its credential, the interface explains that email-code sign-in is temporarily unavailable and directs the visitor to password registration.
+- The Google control now renders into an unstyled, fixed-height host; only Google's official button is visible. Rendering is cancelled when a tab switch removes the host, and its width is measured only after the host is connected.
+- Regression tests must keep password registration independent from `request_otp`, preserve the connected-host guard and keep the release label synchronized across the shell and static app.
+- `/api/auth` now performs a cached, read-only Supabase Auth health request before advertising email OTP as available. It also performs a D1 `SELECT 1` connectivity check and returns only availability booleans—never credentials.
+
+Credential placement rule:
+
+- Supabase, Google, Resend and Razorpay credentials belong in Cloudflare's encrypted runtime variables. Do not copy them into D1 tables, user records, browser storage or frontend JavaScript.
+- D1 stores Content X account, session, project and workflow data. It is not a secret manager.
+- `SUPABASE_URL` must identify the same Supabase project as `SUPABASE_ANON_KEY`. Use either that project's publishable key (`sb_publishable_...`) or its legacy `anon` key—not a key copied from another project and never a `service_role`/secret key.
+- A green provider health result proves that Supabase accepts the configured project URL/key pair. End-to-end OTP delivery still requires an intentional test to a real inbox.
 
 ## Main Website Areas
 
@@ -259,15 +405,16 @@ This project uses vinext and Cloudflare-style bindings for the deployed app.
 
 ## Deployment Notes
 
-The custom domain is served through Cloudflare.
+The custom domain is served only through Cloudflare Worker `contentx`. OpenAI Sites is not part of the normal production publishing path.
 
 When deploying changes:
 
 1. Run tests/build locally.
-2. Push the intended commit to GitHub.
-3. Deploy the built output through Cloudflare/Sites.
+2. Push the intended commit to GitHub `main`.
+3. Let Cloudflare Builds build and deploy the Worker, and confirm the deployment succeeds.
 4. Open the live domain with a fresh cache-buster query.
 5. Verify the actual user-facing page, including the `/site/` iframe route when relevant.
+6. Run the authentication-provider and Razorpay configuration checks described in the production checklist above.
 
 If the live site appears stale, check both:
 

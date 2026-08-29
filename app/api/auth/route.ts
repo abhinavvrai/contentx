@@ -1,8 +1,10 @@
 import {
   AccountError,
+  accountDatabaseAvailable,
   expiredGoogleNonceCookie,
   expiredSessionCookie,
   getAccountCapabilities,
+  getVerifiedAccountCapabilities,
   getSessionUser,
   issueGoogleNonce,
   loginAccount,
@@ -18,8 +20,12 @@ import {
 
 export async function GET(request: Request) {
   return handle(async () => {
-    const user = await getSessionUser(request);
-    return response({ user, providers: getAccountCapabilities() });
+    const [user, providers, databaseAvailable] = await Promise.all([
+      getSessionUser(request),
+      getVerifiedAccountCapabilities(),
+      accountDatabaseAvailable(),
+    ]);
+    return response({ user, providers, database: { available: databaseAvailable } });
   });
 }
 

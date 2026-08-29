@@ -82,11 +82,11 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=package-clarity-1/);
-  assert.match(html, /contentx-release" content="package-clarity-1/);
-  assert.match(html, /main\.js\?v=package-clarity-1/);
+  assert.match(page, /\/site\/index\.html\?v=auth-health-1/);
+  assert.match(html, /contentx-release" content="auth-health-1/);
+  assert.match(html, /main\.js\?v=auth-health-1/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
-  assert.match(main, /features\.js\?v=package-clarity-1/);
+  assert.match(main, /features\.js\?v=auth-health-1/);
   assert.match(main, /uploads\.js\?v=no-video-placeholders-1/);
 });
 
@@ -213,12 +213,22 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   ]);
   assert.match(auth, /requestEmailOtp/);
   assert.match(auth, /loginWithGoogle/);
+  assert.match(auth, /\/auth\/v1\/health/);
+  assert.match(auth, /SELECT 1 AS ok/);
+  assert.match(auth, /OTP_HEALTH_CACHE_MS/);
   assert.match(auth, /RSASSA-PKCS1-v1_5/);
   assert.match(route, /request_otp/);
+  assert.match(route, /getVerifiedAccountCapabilities/);
+  assert.match(route, /database: \{ available: databaseAvailable \}/);
   assert.match(route, /verify_otp/);
   assert.match(route, /request_password_reset/);
   assert.match(route, /reset_password/);
   assert.match(account, /Continue with email code/);
+  assert.doesNotMatch(account, /if \(register && accountProviders\.emailOtp\?\.available\)/);
+  assert.match(account, /action:register \? "register" : "login"/);
+  assert.match(account, /host\.isConnected/);
+  assert.match(account, /theme:"filled_black"/);
+  assert.match(auth, /Email-code sign-in is temporarily unavailable/);
   assert.match(account, /Forgot password/);
   assert.match(account, /request_password_reset/);
   assert.match(account, /reset_password/);

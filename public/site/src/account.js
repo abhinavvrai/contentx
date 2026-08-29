@@ -40,7 +40,7 @@ export function rememberProtectedRoute(route) {
 export function renderAccountAccess(root, actions) {
   const returningTo = localStorage.getItem("cx_return_route") || "workspace";
   root.className = "account-app";
-  root.innerHTML = `<main class="account-access account-access-frame"><section class="account-story"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><div><span class="account-orbit-mark">CX</span><p class="eyebrow light"><span></span>Free review workspace</p><h1>Welcome to your production room.</h1><p>Create projects, upload safe files, compare versions, create share links and keep feedback away from scattered WhatsApp threads.</p><ul><li><b>✓</b> Free 50 GB account workspace</li><li><b>✓</b> Private project files and version stacks</li><li><b>✓</b> Share links with expiry and upload controls</li></ul></div><small>Clients can review from a private link without creating an account.</small></section><section class="account-card account-card-frame"><button class="account-close" type="button" aria-label="Return home">×</button><div class="account-card-logo"><span>CX</span><small>Content X Workspace</small></div><div class="account-toggle" role="tablist" aria-label="Account action"><button class="active" type="button" data-account-tab="login">Sign in</button><button type="button" data-account-tab="register">Create account</button></div><div data-account-panel></div><div class="dashboard-help-strip account-help-strip"><article><span>1</span><strong>Create project</strong><small>Start a private workspace for each client.</small></article><article><span>2</span><strong>Upload files</strong><small>Add footage, finals, references and new versions.</small></article><article><span>3</span><strong>Share for review</strong><small>Collect comments, approvals and delivery notes.</small></article></div><aside class="account-security"><span>✓</span><p><strong>Ready to review</strong><small>Sign in with Google, email code, or password to open your workspace.</small></p></aside></section></main>`;
+  root.innerHTML = `<main class="account-access account-access-frame"><section class="account-story"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><div><span class="account-orbit-mark">CX</span><p class="eyebrow light"><span></span>Free review workspace</p><h1>Welcome to your production room.</h1><p>Create projects, upload safe files, compare versions, create share links and keep feedback away from scattered WhatsApp threads.</p><ul><li><b>✓</b> Free 50 GB account workspace</li><li><b>✓</b> Private project files and version stacks</li><li><b>✓</b> Share links with expiry and upload controls</li></ul></div><small>Clients can review from a private link without creating an account.</small></section><section class="account-card account-card-frame"><button class="account-close" type="button" aria-label="Return home">×</button><div class="account-card-logo"><span>CX</span><small>Content X Workspace</small></div><div class="account-toggle" role="tablist" aria-label="Account action"><button class="active" type="button" data-account-tab="login">Sign in</button><button type="button" data-account-tab="register">Create account</button></div><div data-account-panel></div><div class="account-workflow-signature"><div><span>The Content X flow</span><strong>One private room. Every version. A clear final yes.</strong></div><p aria-label="Organise, review and deliver"><span>Organise</span><i></i><span>Review</span><i></i><span>Deliver</span></p></div><aside class="account-security"><span>✓</span><p><strong>Ready to review</strong><small>Sign in with Google, email code, or password to open your workspace.</small></p></aside></section></main>`;
   root.querySelector(".account-close").addEventListener("click", actions.openMarketing);
   root.querySelector(".account-story .brand").addEventListener("click", event => { event.preventDefault(); actions.openMarketing(); });
   const panel = root.querySelector("[data-account-panel]");
@@ -60,11 +60,6 @@ export function renderAccountAccess(root, actions) {
       button.disabled = true; button.textContent = register ? "Creating account…" : "Signing in…"; error.hidden = true;
       try {
         const values = Object.fromEntries(new FormData(event.currentTarget));
-        if (register && accountProviders.emailOtp?.available) {
-          await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"request_otp", email:values.email }) });
-          renderOtpVerification(panel, returningTo, true, values);
-          return;
-        }
         const result = await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:register ? "register" : "login", ...values }) });
         finishAccountAccess(result.user, returningTo);
       } catch (failure) {
@@ -200,9 +195,11 @@ function bindOtpBoxes(form) {
 async function renderGoogleAccess(panel, returningTo) {
   const host = panel.querySelector("[data-google-button]");
   if (!host) return;
+  host.setAttribute("aria-busy", "true");
   try {
     const nonceData = await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"google_nonce" }) });
     await loadGoogleIdentity();
+    if (!host.isConnected || !panel.contains(host)) return;
     window.google.accounts.id.initialize({
       client_id:nonceData.clientId,
       nonce:nonceData.nonce,
@@ -213,8 +210,14 @@ async function renderGoogleAccess(panel, returningTo) {
         } catch (failure) { showProviderError(panel, failure.message); }
       },
     });
-    window.google.accounts.id.renderButton(host, { theme:"outline", size:"large", shape:"rectangular", text:"continue_with", width:Math.min(420, host.clientWidth || 420) });
-  } catch (error) { showProviderError(panel, error.message); }
+    host.replaceChildren();
+    const width = Math.max(240, Math.min(400, Math.floor(host.getBoundingClientRect().width || 400)));
+    window.google.accounts.id.renderButton(host, { theme:"filled_black", size:"large", shape:"rectangular", text:"continue_with", logo_alignment:"left", width });
+    host.setAttribute("aria-busy", "false");
+  } catch (error) {
+    host.setAttribute("aria-busy", "false");
+    showProviderError(panel, error.message);
+  }
 }
 
 function loadGoogleIdentity() {

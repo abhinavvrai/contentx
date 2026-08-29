@@ -47,6 +47,8 @@ type StoredUser = {
 
 let authSchemaPromise: Promise<void> | null = null;
 let googleKeysPromise: Promise<Array<JsonWebKey & { kid?: string }>> | null = null;
+let otpHealthCache: { available: boolean; checkedAt: number } | null = null;
+const OTP_HEALTH_CACHE_MS = 5 * 60 * 1000;
 
 export class AccountError extends Error {
   constructor(message: string, public status = 400) {
@@ -70,6 +72,28 @@ export function getAccountCapabilities(): AccountCapabilities {
   };
 }
 
+export async function getVerifiedAccountCapabilities(): Promise<AccountCapabilities> {
+  const capabilities = getAccountCapabilities();
+  if (!capabilities.emailOtp.available) return capabilities;
+  const now = Date.now();
+  if (!otpHealthCache || now - otpHealthCache.checkedAt >= OTP_HEALTH_CACHE_MS) {
+    otpHealthCache = { available: await checkSupabaseAuthHealth(), checkedAt: now };
+  }
+  return {
+    ...capabilities,
+    emailOtp: { available: otpHealthCache.available },
+  };
+}
+
+export async function accountDatabaseAvailable(): Promise<boolean> {
+  try {
+    const result = await getAccountDatabase().prepare("SELECT 1 AS ok").first<{ ok: number }>();
+    return result?.ok === 1;
+  } catch {
+    return false;
+  }
+}
+
 export async function requestEmailOtp(request: Request, input: Record<string, unknown>): Promise<void> {
   requireSameOrigin(request);
   await ensureAccountSchema();
@@ -91,7 +115,11 @@ export async function requestEmailOtp(request: Request, input: Record<string, un
   });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({})) as { msg?: string; message?: string };
-    throw new AccountError(payload.msg || payload.message || "We could not send the verification code.", response.status === 429 ? 429 : 503);
+    const providerMessage = `${payload.msg || payload.message || ""}`.toLowerCase();
+    const message = providerMessage.includes("api key") || response.status === 401 || response.status === 403
+      ? "Email-code sign-in is temporarily unavailable. You can still create an account with a password."
+      : (payload.msg || payload.message || "We could not send the verification code.");
+    throw new AccountError(message, response.status === 429 ? 429 : 503);
   }
   await recordOtpRequest(db, attemptKey);
 }
@@ -498,6 +526,19 @@ function supabaseConfig(): { url: string; anonKey: string } {
     throw new AccountError("Email verification is not configured yet.", 503);
   }
   return { url, anonKey };
+}
+
+async function checkSupabaseAuthHealth(): Promise<boolean> {
+  try {
+    const { url, anonKey } = supabaseConfig();
+    const response = await fetch(`${url}/auth/v1/health`, {
+      headers: { apikey: anonKey },
+      signal: AbortSignal.timeout(5000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 async function otpAttemptKey(request: Request, email: string): Promise<string> {
