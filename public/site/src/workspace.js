@@ -1,3 +1,6 @@
+import { enhanceFileLibrary, fileToolbar, workspacePulse, hasTimestamp } from "./studio-workspace.js?v=review-studio-1";
+import { openReviewRoom } from "./review-room.js?v=review-studio-1";
+
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
 
@@ -26,40 +29,47 @@ export async function renderClientWorkspace(root, actions, route) {
   root.className = "workspace-app";
   root.innerHTML = `<main class="workspace-loading"><span></span><h1>Opening your workspace…</h1></main>`;
   try {
-    const account = await api(BRIEF_API, { cache:"no-store" });
-    const projects = (account.orders || []).filter(order => order.project_id);
+    const account = await api(`${UPLOAD_API}?action=account-projects`, { cache:"no-store" });
+    const projects = account.projects || [];
     const params = new URLSearchParams(route.split("?")[1] || "");
     const requested = params.get("project");
     const selected = projects.find(project => project.project_id === requested) || projects[0] || null;
-    const [projectData, shareData] = selected ? await Promise.all([
+    const [projectData, shareData, commentData] = selected ? await Promise.all([
       api(`${UPLOAD_API}?action=project&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }),
       api(`${UPLOAD_API}?action=shares&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }),
-    ]) : [{ project:null, files:[], permissions:{ canUpload:false } }, { shares:[] }];
-    renderWorkspaceShell(root, actions, account.user, projects, selected, projectData, shareData.shares || []);
+      api(`${UPLOAD_API}?action=comments&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }),
+    ]) : [{ project:null, files:[], permissions:{ canUpload:false } }, { shares:[] }, { comments:[] }];
+    renderWorkspaceShell(root, actions, account.user, projects, selected, projectData, shareData.shares || [], account.storage || {}, commentData.comments || []);
   } catch (error) {
     root.innerHTML = `<main class="workspace-error"><span>!</span><h1>Workspace unavailable.</h1><p>${escapeHTML(error.message)}</p><a class="workspace-button primary" href="#account">Return to account</a></main>`;
   }
 }
 
-function renderWorkspaceShell(root, actions, user, projects, selected, projectData, shares) {
+function renderWorkspaceShell(root, actions, user, projects, selected, projectData, shares, storage, comments) {
   const project = projectData.project;
   const files = projectData.files || [];
+  const used = Number(storage.usedBytes || 0);
+  const quota = Number(storage.quotaBytes || 50 * 1024 ** 3);
+  const percent = Math.min(100, Math.round(used / quota * 100));
   root.innerHTML = `<div class="workspace-shell">
     <aside class="workspace-sidebar">
       <a class="workspace-brand" href="#home"><span>CX</span><b>Content X</b></a>
-      <nav><a class="active" href="#workspace"><span>▱</span>Projects</a><a href="#account"><span>◎</span>Orders & briefs</a><a href="#home"><span>＋</span>New project</a></nav>
-      <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id ? "active" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}"><span>${escapeHTML((item.title || item.plan_name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.title || item.plan_name)}</b><small>${escapeHTML(item.brief_status || "Ready")}</small></a>`).join("") || `<p>Your paid projects appear here.</p>`}</div>
+      <nav><a class="active" href="#workspace"><span>▱</span>Projects</a><a href="#account"><span>◎</span>Account</a><button type="button" data-create-free-project><span>＋</span>New project</button></nav>
+      <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id ? "active" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}"><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}</small></a>`).join("") || `<p>Create a free project to begin.</p>`}</div>
+      <div class="workspace-storage"><div><b>Free storage</b><small>${formatBytes(used)} of ${formatBytes(quota)}</small></div><i><em style="width:${percent}%"></em></i></div>
       <div class="workspace-user"><span>${escapeHTML(user.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(user.name)}</b><small>${escapeHTML(user.email)}</small></div><a href="#account" aria-label="Account settings">•••</a></div>
     </aside>
     <main class="workspace-main">
-      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>Projects</span>${project ? `<b>/ ${escapeHTML(project.name)}</b>` : ""}</div><div>${project ? `<button class="workspace-button" type="button" data-share-project>Share</button><button class="workspace-button primary" type="button" data-upload-files>Upload files</button>` : `<a class="workspace-button primary" href="#home">Choose a package</a>`}</div></header>
-      ${project ? projectSurface(project, files, projectData.permissions?.canUpload !== false) : emptyWorkspace()}
+      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>Projects</span>${project ? `<b>/ ${escapeHTML(project.name)}</b>` : ""}</div><div>${project ? `<button class="workspace-button" type="button" data-share-project>Share</button><button class="workspace-button primary" type="button" data-upload-files>Upload files</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
+      ${project ? projectSurface(project, files, projectData.permissions?.canUpload !== false, comments, true) : emptyWorkspace()}
     </main>
   </div><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
 
   root.querySelector("[data-workspace-menu]")?.addEventListener("click", () => root.querySelector(".workspace-sidebar").classList.toggle("open"));
   root.querySelector(".workspace-main")?.addEventListener("click", () => root.querySelector(".workspace-sidebar")?.classList.remove("open"));
+  root.querySelectorAll("[data-create-free-project]").forEach(button => button.addEventListener("click", () => openCreateProjectModal(root, actions)));
   if (!project) return;
+  enhanceFileLibrary(root, files, comments);
   const picker = root.querySelector("[data-workspace-picker]");
   root.querySelector("[data-upload-files]")?.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });
   root.querySelector("[data-project-drop]")?.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });
@@ -75,7 +85,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   root.querySelectorAll("[data-file-card]").forEach(card => {
     const fileId = card.dataset.fileId;
     const assetId = card.dataset.assetId;
-    card.querySelector("[data-file-open]").addEventListener("click", () => openVersions(root, project.id, assetId, ""));
+    card.querySelector("[data-file-open]").addEventListener("click", () => openVersions(root, project.id, assetId, "", true, actions.refreshRoute));
     card.querySelector("[data-new-version]")?.addEventListener("click", () => { picker.dataset.replaceFile = fileId; picker.click(); });
     bindDropTarget(card, async dropped => {
       await uploadSelectedFiles(root, project.id, "", dropped.slice(0, 1), fileId, project.maxFileSize, project.maxVideoSeconds || project.max_video_seconds || 0);
@@ -83,14 +93,17 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     }, "is-version-drop");
   });
   root.querySelector("[data-share-project]")?.addEventListener("click", () => openSharePanel(root, project, shares));
+  bindComments(root, project.id, "", actions, true);
 }
 
-function projectSurface(project, files, canUpload) {
-  return `<section class="workspace-project-head"><div><p>PROJECT</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle"><button class="active" type="button">Grid</button><button type="button">List</button></div></section>
+function projectSurface(project, files, canUpload, comments = [], canManageComments = false) {
+  return `<section class="workspace-project-head"><div><p>PROJECT</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
+    ${workspacePulse(files, comments)}
     <section class="workspace-dropbar ${canUpload ? "" : "disabled"}" data-project-drop><span>↑</span><div><b>${canUpload ? "Drop files anywhere here" : "This link is view-only"}</b><small>${canUpload ? "Upload new assets, or drop directly on a file to create its next version." : "Ask the owner to enable uploads on this share link."}</small></div></section>
     ${canUpload ? `<p class="workspace-upload-rules">Allowed uploads: video, audio, image, PDF, text, CSV and subtitle files. Executables, archives, scripts, HTML and SVG are blocked.</p>` : ""}
     <section class="workspace-revision-flow"><article><span>01</span><b>Upload cut</b><small>Raw files and edits land in one project.</small></article><article><span>02</span><b>Drop replacement</b><small>Dropping on a card creates the next version.</small></article><article><span>03</span><b>Share review link</b><small>Send one link with multiple videos, expiry and upload controls.</small></article><article><span>04</span><b>Approve final</b><small>Comments, downloads and decisions stay attached.</small></article></section>
-    <section class="workspace-files"><header><div><h2>Files</h2><span>Latest versions</span></div><p>${canUpload ? "Drop a replacement onto a card to keep every version together." : "Open a file to review and download its version history."}</p></header><div class="workspace-file-grid">${files.length ? files.map(file => fileCard(file, canUpload)).join("") : `<div class="workspace-empty-files"><span>↑</span><h3>No files yet</h3><p>${canUpload ? "Upload raw footage, references, audio or working files." : "The project owner has not shared any files yet."}</p></div>`}</div></section>
+    <section class="workspace-files"><header><div><h2>Files</h2><span>Latest versions</span></div><p>Open a file to preview, compare versions and leave timestamped feedback.</p></header>${fileToolbar()}<div class="workspace-file-grid">${files.length ? files.map(file => fileCard(file, canUpload)).join("") : `<div class="workspace-empty-files"><span>↑</span><h3>No files yet</h3><p>${canUpload ? "Upload raw footage, references, audio or working files." : "The project owner has not shared any files yet."}</p></div>`}</div></section>
+    ${commentsPanel(comments, canManageComments)}
     <section class="workspace-queue" data-workspace-queue></section>`;
 }
 
@@ -101,22 +114,11 @@ function fileCard(file, canUpload) {
 }
 
 function emptyWorkspace() {
-  return `<section class="workspace-zero"><span>◇</span><h1>Your production workspace is ready.</h1><p>Complete payment and submit the brief to open a project with uploads, versions and share links.</p><a class="workspace-button primary" href="#home">View packages</a></section>`;
+  return `<section class="workspace-zero"><span>◇</span><h1>Your free review workspace is ready.</h1><p>Create a project, upload files, then send a private review link to your client. Every free account starts with 50 GB storage.</p><button class="workspace-button primary" type="button" data-create-free-project>Create first project</button></section>`;
 }
 
-async function openVersions(root, projectId, assetId, token) {
-  const layer = root.querySelector("[data-workspace-layer]");
-  layer.innerHTML = `<div class="workspace-drawer-backdrop"><aside class="workspace-drawer"><button type="button" data-close-drawer>×</button><div class="workspace-drawer-loading">Loading versions…</div></aside></div>`;
-  layer.querySelector("[data-close-drawer]").addEventListener("click", () => { layer.innerHTML = ""; });
-  try {
-    const data = await api(`${UPLOAD_API}?action=versions&projectId=${encodeURIComponent(projectId)}&assetId=${encodeURIComponent(assetId)}`, { headers:bearerHeaders(token) });
-    const drawer = layer.querySelector(".workspace-drawer");
-    drawer.innerHTML = `<button type="button" data-close-drawer>×</button><p class="workspace-kicker">VERSION HISTORY</p><h2>${escapeHTML(data.versions[0]?.original_name || "Project file")}</h2><p>Every replacement stays attached to the same asset.</p><div class="workspace-version-list">${data.versions.map(version => `<article><span>${fileGlyph(version.content_type)}</span><div><b>Version ${Number(version.version_number || 1)}</b><small>${escapeHTML(version.original_name)} · ${formatBytes(version.size_bytes)} · ${formatDate(version.completed_at)}</small></div><button type="button" data-download-version="${escapeHTML(version.id)}">Download</button></article>`).join("")}</div>`;
-    drawer.querySelector("[data-close-drawer]").addEventListener("click", () => { layer.innerHTML = ""; });
-    drawer.querySelectorAll("[data-download-version]").forEach(button => button.addEventListener("click", () => downloadProjectFile(projectId, button.dataset.downloadVersion, token, button)));
-  } catch (error) {
-    layer.querySelector(".workspace-drawer-loading").textContent = error.message;
-  }
+async function openVersions(root, projectId, assetId, token, canManage = false, onChange = () => {}) {
+  return openReviewRoom({ layer:root.querySelector("[data-workspace-layer]"), api, headers:json => bearerHeaders(token, json), projectId, assetId, canManage, onChange });
 }
 
 async function openSharePanel(root, project, shares) {
@@ -149,6 +151,61 @@ async function openSharePanel(root, project, shares) {
   }));
 }
 
+function openCreateProjectModal(root, actions) {
+  const layer = root.querySelector("[data-workspace-layer]");
+  layer.innerHTML = `<div class="workspace-modal-backdrop"><form class="workspace-share-modal workspace-create-modal"><button type="button" data-close-create>×</button><p class="workspace-kicker">FREE WORKSPACE</p><h2>Create a project</h2><p>Use this for your own editing clients. Upload files, keep versions together and send a private review link.</p><label>Project name<input name="name" required maxlength="120" placeholder="e.g. Kapil launch reel"></label><label>Client name <span>optional</span><input name="clientName" maxlength="120" placeholder="Client or brand name"></label><label>Client email <span>optional</span><input name="clientEmail" type="email" maxlength="254" placeholder="client@example.com"></label><p role="alert" data-create-error hidden></p><button class="workspace-button primary" type="submit">Create project</button></form></div>`;
+  const close = () => { layer.innerHTML = ""; };
+  layer.querySelector("[data-close-create]").addEventListener("click", close);
+  layer.querySelector(".workspace-modal-backdrop").addEventListener("click", event => { if (event.target === event.currentTarget) close(); });
+  layer.querySelector("form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = event.currentTarget.querySelector("button[type=submit]");
+    const error = event.currentTarget.querySelector("[data-create-error]");
+    button.disabled = true; button.textContent = "Creating…"; error.hidden = true;
+    try {
+      const result = await api(UPLOAD_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"create-account-project", ...Object.fromEntries(new FormData(event.currentTarget)) }) });
+      location.hash = `workspace?project=${encodeURIComponent(result.project.id)}`;
+      actions.refreshRoute();
+    } catch (failure) {
+      error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Create project";
+    }
+  });
+}
+
+function commentsPanel(comments, canManageComments) {
+  return `<section class="workspace-comments"><header><div><h2>Review comments</h2><p>Clients can leave feedback from the share link without creating an account.</p></div><span>${comments.length} comment${comments.length === 1 ? "" : "s"}</span></header><div class="workspace-comment-list">${comments.length ? comments.map(comment => commentRow(comment, canManageComments)).join("") : `<article class="workspace-comment-empty"><span>◌</span><b>No feedback yet</b><small>Share this project with your client to collect comments here.</small></article>`}</div><form class="workspace-comment-form"><div><input name="authorName" required maxlength="100" placeholder="Your name"><input name="authorEmail" type="email" maxlength="254" placeholder="Email optional"></div><textarea name="body" required maxlength="2000" rows="3" placeholder="Write feedback for this project…"></textarea><button class="workspace-button primary" type="submit">Send comment</button><p role="alert" hidden></p></form></section>`;
+}
+
+function commentRow(comment, canManageComments) {
+  const completed = comment.status === "completed" || comment.status === "resolved";
+  const timestamp = hasTimestamp(comment.timestamp_seconds) ? `<em>${formatDuration(Number(comment.timestamp_seconds))}</em>` : "";
+  return `<article class="workspace-comment ${completed ? "completed" : ""}"><span>${escapeHTML((comment.author_name || "?").slice(0,1).toUpperCase())}</span><div><strong>${escapeHTML(comment.author_name || "Reviewer")} <small>${formatDate(comment.created_at)}</small></strong>${timestamp}<p>${escapeHTML(comment.body)}</p></div>${canManageComments ? `<button type="button" data-comment-complete="${escapeHTML(comment.id)}">${completed ? "Completed ✓" : "Mark complete"}</button>` : ""}</article>`;
+}
+
+function bindComments(root, projectId, token, actions, canManageComments = false) {
+  const form = root.querySelector(".workspace-comment-form");
+  if (!form) return;
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = form.querySelector("button[type=submit]");
+    const error = form.querySelector("[role=alert]");
+    button.disabled = true; button.textContent = "Sending…"; error.hidden = true;
+    try {
+      await api(UPLOAD_API, { method:"POST", headers:bearerHeaders(token, true), body:JSON.stringify({ action:"create-comment", projectId, ...Object.fromEntries(new FormData(form)) }) });
+      actions.refreshRoute ? actions.refreshRoute() : null;
+    } catch (failure) {
+      error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Send comment";
+    }
+  });
+  if (canManageComments) {
+    root.querySelectorAll("[data-comment-complete]").forEach(button => button.addEventListener("click", async () => {
+      button.disabled = true; button.textContent = "Saving…";
+      await api(UPLOAD_API, { method:"PATCH", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"comment-status", projectId, commentId:button.dataset.commentComplete, status:"completed" }) });
+      actions.refreshRoute();
+    }));
+  }
+}
+
 function shareRow(share) {
   const active = share.status === "active";
   return `<article data-share-row="${escapeHTML(share.id)}" class="workspace-share-row"><div><label>Label<input data-share-name value="${escapeHTML(share.name)}"></label><small>${active ? (share.allow_uploads ? "Uploads enabled" : "View and download") : "Disabled"} · ${share.expires_at ? `Expires ${formatDate(share.expires_at)}` : "No expiry"}</small></div><label class="mini-check"><input type="checkbox" data-share-uploads ${share.allow_uploads ? "checked" : ""}>Uploads</label><select data-share-expiry><option value="0">No expiry</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option></select><select data-share-status><option value="active" ${active ? "selected" : ""}>Active</option><option value="revoked" ${!active ? "selected" : ""}>Disabled</option></select><button type="button" data-share-save>Save</button></article>`;
@@ -176,7 +233,9 @@ export async function renderSharedWorkspace(root, actions, route) {
   try {
     const data = await api(`${UPLOAD_API}?action=project&projectId=${encodeURIComponent(projectId)}`, { headers:bearerHeaders(token), cache:"no-store" });
     const canUpload = Boolean(data.permissions?.canUpload);
-    root.innerHTML = `<header class="shared-header"><a href="#home"><span>CX</span><b>Content X</b></a><div><b>Shared project</b><small>${canUpload ? "Uploads enabled" : "View and download"}</small></div></header><main class="shared-main"><section class="shared-title"><p class="workspace-kicker">PRIVATE CLIENT LINK</p><h1>${escapeHTML(data.project.name)}</h1><p>Review the latest files, download any version${canUpload ? ", or add new files and replacements" : ""}.</p></section>${projectSurface(data.project, data.files || [], canUpload)}</main><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
+    const commentData = await api(`${UPLOAD_API}?action=comments&projectId=${encodeURIComponent(projectId)}`, { headers:bearerHeaders(token), cache:"no-store" }).catch(() => ({ comments:[] }));
+    root.innerHTML = `<header class="shared-header"><a href="#home"><span>CX</span><b>Content X</b></a><div><b>Shared project</b><small>${canUpload ? "Uploads enabled" : "View and download"}</small></div></header><main class="shared-main"><section class="shared-title"><p class="workspace-kicker">PRIVATE CLIENT LINK</p><h1>${escapeHTML(data.project.name)}</h1><p>Review the latest files, download any version${canUpload ? ", or add new files and replacements" : ""}. Leave your name and feedback below — no login needed.</p></section>${projectSurface(data.project, data.files || [], canUpload, commentData.comments || [], false)}</main><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
+    enhanceFileLibrary(root, data.files || [], commentData.comments || []);
     const picker = root.querySelector("[data-workspace-picker]");
     if (canUpload) {
       root.querySelector("[data-project-drop]").addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });
@@ -184,12 +243,13 @@ export async function renderSharedWorkspace(root, actions, route) {
       picker.addEventListener("change", async () => { await uploadSelectedFiles(root, projectId, token, [...picker.files], picker.dataset.replaceFile || "", data.project.maxFileSize, data.project.maxVideoSeconds || data.project.max_video_seconds || 0); picker.value = ""; await renderSharedWorkspace(root, actions, route); });
     }
     root.querySelectorAll("[data-file-card]").forEach(card => {
-      card.querySelector("[data-file-open]").addEventListener("click", () => openVersions(root, projectId, card.dataset.assetId, token));
+      card.querySelector("[data-file-open]").addEventListener("click", () => openVersions(root, projectId, card.dataset.assetId, token, false, () => renderSharedWorkspace(root, actions, route)));
       if (canUpload) {
         card.querySelector("[data-new-version]")?.addEventListener("click", () => { picker.dataset.replaceFile = card.dataset.fileId; picker.click(); });
         bindDropTarget(card, async dropped => { await uploadSelectedFiles(root, projectId, token, dropped.slice(0,1), card.dataset.fileId, data.project.maxFileSize, data.project.maxVideoSeconds || data.project.max_video_seconds || 0); await renderSharedWorkspace(root, actions, route); }, "is-version-drop");
       }
     });
+    bindComments(root, projectId, token, { refreshRoute:() => renderSharedWorkspace(root, actions, route) }, false);
   } catch (error) { sharedError(root, error.message); }
 }
 

@@ -305,7 +305,7 @@ function setActiveNav(root, active) { root.querySelectorAll(".dash-sidebar nav b
 function applyClientDashboard(root, client, actions) {
   const user = root.querySelector(".dash-user");
   if (user) { user.querySelector("b").textContent = client.contactInitials; const text = user.querySelector("span"); text.innerHTML = `${safe(client.contactName)}<small>${safe(client.name)}</small>`; }
-  const greeting = root.querySelector(".dash-header h1"); if (greeting) greeting.textContent = `Good afternoon, ${client.contactName.split(" ")[0]}.`;
+  const greeting = root.querySelector(".dash-header h1"); if (greeting) greeting.textContent = "Good afternoon.";
   const storage = root.querySelector(".storage"); if (storage) { storage.querySelector("small").textContent = client.storageLabel; storage.querySelector("em").style.width = `${client.storage}%`; }
   const projectCount = root.querySelector('[data-dash="projects"] b'); if (projectCount) projectCount.textContent = client.projects.length;
   const reviewCount = client.projects.filter(project => project.status === "In review" || project.status === "Editing").length;

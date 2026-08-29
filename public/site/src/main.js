@@ -1,13 +1,25 @@
 import { studio } from "./data.js";
-import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=security-upload-login-1";
-import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=security-upload-login-1";
-import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=restored-features-1";
-import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js";
-import { initProductPolish, polishRoute } from "./polish.js?v=core-features-2";
-import { enhanceCreatorTools } from "./creator-tools.js?v=security-upload-login-1";
-import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=security-upload-login-1";
-import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=security-upload-login-1";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=security-upload-login-1";
+import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=no-video-placeholders-1";
+import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=noir-studio-1";
+import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=noir-studio-1";
+import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js?v=no-video-placeholders-1";
+import { initProductPolish, polishRoute } from "./polish.js?v=noir-studio-1";
+import { enhanceCreatorTools } from "./creator-tools.js?v=landscape-contrast-1";
+import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=no-video-placeholders-1";
+import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=no-video-placeholders-1";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=review-studio-1";
+import { enhanceStudioDashboard } from "./studio-workspace.js?v=review-studio-1";
+
+// Load decorative motion independently so a missing effect cannot block the app.
+let cinematic;
+const cinematicReady = import("./cinematic.js?v=landscape-contrast-1")
+  .then(module => { cinematic = module; })
+  .catch(error => console.warn("Content X motion is unavailable", error));
+let ambient;
+const ambientReady = import("./ambient-scenes.js?v=ember-flow-1")
+  .then(module => { ambient = module; })
+  .catch(error => console.warn("Content X atmosphere is unavailable", error));
+let cinematicRender = 0;
 
 const root = document.getElementById("app");
 const loader = document.querySelector("[data-loader]");
@@ -34,8 +46,11 @@ const actions = {
 };
 
 async function renderRoute() {
+  const motionRender = ++cinematicRender;
   const route = location.hash.slice(1) || "home";
   try {
+    // These guards belong to the old DOM, not to the reusable route root.
+    ["advancedDashboard", "advancedProject", "advancedReview", "advancedAdmin"].forEach(key => delete root.dataset[key]);
     prepareClientRoute(route);
     window.scrollTo(0, 0);
     canvas.hidden = true;
@@ -44,7 +59,7 @@ async function renderRoute() {
     const uploadRoute = route.startsWith("upload?");
     const uploadHasToken = uploadRoute && Boolean(new URLSearchParams(route.split("?")[1] || "").get("token"));
     const protectedRoute = ["account", "checkout"].includes(route) || route.startsWith("brief") || (uploadRoute && !uploadHasToken);
-    if (protectedRoute || route === "access") await refreshAccountSession();
+    if (protectedRoute || route.startsWith("access")) await refreshAccountSession();
     if (protectedRoute && !accountUser()) {
       rememberProtectedRoute(route);
       renderAccountAccess(root, actions);
@@ -59,7 +74,7 @@ async function renderRoute() {
     }
     else if (route === "project") { renderProject(root, actions); enhanceProject(root, actions); enhanceProjectSuite(root, actions); }
     else if (route === "review") { renderReview(root, actions); enhanceReview(root, actions); enhanceReviewSuite(root, actions); }
-    else if (route === "access") { if (accountUser()) await renderAccountDashboard(root, actions); else renderAccountAccess(root, actions); }
+    else if (route.startsWith("access")) { if (accountUser() && !route.includes("reset=")) await renderAccountDashboard(root, actions); else renderAccountAccess(root, actions); }
     else if (route === "account") await renderAccountDashboard(root, actions);
     else if (route.startsWith("brief")) await renderProjectBrief(root, actions, route);
     else if (route === "checkout") renderCheckout(root, actions);
@@ -71,6 +86,15 @@ async function renderRoute() {
     else { renderMarketing(root, studio, actions); enhanceMarketing(root, actions, studio); enhanceMarketplaceMarketing(root, actions); }
     polishRoute(root, route);
     enhanceCreatorTools(root, route);
+    try { enhanceStudioDashboard(root); }
+    catch (error) { console.warn("Dashboard presentation was skipped", error); }
+    Promise.all([cinematicReady, ambientReady]).then(() => {
+      if (motionRender !== cinematicRender) return;
+      try { cinematic?.enhanceCinematic(root); }
+      catch (error) { console.warn("Content X motion was skipped", error); }
+      try { ambient?.enhanceAmbientScenes(root); }
+      catch (error) { console.warn("Content X atmosphere was skipped", error); }
+    });
   } catch (error) {
     console.error("Content X route rendering failed", error);
   } finally {

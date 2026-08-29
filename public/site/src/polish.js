@@ -44,10 +44,6 @@ function labelInteractiveControls(root) {
     const text = (button.textContent || "").trim();
     if (!button.getAttribute("aria-label") && /^[+×−•••⌕◦⚙⛶↗↑↓←→✓◇◷]+$/.test(text)) button.setAttribute("aria-label", button.title || "Action");
   });
-  root.querySelectorAll("[data-theme-toggle], [data-market-theme]").forEach(button => {
-    button.setAttribute("aria-label", document.documentElement.dataset.theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
-    button.setAttribute("aria-pressed", String(document.documentElement.dataset.theme === "dark"));
-  });
 }
 
 export function polishRoute(root, requestedRoute) {

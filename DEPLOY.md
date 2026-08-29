@@ -21,6 +21,19 @@ If an automatic build is delayed:
 
 Secrets stay in `.env.local` and Cloudflare Worker Secrets. They are excluded from GitHub and must never be pasted into source files or commits.
 
+## Login and notification email setup
+
+For Google login, OTP login, forgot-password links and notification emails, configure these as Cloudflare Worker secrets or environment variables:
+
+- `GOOGLE_CLIENT_ID`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `RESEND_API_KEY`
+- `CONTENTX_EMAIL_FROM`
+- `CONTENTX_OWNER_EMAIL`
+
+Do not expose Google client secrets, Supabase service-role keys, Resend keys, OTPs, reset links or user passwords in frontend files, screenshots, GitHub commits or docs. Passwords are stored only as hashes; owner/admin screens must use reset/revoke controls instead of showing real passwords.
+
 ## File-storage setup
 
 The project upload service uses the private R2 bucket bound as `UPLOADS` and D1 metadata tables created by the checked-in migration.

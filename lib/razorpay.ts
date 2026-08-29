@@ -75,14 +75,38 @@ export async function ensurePaymentSchema(): Promise<void> {
       customer_name TEXT,
       customer_email TEXT,
       customer_phone TEXT,
+      refund_status TEXT NOT NULL DEFAULT 'none',
+      refund_reason TEXT,
+      refund_amount_paise INTEGER,
+      refund_requested_at INTEGER,
+      refund_updated_at INTEGER,
+      refund_note TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
-    )`).run().then(() => undefined).catch(error => {
+    )`).run().then(async () => {
+      await ensurePaymentSchemaColumns(db);
+    }).then(() => undefined).catch((error: unknown) => {
       paymentSchemaPromise = null;
       throw error;
     });
   }
   await paymentSchemaPromise;
+}
+
+async function ensurePaymentSchemaColumns(db: D1Database): Promise<void> {
+  const existing = await db.prepare("PRAGMA table_info(payment_orders)").all<{ name: string }>();
+  const names = new Set(existing.results.map((column: { name: string }) => column.name));
+  const columns: Array<[string, string]> = [
+    ["refund_status", "TEXT NOT NULL DEFAULT 'none'"],
+    ["refund_reason", "TEXT"],
+    ["refund_amount_paise", "INTEGER"],
+    ["refund_requested_at", "INTEGER"],
+    ["refund_updated_at", "INTEGER"],
+    ["refund_note", "TEXT"],
+  ];
+  for (const [name, definition] of columns) {
+    if (!names.has(name)) await db.prepare(`ALTER TABLE payment_orders ADD COLUMN ${name} ${definition}`).run();
+  }
 }
 
 export function getRazorpayConfig() {
@@ -127,14 +151,14 @@ export function calculateOrder(input: {
   if (isReelPlan && billing === "monthly" && quantity < 10) {
     throw new Error("Monthly reel production starts at 10 videos.");
   }
-  if (isPodcastPlan && billing === "monthly" && quantity < 4) {
-    throw new Error("Monthly podcast production starts at 4 episodes.");
+  if (isPodcastPlan && billing === "monthly" && quantity < 2) {
+    throw new Error("Monthly podcast production starts at 2 episodes.");
   }
   if (isPodcastPlan && quantity > 12) {
     throw new Error("Podcast packages allow up to 12 episodes per order.");
   }
-  if (isLongformPlan && billing === "monthly" && quantity < 2) {
-    throw new Error("Monthly long-form production starts at 2 videos.");
+  if (isLongformPlan && billing === "monthly" && quantity < 4) {
+    throw new Error("Monthly long-form production starts at 4 videos.");
   }
   if (isLongformPlan && quantity > 8) {
     throw new Error("Long-form packages allow up to 8 videos per order.");

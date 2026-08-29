@@ -3,6 +3,7 @@ import { getSessionUser } from "./auth";
 
 export const DEFAULT_MAX_FILE_BYTES = 50 * 1024 * 1024 * 1024;
 export const DEFAULT_MAX_PROJECT_BYTES = 250 * 1024 * 1024 * 1024;
+export const FREE_ACCOUNT_STORAGE_BYTES = 50 * 1024 * 1024 * 1024;
 export const UPLOAD_PART_BYTES = 8 * 1024 * 1024;
 export const MAX_UPLOAD_PARTS = 10_000;
 
@@ -130,6 +131,22 @@ export async function ensureUploadSchema(): Promise<void> {
         FOREIGN KEY (project_id) REFERENCES upload_projects(id)
       )`),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_project_share_links_project_status ON project_share_links(project_id, status, updated_at)"),
+      db.prepare(`CREATE TABLE IF NOT EXISTS project_review_comments (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL,
+        file_id TEXT,
+        asset_id TEXT,
+        author_name TEXT NOT NULL,
+        author_email TEXT,
+        body TEXT NOT NULL,
+        timestamp_seconds INTEGER,
+        status TEXT NOT NULL DEFAULT 'open',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        deleted_at INTEGER,
+        FOREIGN KEY (project_id) REFERENCES upload_projects(id)
+      )`),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_project_review_comments_project_created ON project_review_comments(project_id, created_at)"),
       ]);
       const columns = await db.prepare("PRAGMA table_info(upload_files)").all<{ name: string }>();
       const names = new Set(columns.results.map(column => column.name));

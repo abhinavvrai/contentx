@@ -10,6 +10,8 @@ import {
   logoutAccount,
   registerAccount,
   requestEmailOtp,
+  requestPasswordReset,
+  resetAccountPassword,
   sessionCookie,
   verifyEmailOtp,
 } from "../../../lib/auth";
@@ -31,6 +33,14 @@ export async function POST(request: Request) {
     }
     if (action === "login") {
       const { user, token } = await loginAccount(request, input);
+      return response({ user }, 200, { "Set-Cookie": sessionCookie(request, token) });
+    }
+    if (action === "request_password_reset") {
+      await requestPasswordReset(request, input);
+      return response({ ok: true });
+    }
+    if (action === "reset_password") {
+      const { user, token } = await resetAccountPassword(request, input);
       return response({ user }, 200, { "Set-Cookie": sessionCookie(request, token) });
     }
     if (action === "request_otp") {

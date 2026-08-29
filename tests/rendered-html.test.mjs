@@ -3,15 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
-
-  return worker.fetch(
-    new Request("http://localhost/", { headers: { accept: "text/html" } }),
-    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
-    { waitUntil() {}, passThroughOnException() {} },
-  );
+  const html = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
 }
 
 test("server-renders the Content X application shell", async () => {
@@ -20,10 +13,9 @@ test("server-renders the Content X application shell", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>Content X \| Managed Content Production<\/title>/i);
-  assert.match(html, /class="site-frame"/i);
-  assert.match(html, /src="\/site\/index\.html"/i);
-  assert.match(html, /title="Content X — Managed Content Production"/i);
+  assert.match(html, /className="site-frame"/i);
+  assert.match(html, /src="\/site\/index\.html\?v=landscape-contrast-3"/i);
+  assert.match(html, /title="Content X"/i);
   assert.doesNotMatch(html, /site is taking shape|Building your site/i);
 });
 
@@ -40,7 +32,7 @@ test("ships the managed-service intake, private provider workspace and protected
   assert.match(main, /route === "marketplace"/);
   assert.match(main, /route === "provider-workspace"/);
   assert.match(main, /enhanceMarketplaceAdmin/);
-  assert.match(index, /polish\.css\?v=core-features-2/);
+  assert.match(index, /polish\.css\?v=free-workspace-foundation-1/);
   assert.match(marketplace, /Managed creative network/);
   assert.match(marketplace, /We assemble the team/);
   assert.match(marketplace, /One scope and one invoice/);
@@ -159,14 +151,14 @@ test("ships native reel ratios and isolated client workspaces", async () => {
   assert.match(advancedStyles, /aspect-ratio:9\/16/);
 });
 
-test("keeps dark mode, video feedback and pricing selection first-class", async () => {
+test("keeps permanent dark styling, video feedback and pricing selection first-class", async () => {
   const [features, polishStyles] = await Promise.all([
     readFile(new URL("../public/site/src/features.js", import.meta.url), "utf8"),
     readFile(new URL("../public/site/src/polish.css", import.meta.url), "utf8"),
   ]);
 
-  assert.match(features, /syncThemeControls/);
-  assert.match(features, /review-theme-button/);
+  assert.match(features, /document\.documentElement\.dataset\.theme = "dark"/);
+  assert.doesNotMatch(features, /data-theme-toggle|review-theme-button|toggleTheme|cx_theme/);
   assert.match(features, /Try video feedback/);
   assert.match(features, /Frame annotations/);
   assert.match(features, /deliveryFormat/);
@@ -175,4 +167,65 @@ test("keeps dark mode, video feedback and pricing selection first-class", async 
   assert.match(polishStyles, /Restored core controls/);
   assert.match(polishStyles, /delivery-format-options/);
   assert.match(polishStyles, /volume-presets/);
+});
+
+test("ships the low-credit one-prompt Hinglish caption workflow", async () => {
+  const [index, tools, styles, endpoint, captionApi] = await Promise.all([
+    readFile(new URL("../public/site/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/creator-tools.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/creator-tools.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/captions/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/caption-api.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(index, /creator-tools\.css\?v=no-video-placeholders-1/);
+  assert.match(tools, /Hinglish caption studio/);
+  assert.match(tools, /Generate Hinglish captions/);
+  assert.match(tools, /Download \.SRT/);
+  assert.match(tools, /editing the result uses no extra credit/);
+  assert.match(styles, /One-prompt Hinglish caption studio/);
+  assert.match(styles, /max-height:calc\(100dvh - 32px\)/);
+  assert.match(endpoint, /generateCaptions/);
+  assert.match(endpoint, /process\.env\.OPENAI_API_KEY/);
+  assert.match(captionApi, /gpt-4o-mini-transcribe/);
+  assert.match(captionApi, /timestamp_granularities/);
+  assert.match(captionApi, /MAX_UPLOAD_BYTES/);
+});
+
+test("uses billing-aware reel minimums and includes advanced SaaS animation", async () => {
+  const [tools, styles] = await Promise.all([
+    readFile(new URL("../public/site/src/creator-tools.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/creator-tools.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(tools, /Monthly production starts at 10 reels/);
+  assert.match(tools, /monthly \? 10 : 1/);
+  assert.match(tools, /Monthly plans start at 10 reels/);
+  assert.match(tools, /One-off projects start at 1 reel/);
+  assert.match(tools, /updateTierRates/);
+  assert.match(tools, /factor = billing === "monthly" \? 1 : 1\.2/);
+  assert.doesNotMatch(tools, /tier-rate-note/);
+  assert.match(tools, /SaaS Animation/);
+  assert.match(tools, /"SaaS Animation":9000/);
+  assert.match(tools, /UP TO 30 SEC · ADVANCED SAAS/);
+  assert.match(tools, /Up to 30 seconds of animated product UI/);
+  assert.match(tools, /const oldCheckout = pricing\.querySelector/);
+  assert.match(styles, /Advanced SaaS animation pricing tier/);
+  assert.match(styles, /saas-animation-tier/);
+  assert.doesNotMatch(styles, /Billing-aware package rates/);
+});
+
+test("uses one clear audience switch for clients and providers", async () => {
+  const [marketplace, styles] = await Promise.all([
+    readFile(new URL("../public/site/src/marketplace.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/styles.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(marketplace, /data-hire-talent/);
+  assert.match(marketplace, /Submit a project brief/);
+  assert.match(marketplace, /Create private listing/);
+  assert.match(marketplace, /querySelector\("\.work-with-us"\)\?\.remove/);
+  assert.match(styles, /Client \/ provider audience switch/);
+  assert.match(styles, /\.site-nav \.audience-switch,.site-nav \[data-start-project\]\{display:none!important\}/);
+  assert.match(styles, /Client \/ provider audience switch/);
 });

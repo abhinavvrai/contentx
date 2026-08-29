@@ -1,8 +1,9 @@
 import { env } from "cloudflare:workers";
+import { contentXEmailShell, sendTransactionalEmail } from "./email";
 
 const SESSION_COOKIE = "cx_session";
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const PASSWORD_ITERATIONS = 310_000;
+const PASSWORD_ITERATIONS = 100_000;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS = 6;
 const OTP_REQUEST_WINDOW_MS = 15 * 60 * 1000;
@@ -10,12 +11,15 @@ const OTP_REQUEST_COOLDOWN_MS = 60 * 1000;
 const MAX_OTP_REQUESTS = 5;
 const GOOGLE_NONCE_COOKIE = "cx_google_nonce";
 const GOOGLE_NONCE_TTL_SECONDS = 10 * 60;
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 
 type AuthBindings = {
   DB?: D1Database;
   GOOGLE_CLIENT_ID?: string;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
+  RESEND_API_KEY?: string;
+  CONTENTX_EMAIL_FROM?: string;
 };
 
 export type AccountUser = {
@@ -28,6 +32,7 @@ export type AccountUser = {
 export type AccountCapabilities = {
   google: { available: boolean; clientId: string };
   emailOtp: { available: boolean };
+  passwordReset: { available: boolean };
 };
 
 type StoredUser = {
@@ -61,6 +66,7 @@ export function getAccountCapabilities(): AccountCapabilities {
   return {
     google: { available: Boolean(googleClientId), clientId: googleClientId },
     emailOtp: { available: otpAvailable },
+    passwordReset: { available: Boolean(bindingValue("RESEND_API_KEY") && bindingValue("CONTENTX_EMAIL_FROM")) },
   };
 }
 
@@ -200,6 +206,17 @@ export async function ensureAccountSchema(): Promise<void> {
         PRIMARY KEY (provider, provider_user_id),
         FOREIGN KEY (user_id) REFERENCES account_users(id) ON DELETE CASCADE
       )`),
+      db.prepare(`CREATE TABLE IF NOT EXISTS account_password_resets (
+        token_hash TEXT PRIMARY KEY NOT NULL,
+        user_id TEXT NOT NULL,
+        email TEXT NOT NULL,
+        expires_at INTEGER NOT NULL,
+        used_at INTEGER,
+        created_at INTEGER NOT NULL,
+        request_ip_hash TEXT,
+        user_agent TEXT,
+        FOREIGN KEY (user_id) REFERENCES account_users(id) ON DELETE CASCADE
+      )`),
       db.prepare(`CREATE TABLE IF NOT EXISTS order_selections (
         razorpay_order_id TEXT PRIMARY KEY NOT NULL,
         user_id TEXT NOT NULL,
@@ -232,15 +249,61 @@ export async function ensureAccountSchema(): Promise<void> {
       db.prepare("CREATE INDEX IF NOT EXISTS idx_account_sessions_user_expires ON account_sessions(user_id, expires_at)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_auth_identities_user ON auth_identities(user_id)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_auth_identities_email ON auth_identities(email)"),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_account_password_resets_user_email ON account_password_resets(user_id, email, expires_at)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_order_selections_user_created ON order_selections(user_id, created_at)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_project_briefs_user_updated ON project_briefs(user_id, updated_at)"),
       db.prepare("PRAGMA optimize"),
-    ]).then(() => undefined).catch(error => {
+    ]).then(async () => {
+      await ensureAuthSchemaColumns(db);
+    }).catch(error => {
       authSchemaPromise = null;
       throw error;
     });
   }
   await authSchemaPromise;
+}
+
+async function ensureAuthSchemaColumns(db: D1Database): Promise<void> {
+  await ensureColumns(db, "account_users", [
+    ["password_hash", "TEXT NOT NULL DEFAULT ''"],
+    ["password_salt", "TEXT NOT NULL DEFAULT ''"],
+    ["password_iterations", `INTEGER NOT NULL DEFAULT ${PASSWORD_ITERATIONS}`],
+    ["updated_at", "INTEGER"],
+  ]);
+  await db.prepare("UPDATE account_users SET updated_at = created_at WHERE updated_at IS NULL").run();
+  await ensureColumns(db, "account_sessions", [
+    ["last_seen_at", "INTEGER NOT NULL DEFAULT 0"],
+    ["user_agent", "TEXT"],
+  ]);
+  await ensureColumns(db, "auth_login_attempts", [
+    ["blocked_until", "INTEGER NOT NULL DEFAULT 0"],
+  ]);
+  await ensureColumns(db, "auth_identities", [
+    ["verified_at", "INTEGER NOT NULL DEFAULT 0"],
+    ["created_at", "INTEGER NOT NULL DEFAULT 0"],
+  ]);
+  await ensureColumns(db, "account_password_resets", [
+    ["request_ip_hash", "TEXT"],
+    ["user_agent", "TEXT"],
+  ]);
+  await ensureColumns(db, "order_selections", [
+    ["delivery_format", "TEXT"],
+    ["add_ons_json", "TEXT NOT NULL DEFAULT '[]'"],
+  ]);
+  await ensureColumns(db, "project_briefs", [
+    ["reference_url", "TEXT"],
+    ["status", "TEXT NOT NULL DEFAULT 'submitted'"],
+    ["updated_at", "INTEGER"],
+  ]);
+  await db.prepare("UPDATE project_briefs SET updated_at = created_at WHERE updated_at IS NULL").run();
+}
+
+async function ensureColumns(db: D1Database, table: string, columns: Array<[string, string]>): Promise<void> {
+  const existing = await db.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>();
+  const names = new Set(existing.results.map(column => column.name));
+  for (const [name, definition] of columns) {
+    if (!names.has(name)) await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`).run();
+  }
 }
 
 export function requireSameOrigin(request: Request): void {
@@ -290,6 +353,67 @@ export async function loginAccount(request: Request, input: Record<string, unkno
   }
   await db.prepare("DELETE FROM auth_login_attempts WHERE attempt_key = ?").bind(attemptKey).run();
   const user = { id: stored.id, name: stored.name, email: stored.email, createdAt: stored.created_at };
+  return { user, token: await createSession(request, user.id) };
+}
+
+export async function requestPasswordReset(request: Request, input: Record<string, unknown>): Promise<void> {
+  requireSameOrigin(request);
+  await ensureAccountSchema();
+  const email = cleanEmail(input.email);
+  if (!email) throw new AccountError("Enter a valid email address.");
+  const db = getAccountDatabase();
+  const attemptKey = await resetAttemptKey(request, email);
+  await enforceOtpRequestLimit(db, attemptKey);
+  const user = await db.prepare("SELECT id, name, email FROM account_users WHERE email = ? LIMIT 1")
+    .bind(email).first<{ id: string; name: string; email: string }>();
+  await recordOtpRequest(db, attemptKey);
+  if (!user) return;
+  const token = randomToken(32);
+  const tokenHash = await sha256(token);
+  const now = Date.now();
+  await db.prepare(`INSERT INTO account_password_resets
+    (token_hash, user_id, email, expires_at, created_at, request_ip_hash, user_agent)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .bind(tokenHash, user.id, user.email, now + PASSWORD_RESET_TTL_MS, now, await requestIpHash(request), cleanText(request.headers.get("user-agent"), 240) || null).run();
+  const resetUrl = new URL("/site/index.html", request.url);
+  resetUrl.hash = `access?reset=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+  await sendTransactionalEmail({
+    to: user.email,
+    subject: "Reset your Content X password",
+    html: contentXEmailShell(
+      "Reset your Content X password",
+      "Use this secure link to set a new password. The link expires in 60 minutes. If you did not request this, you can ignore this email.",
+      { label: "Reset password", url: resetUrl.toString() },
+    ),
+    idempotencyKey: `reset_${tokenHash.slice(0, 32)}`,
+  });
+}
+
+export async function resetAccountPassword(request: Request, input: Record<string, unknown>): Promise<{ user: AccountUser; token: string }> {
+  requireSameOrigin(request);
+  await ensureAccountSchema();
+  const email = cleanEmail(input.email);
+  const resetToken = cleanText(input.token, 256);
+  const password = typeof input.password === "string" ? input.password : "";
+  if (!email || !resetToken) throw new AccountError("Open the latest password reset link from your email.");
+  validatePassword(password);
+  const db = getAccountDatabase();
+  const tokenHash = await sha256(resetToken);
+  const row = await db.prepare(`SELECT r.token_hash, r.user_id, u.name, u.email, u.created_at
+    FROM account_password_resets r JOIN account_users u ON u.id = r.user_id
+    WHERE r.token_hash = ? AND r.email = ? AND r.used_at IS NULL AND r.expires_at > ? LIMIT 1`)
+    .bind(tokenHash, email, Date.now()).first<{ token_hash: string; user_id: string; name: string; email: string; created_at: number }>();
+  if (!row) throw new AccountError("This reset link is invalid or expired.", 401);
+  const salt = randomToken(16);
+  const passwordHash = await derivePasswordHash(password, salt, PASSWORD_ITERATIONS);
+  const now = Date.now();
+  await db.batch([
+    db.prepare(`UPDATE account_users SET password_hash = ?, password_salt = ?, password_iterations = ?, updated_at = ? WHERE id = ?`)
+      .bind(passwordHash, salt, PASSWORD_ITERATIONS, now, row.user_id),
+    db.prepare("UPDATE account_password_resets SET used_at = ? WHERE token_hash = ?").bind(now, row.token_hash),
+    db.prepare("DELETE FROM account_sessions WHERE user_id = ?").bind(row.user_id),
+  ]);
+  const user = { id: row.user_id, name: row.name, email: row.email, createdAt: row.created_at };
   return { user, token: await createSession(request, user.id) };
 }
 
@@ -515,6 +639,16 @@ async function derivePasswordHash(password: string, salt: string, iterations: nu
 async function loginAttemptKey(request: Request, email: string): Promise<string> {
   const address = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
   return sha256(`${email}|${address.trim()}`);
+}
+
+async function resetAttemptKey(request: Request, email: string): Promise<string> {
+  const address = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+  return sha256(`reset|${email}|${address.trim()}`);
+}
+
+async function requestIpHash(request: Request): Promise<string> {
+  const address = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+  return sha256(`ip|${address.trim()}`);
 }
 
 async function enforceLoginRateLimit(db: D1Database, key: string): Promise<void> {

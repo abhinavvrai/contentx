@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { createReadStream, statSync, existsSync } from "node:fs";
 import { extname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { generateCaptions } from "./lib/caption-api.js";
 
 const root = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const port = Number(process.env.PORT || process.argv[2] || 4173);
@@ -55,9 +56,22 @@ function sendFile(request, response, filePath) {
   createReadStream(filePath).pipe(response);
 }
 
-createServer((request, response) => {
+createServer(async (request, response) => {
   try {
     const url = new URL(request.url || "/", `http://127.0.0.1:${port}`);
+    if (url.pathname === "/api/captions") {
+      if (request.method !== "POST") {
+        response.writeHead(405, { "Content-Type":"application/json; charset=utf-8", Allow:"POST" });
+        response.end(JSON.stringify({ error:"Method not allowed" }));
+        return;
+      }
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      const apiResponse = await generateCaptions(new Request(url, { method:"POST", headers:request.headers, body:Buffer.concat(chunks) }), process.env.OPENAI_API_KEY);
+      response.writeHead(apiResponse.status, Object.fromEntries(apiResponse.headers));
+      response.end(Buffer.from(await apiResponse.arrayBuffer()));
+      return;
+    }
     const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
     const filePath = resolve(root, `.${pathname}`);
     const relativePath = relative(root, filePath);
