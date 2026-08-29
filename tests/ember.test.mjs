@@ -52,11 +52,11 @@ test("workflow and marketplace actions use the vivid orange design system",async
   assert.match(market,/class="pill pill-hot" data-teaser-offer/);
   assert.match(css,/\.workflow-grid \.workflow-step::before/);
   assert.match(css,/\.creator-suite-grid \.creator-card::before/);
-  assert.match(css,/@keyframes em-workflow-orbit/);
+  assert.match(css,/@keyframes em-review-pulse/);
   assert.match(css,/grid-template-columns:1fr; gap:12px/);
   assert.match(main,/ui\.js\?v=workflow-glow-1/);
   assert.match(main,/marketplace\.js\?v=workflow-glow-1/);
-  assert.match(index,/ember\.css\?v=white-gradient-2/);
+  assert.match(index,/ember\.css\?v=workflow-scenes-1/);
 });
 test("legacy peach calls to action are vivid gradients with white labels",async()=>{
   const css=await read("public/site/src/ember.css");
@@ -64,6 +64,14 @@ test("legacy peach calls to action are vivid gradients with white labels",async(
   assert.match(css,/:is\(\.pill-light,\.pill-dark,\.pill-outline\) \*/);
   assert.match(css,/background:var\(--em-gradient\); color:#fff!important; border-color:#ff883f/);
   assert.match(css,/background:linear-gradient\(115deg,#ff702c,#ffae4c\); color:#fff!important/);
+});
+test("each workflow card has its own animation language",async()=>{
+  const css=await read("public/site/src/ember.css");
+  for(const step of ["01","02","03","04"]) assert.match(css,new RegExp(`workflow-step-${step}::before`));
+  for(const animation of ["em-upload-bars","em-cut-frame","em-review-pulse","em-approve-sweep"]) assert.match(css,new RegExp(`@keyframes ${animation}`));
+  assert.match(css,/workflow-step-01 \.step-icon/);
+  assert.match(css,/workflow-step-04 \.step-icon/);
+  assert.doesNotMatch(css,/@keyframes em-workflow-orbit/);
 });
 test("atmosphere remains optional and shares the route-race guard",async()=>{
   const main = await read("public/site/src/main.js");

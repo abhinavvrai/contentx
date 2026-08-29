@@ -94,10 +94,31 @@ html[data-theme="dark"] #app .workflow-grid .workflow-step:nth-child(even) {
   background:radial-gradient(circle at 18% 90%,#ff65201c,transparent 40%),linear-gradient(145deg,#1d1920,#14151b 70%);
 }
 html[data-theme="dark"] #app .workflow-grid .workflow-step::before {
-  content:""; position:absolute; z-index:-1; width:160px; height:160px; right:-88px; top:-82px;
-  border:1px solid #ff9d5866; border-radius:50%;
+  content:""; position:absolute; z-index:-1; pointer-events:none; animation-play-state:paused;
+}
+html[data-theme="dark"] #app .workflow-step-01::before {
+  width:126px; height:122px; right:-4px; top:16px; border-radius:18px;
+  background:linear-gradient(0deg,#ff5c2035,#ffb05e9c) 8px 65px/12px 42px no-repeat,
+    linear-gradient(0deg,#ff5c2028,#ff8b3d8c) 34px 40px/12px 67px no-repeat,
+    linear-gradient(0deg,#ff5c202c,#ffc071a8) 60px 55px/12px 52px no-repeat,
+    linear-gradient(0deg,#ff5c2024,#ff7b3294) 86px 24px/12px 83px no-repeat;
+  filter:drop-shadow(0 0 14px #ff6e2b42); animation:em-upload-bars 3.6s ease-in-out infinite alternate;
+}
+html[data-theme="dark"] #app .workflow-step-02::before {
+  width:88px; height:88px; right:15px; top:25px; border:1px solid #ff9e5c8c; border-radius:19px;
+  background:linear-gradient(145deg,#ffad6030,#ff5c2008 60%); box-shadow:0 0 0 13px #ff742410,inset 0 1px #ffe0aa70;
+  animation:em-cut-frame 7s ease-in-out infinite;
+}
+html[data-theme="dark"] #app .workflow-step-03::before {
+  width:132px; height:132px; right:-42px; top:-30px; border:1px solid #ff9d5866; border-radius:50%;
   box-shadow:0 0 0 20px #ff742415,0 0 0 43px #ff74240b;
-  animation:em-workflow-orbit 7s ease-in-out infinite alternate; animation-play-state:paused;
+  animation:em-review-pulse 3.8s ease-in-out infinite;
+}
+html[data-theme="dark"] #app .workflow-step-04::before {
+  width:124px; height:124px; right:-30px; top:-28px; border-radius:50%;
+  background:conic-gradient(from 20deg,transparent 0 18%,#ff6426 26%,#ffad55 48%,transparent 58% 100%);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 8px),#000 0); mask:radial-gradient(farthest-side,transparent calc(100% - 8px),#000 0);
+  filter:drop-shadow(0 0 12px #ff702c70); animation:em-approve-sweep 5.6s linear infinite;
 }
 html[data-theme="dark"] #app .workflow-grid .workflow-step::after {
   content:""; position:absolute; inset:0 20px auto; height:2px;
@@ -117,10 +138,22 @@ html[data-theme="dark"] #app .workflow-grid .step-icon {
   width:52px; height:52px; margin-bottom:34px; border:1px solid #ff96566e; border-radius:15px;
   background:var(--em-gradient); color:#fff; box-shadow:0 12px 34px #ff5c203d;
 }
+html[data-theme="dark"] #app .workflow-step-01 .step-icon { animation:em-upload-icon 2.2s ease-in-out infinite; animation-play-state:paused; }
+html[data-theme="dark"] #app .workflow-step-02 .step-icon { animation:em-cut-spark 4.8s ease-in-out infinite; animation-play-state:paused; }
+html[data-theme="dark"] #app .workflow-step-03 .step-icon { animation:em-review-icon 2.6s ease-in-out infinite; animation-play-state:paused; }
+html[data-theme="dark"] #app .workflow-step-04 .step-icon { animation:em-approve-icon 3.4s ease-in-out infinite; animation-play-state:paused; }
 html[data-theme="dark"] #app .workflow-grid h3 { color:#fff7f2; font-size:22px; }
 html[data-theme="dark"] #app .workflow-grid p { color:#c9bec7; font-size:12px; line-height:1.75; }
-html[data-theme="dark"] #app.cx-cinematic[data-cx-motion="on"] .workflow-step::before { animation-play-state:running; }
-@keyframes em-workflow-orbit { from { transform:translate3d(0,0,0) scale(.92); opacity:.55; } to { transform:translate3d(-14px,16px,0) scale(1.06); opacity:1; } }
+html[data-theme="dark"] #app.cx-cinematic[data-cx-motion="on"] .workflow-step::before,
+html[data-theme="dark"] #app.cx-cinematic[data-cx-motion="on"] .workflow-step .step-icon { animation-play-state:running; }
+@keyframes em-upload-bars { from { transform:translateY(10px); opacity:.5; } to { transform:translateY(-7px); opacity:1; } }
+@keyframes em-cut-frame { 0%,100% { transform:rotate(36deg) scale(.82); opacity:.45; } 50% { transform:rotate(135deg) scale(1.03); opacity:1; } }
+@keyframes em-review-pulse { 0%,100% { transform:scale(.82); opacity:.42; } 55% { transform:scale(1.08); opacity:1; } }
+@keyframes em-approve-sweep { to { transform:rotate(360deg); } }
+@keyframes em-upload-icon { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
+@keyframes em-cut-spark { 0%,100% { transform:rotate(0) scale(1); } 50% { transform:rotate(12deg) scale(1.08); } }
+@keyframes em-review-icon { 0%,100% { box-shadow:0 12px 34px #ff5c203d; } 50% { box-shadow:0 12px 34px #ff5c2060,0 0 0 9px #ff7b2d17; } }
+@keyframes em-approve-icon { 0%,100% { transform:rotate(-3deg); } 50% { transform:rotate(4deg) scale(1.05); } }
 
 /* Restore a bright orange system across creator cards instead of muted brown accents. */
 html[data-theme="dark"] #app .creator-suite-grid .creator-card {
@@ -225,7 +258,7 @@ html[data-theme="dark"] #app .creator-suite-grid .creator-card :is(button,a,.cre
   #app .workspace-project-head>.em-motion-toggle { margin-top:8px; }
 }
 @media (prefers-reduced-motion:reduce) {
-  #app .em-scene *,#app .sx-project-art i,#app .sx-focus-orbits span,#app .sx-pulse:after,#app .workflow-step::before { animation:none!important; }
+  #app .em-scene *,#app .sx-project-art i,#app .sx-focus-orbits span,#app .sx-pulse:after,#app .workflow-step::before,#app .workflow-step .step-icon { animation:none!important; }
   html[data-theme="dark"] #app .workflow-grid .workflow-step:hover { transform:none; }
 }
 @media (forced-colors:active) {

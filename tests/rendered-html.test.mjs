@@ -14,7 +14,7 @@ test("server-renders the Content X application shell", async () => {
 
   const html = await response.text();
   assert.match(html, /className="site-frame"/i);
-  assert.match(html, /src="\/site\/index\.html\?v=white-gradient-2"/i);
+  assert.match(html, /src="\/site\/index\.html\?v=workflow-scenes-1"/i);
   assert.match(html, /title="Content X"/i);
   assert.doesNotMatch(html, /site is taking shape|Building your site/i);
 });
