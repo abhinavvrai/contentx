@@ -1,5 +1,5 @@
-import { enhanceFileLibrary, fileToolbar, workspacePulse, hasTimestamp } from "./studio-workspace.js?v=review-studio-1";
-import { openReviewRoom } from "./review-room.js?v=review-studio-1";
+import { enhanceFileLibrary, fileToolbar, workspacePulse, hasTimestamp } from "./studio-workspace.js?v=frame-account-1";
+import { openReviewRoom } from "./review-room.js?v=frame-account-1";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -52,10 +52,20 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   const quota = Number(storage.quotaBytes || 50 * 1024 ** 3);
   const percent = Math.min(100, Math.round(used / quota * 100));
   root.innerHTML = `<div class="workspace-shell">
+    <aside class="workspace-rail" aria-label="Workspace tools">
+      <a class="workspace-rail-brand" href="#home" aria-label="Content X home">CX</a>
+      <nav>
+        <a class="active" href="#workspace" aria-label="Projects" title="Projects">▱</a>
+        <button type="button" data-focus-files aria-label="Search project files" title="Search">⌕</button>
+        <a href="#account" aria-label="Account and notifications" title="Account">◎</a>
+      </nav>
+      <a class="workspace-rail-user" href="#account" aria-label="Open account" title="Account">${escapeHTML(user.name.slice(0,1).toUpperCase())}</a>
+    </aside>
     <aside class="workspace-sidebar">
       <a class="workspace-brand" href="#home"><span>CX</span><b>Content X</b></a>
       <nav><a class="active" href="#workspace"><span>▱</span>Projects</a><a href="#account"><span>◎</span>Account</a><button type="button" data-create-free-project><span>＋</span>New project</button></nav>
-      <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id ? "active" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}"><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}</small></a>`).join("") || `<p>Create a free project to begin.</p>`}</div>
+      <label class="workspace-project-search"><span>⌕</span><input type="search" placeholder="Search projects" aria-label="Search projects" data-project-nav-search></label>
+      <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id ? "active" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}" data-project-nav-item><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}</small></a>`).join("") || `<p>Create a free project to begin.</p>`}</div>
       <div class="workspace-storage"><div><b>Free storage</b><small>${formatBytes(used)} of ${formatBytes(quota)}</small></div><i><em style="width:${percent}%"></em></i></div>
       <div class="workspace-user"><span>${escapeHTML(user.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(user.name)}</b><small>${escapeHTML(user.email)}</small></div><a href="#account" aria-label="Account settings">•••</a></div>
     </aside>
@@ -68,6 +78,12 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   root.querySelector("[data-workspace-menu]")?.addEventListener("click", () => root.querySelector(".workspace-sidebar").classList.toggle("open"));
   root.querySelector(".workspace-main")?.addEventListener("click", () => root.querySelector(".workspace-sidebar")?.classList.remove("open"));
   root.querySelectorAll("[data-create-free-project]").forEach(button => button.addEventListener("click", () => openCreateProjectModal(root, actions)));
+  const projectSearch = root.querySelector("[data-project-nav-search]");
+  projectSearch?.addEventListener("input", () => {
+    const query = projectSearch.value.trim().toLowerCase();
+    root.querySelectorAll("[data-project-nav-item]").forEach(item => { item.hidden = Boolean(query) && !item.textContent.toLowerCase().includes(query); });
+  });
+  root.querySelector("[data-focus-files]")?.addEventListener("click", () => (root.querySelector("[data-file-search]") || projectSearch)?.focus());
   if (!project) return;
   enhanceFileLibrary(root, files, comments);
   const picker = root.querySelector("[data-workspace-picker]");
@@ -257,27 +273,28 @@ export async function renderSharedWorkspace(root, actions, route) {
   const projectId = params.get("project") || "";
   const token = params.get("token") || "";
   root.innerHTML = `<main class="workspace-loading"><span></span><h1>Opening shared project…</h1></main>`;
-  if (!projectId || !token) return sharedError(root, "This share link is incomplete.");
+  if (!token) return sharedError(root, "This share link is incomplete.");
   try {
     const data = await api(`${UPLOAD_API}?action=project&projectId=${encodeURIComponent(projectId)}`, { headers:bearerHeaders(token), cache:"no-store" });
+    const resolvedProjectId = data.project.id;
     const canUpload = Boolean(data.permissions?.canUpload);
-    const commentData = await api(`${UPLOAD_API}?action=comments&projectId=${encodeURIComponent(projectId)}`, { headers:bearerHeaders(token), cache:"no-store" }).catch(() => ({ comments:[] }));
+    const commentData = await api(`${UPLOAD_API}?action=comments&projectId=${encodeURIComponent(resolvedProjectId)}`, { headers:bearerHeaders(token), cache:"no-store" }).catch(() => ({ comments:[] }));
     root.innerHTML = `<header class="shared-header"><a href="#home"><span>CX</span><b>Content X</b></a><div><b>Shared project</b><small>${canUpload ? "Uploads enabled" : "View and download"}</small></div></header><main class="shared-main"><section class="shared-title"><p class="workspace-kicker">PRIVATE CLIENT LINK</p><h1>${escapeHTML(data.project.name)}</h1><p>Review the latest files, download any version${canUpload ? ", or add new files and replacements" : ""}. Leave your name and feedback below — no login needed.</p></section>${projectSurface(data.project, data.files || [], canUpload, commentData.comments || [], false)}</main><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
     enhanceFileLibrary(root, data.files || [], commentData.comments || []);
     const picker = root.querySelector("[data-workspace-picker]");
     if (canUpload) {
       root.querySelector("[data-project-drop]").addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });
-      bindDropTarget(root.querySelector("[data-project-drop]"), async dropped => { await uploadSelectedFiles(root, projectId, token, dropped, "", data.project.maxFileSize, data.project.maxVideoSeconds || data.project.max_video_seconds || 0); await renderSharedWorkspace(root, actions, route); });
-      picker.addEventListener("change", async () => { await uploadSelectedFiles(root, projectId, token, [...picker.files], picker.dataset.replaceFile || "", data.project.maxFileSize, data.project.maxVideoSeconds || data.project.max_video_seconds || 0); picker.value = ""; await renderSharedWorkspace(root, actions, route); });
+      bindDropTarget(root.querySelector("[data-project-drop]"), async dropped => { await uploadSelectedFiles(root, resolvedProjectId, token, dropped, "", data.project.maxFileSize, data.project.maxVideoSeconds || data.project.max_video_seconds || 0); await renderSharedWorkspace(root, actions, route); });
+      picker.addEventListener("change", async () => { await uploadSelectedFiles(root, resolvedProjectId, token, [...picker.files], picker.dataset.replaceFile || "", data.project.maxFileSize, data.project.maxVideoSeconds || data.project.max_video_seconds || 0); picker.value = ""; await renderSharedWorkspace(root, actions, route); });
     }
     root.querySelectorAll("[data-file-card]").forEach(card => {
-      card.querySelector("[data-file-open]").addEventListener("click", () => openVersions(root, projectId, card.dataset.assetId, token, false, () => renderSharedWorkspace(root, actions, route)));
+      card.querySelector("[data-file-open]").addEventListener("click", () => openVersions(root, resolvedProjectId, card.dataset.assetId, token, false, () => renderSharedWorkspace(root, actions, route)));
       if (canUpload) {
         card.querySelector("[data-new-version]")?.addEventListener("click", () => { picker.dataset.replaceFile = card.dataset.fileId; picker.click(); });
-        bindDropTarget(card, async dropped => { await uploadSelectedFiles(root, projectId, token, dropped.slice(0,1), card.dataset.fileId, data.project.maxFileSize, data.project.maxVideoSeconds || data.project.max_video_seconds || 0); await renderSharedWorkspace(root, actions, route); }, "is-version-drop");
+        bindDropTarget(card, async dropped => { await uploadSelectedFiles(root, resolvedProjectId, token, dropped.slice(0,1), card.dataset.fileId, data.project.maxFileSize, data.project.maxVideoSeconds || data.project.max_video_seconds || 0); await renderSharedWorkspace(root, actions, route); }, "is-version-drop");
       }
     });
-    bindComments(root, projectId, token, { refreshRoute:() => renderSharedWorkspace(root, actions, route) }, false);
+    bindComments(root, resolvedProjectId, token, { refreshRoute:() => renderSharedWorkspace(root, actions, route) }, false);
   } catch (error) { sharedError(root, error.message); }
 }
 

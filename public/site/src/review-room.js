@@ -1,4 +1,4 @@
-import { escapeText as esc, commentsForVersion, filterComments, hasTimestamp, isComplete, reviewSummary, timecode } from "./studio-workspace.js?v=review-studio-1";
+import { escapeText as esc, commentsForVersion, filterComments, hasTimestamp, isComplete, reviewSummary, timecode } from "./studio-workspace.js?v=frame-workspace-1";
 
 export function reviewCommentMarkup(comment, canManage) {
   return `<article class="sx-review-note ${isComplete(comment) ? "is-complete" : ""}"><header><span>${esc((comment.author_name || "?").slice(0,1))}</span><strong>${esc(comment.author_name || "Reviewer")}</strong><small>${isComplete(comment) ? "Completed" : "Open"}</small></header>${hasTimestamp(comment.timestamp_seconds) ? `<button type="button" class="sx-timecode" data-seek="${Number(comment.timestamp_seconds)}">▶ ${timecode(comment.timestamp_seconds)}</button>` : ""}<p>${esc(comment.body)}</p>${canManage ? `<button type="button" class="sx-resolve" data-review-resolve="${esc(comment.id)}">${isComplete(comment) ? "↶ Reopen" : "✓ Mark complete"}</button>` : ""}</article>`;

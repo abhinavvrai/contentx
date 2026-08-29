@@ -419,7 +419,7 @@ async function createProjectShareLink(request: Request, input: JsonInput): Promi
   const origin = new URL(request.url).origin;
   return json({
     share: { id, name, allowUploads, status: "active", expiresAt, createdAt: now },
-    shareUrl: `${origin}/site/index.html#share?project=${encodeURIComponent(projectId)}&token=${encodeURIComponent(token)}`,
+    shareUrl: `${origin}/s/${encodeURIComponent(token)}`,
   }, 201);
 }
 

@@ -214,12 +214,19 @@ export async function authorizeProject(request: Request, projectId: string, purp
       canUpload = true;
       accessType = "legacy-link";
     } else {
-      const share = await db.prepare(`SELECT p.id, p.name, p.client_name, p.client_email, p.status,
-        p.max_file_size, p.created_at, p.updated_at, s.allow_uploads, s.id AS share_id
-        FROM project_share_links s JOIN upload_projects p ON p.id = s.project_id
-        WHERE s.project_id = ? AND s.token_hash = ? AND s.status = 'active'
-          AND (s.expires_at IS NULL OR s.expires_at > ?) LIMIT 1`)
-        .bind(projectId, tokenHash, Date.now()).first<UploadProject & { allow_uploads: number; share_id: string }>();
+      const share = projectId
+        ? await db.prepare(`SELECT p.id, p.name, p.client_name, p.client_email, p.status,
+            p.max_file_size, p.created_at, p.updated_at, s.allow_uploads, s.id AS share_id
+            FROM project_share_links s JOIN upload_projects p ON p.id = s.project_id
+            WHERE s.project_id = ? AND s.token_hash = ? AND s.status = 'active'
+              AND (s.expires_at IS NULL OR s.expires_at > ?) LIMIT 1`)
+            .bind(projectId, tokenHash, Date.now()).first<UploadProject & { allow_uploads: number; share_id: string }>()
+        : await db.prepare(`SELECT p.id, p.name, p.client_name, p.client_email, p.status,
+            p.max_file_size, p.created_at, p.updated_at, s.allow_uploads, s.id AS share_id
+            FROM project_share_links s JOIN upload_projects p ON p.id = s.project_id
+            WHERE s.token_hash = ? AND s.status = 'active'
+              AND (s.expires_at IS NULL OR s.expires_at > ?) LIMIT 1`)
+            .bind(tokenHash, Date.now()).first<UploadProject & { allow_uploads: number; share_id: string }>();
       if (share) {
         project = share;
         canUpload = Boolean(share.allow_uploads);

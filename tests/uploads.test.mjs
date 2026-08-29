@@ -49,19 +49,22 @@ test("keeps owner downloads streamed behind short-lived signatures", async () =>
   assert.match(storage, /expires < Date\.now\(\)/);
 });
 
-test("groups replacement uploads into versions and supports controlled share links", async () => {
-  const [route, storage, schema, workspace] = await Promise.all([
+test("groups replacement uploads into versions and supports controlled short share links", async () => {
+  const [route, storage, schema, workspace, shortSharePage] = await Promise.all([
     readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/uploads.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/s/[token]/page.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(route, /replaceFileId/);
   assert.match(route, /create-share-link/);
+  assert.match(route, /\/s\/\$\{encodeURIComponent\(token\)\}/);
   assert.match(route, /expires_at = \?/);
   assert.match(route, /version_count/);
   assert.match(storage, /project_share_links/);
   assert.match(storage, /authorizeProject/);
+  assert.match(storage, /s\.token_hash = \?/);
   assert.match(schema, /versionNumber/);
   assert.match(schema, /projectShareLinks/);
   assert.match(workspace, /Drop replacement here/);
@@ -71,6 +74,8 @@ test("groups replacement uploads into versions and supports controlled share lin
   assert.match(workspace, /shareIntent\("whatsapp"/);
   assert.match(workspace, /data-share-status/);
   assert.match(workspace, /workspace-revision-flow/);
+  assert.match(workspace, /resolvedProjectId/);
+  assert.match(shortSharePage, /#share\?token=/);
 });
 
 test("adds free account workspaces with 50 GB quota and review comments", async () => {

@@ -59,8 +59,9 @@ export function enhanceStudioDashboard(root) {
   if (!grid || root.querySelector(".sx-dashboard-tools")) return;
   const cards = [...grid.querySelectorAll(".project-card")];
   const heading = root.querySelector(".dash-header h1");
-  if (heading) heading.innerHTML = 'Make room<br>for <em>great work.</em>';
-  root.querySelector(".demo-workspace-banner p")?.replaceChildren(document.createTextNode("Sample projects and activity. Sign in for your real free workspace, uploads and client feedback."));
+  if (heading) heading.innerHTML = 'Projects';
+  root.querySelector(".demo-workspace-banner p")?.replaceChildren(document.createTextNode("Preview the workflow. Sign in when you are ready to use real files."));
+  root.querySelector(".dashboard-help-strip")?.remove();
   cards.forEach((card, index) => {
     const top = card.querySelector(".project-card-top");
     top?.insertAdjacentHTML("afterbegin", `<div class="sx-project-art sx-art-${index % 3}" aria-hidden="true"><i></i><i></i><i></i><span>${String(index+1).padStart(2,"0")}</span></div>`);
@@ -79,10 +80,5 @@ export function enhanceStudioDashboard(root) {
   };
   search.addEventListener("input", update); filter.addEventListener("change", update);
   root.querySelectorAll(".view-switch button").forEach((button,index) => { button.setAttribute("aria-label", index ? "List view" : "Grid view"); button.setAttribute("aria-pressed", String(index === 0)); button.addEventListener("click", () => root.querySelectorAll(".view-switch button").forEach(item => item.setAttribute("aria-pressed", String(item === button)))); });
-  const firstReview = cards.find(card => card.querySelector(".status")?.textContent.includes("review"));
-  const focus = document.createElement("section"); focus.className = "sx-focus-card";
-  focus.innerHTML = `<div><span class="sx-overline">YOUR NEXT MOVE · DEMO</span><h2>${firstReview ? "A fresh cut is waiting." : "Keep your next cut moving."}</h2><p>${firstReview ? escapeText(firstReview.querySelector("h3").textContent) : "Open a project to organize your files and feedback."}</p></div><button class="pill pill-hot" type="button">${firstReview ? "Open review project ↗" : "Browse projects ↓"}</button><div class="sx-focus-orbits" aria-hidden="true"><i></i><i></i><span>↗</span></div>`;
-  root.querySelector(".dash-summary")?.insertAdjacentElement("afterend", focus);
-  focus.querySelector("button").addEventListener("click", () => firstReview ? firstReview.click() : search.focus());
   update();
 }

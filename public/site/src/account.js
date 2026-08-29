@@ -236,6 +236,74 @@ function showProviderError(panel, message) {
 }
 
 export async function renderAccountDashboard(root, actions) {
+  root.className = "account-app account-settings-app";
+  root.innerHTML = `<main class="account-loading"><span></span><h1>Opening your settings…</h1></main>`;
+  try {
+    const [data, notificationData] = await Promise.all([
+      api(BRIEF_API, { cache:"no-store" }),
+      api(NOTIFICATION_API, { cache:"no-store" }).catch(() => null),
+    ]);
+    currentUser = data.user;
+    const orders = data.orders || [];
+    const activeRefunds = orders.filter(order => ["requested", "processing"].includes(order.refund_status)).length;
+    const refundUpdates = orders.filter(order => order.refund_status && order.refund_status !== "none").length;
+    const initials = data.user.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
+    root.innerHTML = `<div class="account-settings-shell">
+      <aside class="account-global-rail" aria-label="Content X navigation">
+        <a class="account-rail-brand" href="#home" aria-label="Content X home">CX</a>
+        <nav><a href="#workspace" aria-label="Workspace" title="Workspace">⌂</a><a class="active" href="#account" aria-label="Account settings" title="Account settings">◎</a></nav>
+        <span class="account-rail-avatar">${escapeHTML(initials || "CX")}</span>
+      </aside>
+      <aside class="account-settings-sidebar">
+        <a class="account-settings-back" href="#workspace">← Back to workspace</a>
+        <div class="account-settings-identity"><span>${escapeHTML(initials || "CX")}</span><div><strong>${escapeHTML(data.user.name)}</strong><small>${escapeHTML(data.user.email)}</small></div></div>
+        <nav aria-label="Account settings sections">
+          <small>PERSONAL</small>
+          <button class="active" type="button" data-account-view="profile"><span>◎</span>Profile</button>
+          <button type="button" data-account-view="notifications"><span>◌</span>Notifications</button>
+          <small>ACCOUNT</small>
+          <button type="button" data-account-view="billing"><span>₹</span>Orders & billing</button>
+        </nav>
+        <button class="account-settings-signout" type="button" data-account-logout>Sign out</button>
+      </aside>
+      <main class="account-settings-main">
+        <header class="account-settings-topbar"><div><span>Account</span><b data-account-section-title>Profile</b></div><a class="workspace-button" href="#workspace">Open workspace</a></header>
+        <div class="account-settings-content">
+          <section class="account-settings-panel active" data-account-panel="profile">
+            <div class="account-panel-heading"><p>PERSONAL</p><h1>Your profile</h1><span>Your Content X identity, workspace access and account status in one place.</span></div>
+            <article class="account-profile-card"><div class="account-profile-avatar">${escapeHTML(initials || "CX")}</div><div><small>DISPLAY NAME</small><strong>${escapeHTML(data.user.name)}</strong><span>${escapeHTML(data.user.email)}</span></div><a href="#workspace">View workspace →</a></article>
+            <div class="account-profile-metrics"><article><span>Storage plan</span><strong>50 GB free</strong><small>Private creator workspace</small></article><article><span>Privacy</span><strong>Protected</strong><small>Owner-authorized access only</small></article><article><span>Refunds</span><strong>${activeRefunds}</strong><small>Active requests</small></article></div>
+            <article class="account-profile-note"><span>✓</span><div><strong>Your workspace is ready.</strong><p>Create projects, upload source files, manage versions and share review links from the main dashboard.</p></div><a class="workspace-button primary" href="#workspace">Go to workspace</a></article>
+          </section>
+          <section class="account-settings-panel" data-account-panel="notifications" hidden>${notificationSettingsPanel(notificationData)}</section>
+          <section class="account-settings-panel" data-account-panel="billing" hidden>
+            <div class="account-panel-heading"><p>ACCOUNT</p><h1>Orders & billing</h1><span>Packages, receipts and refund updates stay private to your account.</span></div>
+            <section class="account-order-section"><div class="account-section-title"><div><h2>Paid Content X orders</h2><p>Editing packages and project briefs appear here after checkout.</p></div><span>${orders.length} order${orders.length === 1 ? "" : "s"}</span></div><div class="account-orders">${orders.length ? orders.map(orderCard).join("") : `<div class="account-empty"><span>◇</span><h3>No paid orders yet</h3><p>Your free workspace is already available.</p><a class="workspace-button primary" href="#workspace">Open workspace</a></div>`}</div></section>
+            <section class="account-order-section account-payment-history"><div class="account-section-title"><div><h2>Payment history & refunds</h2><p>Receipts and status changes appear automatically.</p></div><span>${refundUpdates} refund update${refundUpdates === 1 ? "" : "s"}</span></div><div class="account-payment-list">${orders.length ? orders.map(paymentHistoryCard).join("") : `<div class="account-empty"><span>₹</span><h3>No payment history yet</h3><p>Your receipts will appear here after checkout.</p></div>`}</div></section>
+          </section>
+        </div>
+      </main>
+    </div>`;
+    root.querySelector("[data-account-logout]").addEventListener("click", async () => {
+      await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"logout" }) });
+      currentUser = null; sessionChecked = true; localStorage.removeItem("cx_access"); actions.openMarketing();
+    });
+    const titles = { profile:"Profile", notifications:"Notifications", billing:"Orders & billing" };
+    root.querySelectorAll("[data-account-view]").forEach(button => button.addEventListener("click", () => {
+      const view = button.dataset.accountView;
+      root.querySelectorAll("[data-account-view]").forEach(item => item.classList.toggle("active", item === button));
+      root.querySelectorAll("[data-account-panel]").forEach(panel => { const active = panel.dataset.accountPanel === view; panel.hidden = !active; panel.classList.toggle("active", active); });
+      root.querySelector("[data-account-section-title]").textContent = titles[view] || "Account";
+      root.querySelector(".account-settings-main")?.scrollTo({ top:0, behavior:"smooth" });
+    }));
+    bindNotificationSettings(root);
+  } catch (error) {
+    root.innerHTML = `<main class="account-error"><span>!</span><h1>We couldn’t open your account.</h1><p>${escapeHTML(error.message)}</p><button class="pill pill-dark" type="button">Sign in again</button></main>`;
+    root.querySelector("button").addEventListener("click", () => { rememberProtectedRoute("workspace"); location.hash = "access"; });
+  }
+}
+
+async function renderLegacyAccountDashboard(root, actions) {
   root.className = "account-app";
   root.innerHTML = `<main class="account-loading"><span></span><h1>Opening your account…</h1></main>`;
   try {

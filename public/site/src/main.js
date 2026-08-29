@@ -6,9 +6,9 @@ import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceR
 import { initProductPolish, polishRoute } from "./polish.js?v=noir-studio-1";
 import { enhanceCreatorTools } from "./creator-tools.js?v=revision-bands-1";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=no-video-placeholders-1";
-import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=revision-reorder-1";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=revision-reorder-1";
-import { enhanceStudioDashboard } from "./studio-workspace.js?v=review-studio-1";
+import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=frame-account-1";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=frame-account-1";
+import { enhanceStudioDashboard } from "./studio-workspace.js?v=frame-account-1";
 
 // Load decorative motion independently so a missing effect cannot block the app.
 let cinematic;
@@ -33,7 +33,7 @@ const actions = {
   openDashboard: () => go("workspace"),
   openProject: () => go("project"),
   openReview: () => go("review"),
-  openAccess: () => { rememberProtectedRoute("account"); go("access"); },
+  openAccess: () => { rememberProtectedRoute("workspace"); go("access"); },
   openAccount: () => go("account"),
   openBrief: orderId => go(`brief${orderId ? `?order=${encodeURIComponent(orderId)}` : ""}`),
   openAdmin: () => go("owner"),
@@ -74,7 +74,12 @@ async function renderRoute() {
     }
     else if (route === "project") { renderProject(root, actions); enhanceProject(root, actions); enhanceProjectSuite(root, actions); }
     else if (route === "review") { renderReview(root, actions); enhanceReview(root, actions); enhanceReviewSuite(root, actions); }
-    else if (route.startsWith("access")) { if (accountUser() && !route.includes("reset=")) await renderAccountDashboard(root, actions); else renderAccountAccess(root, actions); }
+    else if (route.startsWith("access")) {
+      if (accountUser() && !route.includes("reset=")) {
+        history.replaceState(null, "", `${location.pathname}${location.search}#workspace`);
+        await renderClientWorkspace(root, actions, "workspace");
+      } else renderAccountAccess(root, actions);
+    }
     else if (route === "account") await renderAccountDashboard(root, actions);
     else if (route.startsWith("brief")) await renderProjectBrief(root, actions, route);
     else if (route === "checkout") renderCheckout(root, actions);
