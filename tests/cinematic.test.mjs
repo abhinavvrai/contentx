@@ -34,8 +34,8 @@ test("motion is an optional, cache-versioned enhancement and keeps the loader fa
   assert.match(main, /import\("\.\/cinematic\.js\?v=ring-moved-1"\)/);
   assert.match(main, /motionRender !== cinematicRender/);
   assert.match(main, /finally\s*\{\s*loader\?\.classList\.add\("is-done"\)/);
-  assert.match(index, /cinematic\.css\?v=ring-moved-1/);
-  assert.match(index, /main\.js\?v=ring-moved-1/);
+  assert.match(index, /cinematic\.css\?v=empty-tail-1/);
+  assert.match(index, /main\.js\?v=workflow-glow-1/);
 });
 
 test("motion respects reduced motion, mobile, visibility and route cleanup", async () => {
@@ -50,6 +50,8 @@ test("motion respects reduced motion, mobile, visibility and route cleanup", asy
   assert.doesNotMatch(script, /preventDefault|setInterval|fetch\(|localStorage|https:\/\//);
   assert.match(css, /@media \(max-width: 800px\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /min-height: calc\(100svh \+ 180px\)/);
+  assert.doesNotMatch(css, /195svh/);
   assert.match(script, /ILLUSTRATIVE PREVIEW/);
   assert.match(script, /cx-atmosphere[^`]+cx-orbit"><i><\/i><i><\/i><i><\/i><i><\/i><\/div><span class="cx-satellite"/);
   assert.doesNotMatch(script, /cx-hero-ribbons/);

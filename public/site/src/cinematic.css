@@ -49,7 +49,7 @@
 .cx-motion-toggle:hover { border-color: #ff9566; }
 .cx-motion-toggle:disabled { cursor: default; }
 .cx-cinematic .stat-strip { padding-block: 35px; }
-.cx-story { position: relative; min-height: 195svh; margin-top: 50px; overflow: hidden; background: #111217; color: #f6f4f2; }
+.cx-story { position: relative; min-height: calc(100svh + 180px); margin-top: 50px; overflow: hidden; background: #111217; color: #f6f4f2; }
 .cx-story-pin { position: sticky; top: 76px; min-height: calc(100svh - 76px); display: grid; grid-template-columns: .88fr 1.12fr; align-items: center; gap: 65px; padding-block: 58px; }
 .cx-story .eyebrow { font-size: 10px; color: #b2a39b; }
 .cx-story h2 { margin: 22px 0; font-size: clamp(44px, 4.8vw, 68px); font-weight: 650; line-height: 1; letter-spacing: -.065em; }

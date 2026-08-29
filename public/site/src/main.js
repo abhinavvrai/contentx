@@ -1,7 +1,7 @@
 import { studio } from "./data.js";
-import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=no-video-placeholders-1";
+import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=workflow-glow-1";
 import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=noir-studio-1";
-import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=noir-studio-1";
+import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=workflow-glow-1";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js?v=no-video-placeholders-1";
 import { initProductPolish, polishRoute } from "./polish.js?v=noir-studio-1";
 import { enhanceCreatorTools } from "./creator-tools.js?v=landscape-contrast-1";

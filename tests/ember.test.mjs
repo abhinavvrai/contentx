@@ -42,6 +42,22 @@ test("vivid gradient keeps brand ink readable and orange actions use white label
   assert.match(text,/pointer-events:none/);assert.match(text,/animation-play-state:paused/);assert.match(text,/prefers-reduced-motion:reduce/);assert.match(text,/forced-colors:active/);
   const html = await read("public/site/index.html");assert.ok(html.indexOf("ember.css")>html.indexOf("studio-workspace.css"));
 });
+test("workflow and marketplace actions use the vivid orange design system",async()=>{
+  const [css,ui,market,main,index]=await Promise.all([
+    read("public/site/src/ember.css"),read("public/site/src/ui.js"),read("public/site/src/marketplace.js"),read("public/site/src/main.js"),read("public/site/index.html")
+  ]);
+  assert.match(ui,/class="workflow-step workflow-step-\$\{w\.step\}"/);
+  assert.match(ui,/class="pill pill-hot" data-action="workspace"/);
+  assert.match(market,/class="pill pill-hot" data-teaser-hire/);
+  assert.match(market,/class="pill pill-hot" data-teaser-offer/);
+  assert.match(css,/\.workflow-grid \.workflow-step::before/);
+  assert.match(css,/\.creator-suite-grid \.creator-card::before/);
+  assert.match(css,/@keyframes em-workflow-orbit/);
+  assert.match(css,/grid-template-columns:1fr; gap:12px/);
+  assert.match(main,/ui\.js\?v=workflow-glow-1/);
+  assert.match(main,/marketplace\.js\?v=workflow-glow-1/);
+  assert.match(index,/ember\.css\?v=workflow-glow-1/);
+});
 test("atmosphere remains optional and shares the route-race guard",async()=>{
   const main = await read("public/site/src/main.js");
   assert.match(main,/import\("\.\/ambient-scenes.js\?v=hero-restored-2"\)/);
