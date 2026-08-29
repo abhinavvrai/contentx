@@ -11,13 +11,19 @@ html[data-theme="dark"] #app [data-feedback-demo] {
   background:var(--em-gradient); color:var(--em-ink); border-color:#ff883f;
   box-shadow:0 7px 26px #ff5c202e;
 }
-/* Keep every orange action readable. Several legacy selectors forced white text
-   after this theme layer, so descendants explicitly inherit the dark ink too. */
-html[data-theme="dark"] body :is(.pill-hot,.pay-button,.brand-mark,.workspace-brand>span,.preloader__mark,.support-fab),
-html[data-theme="dark"] body :is(.pill-hot,.pay-button,.brand-mark,.workspace-brand>span,.preloader__mark,.support-fab) *,
-html[data-theme="dark"] #app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary) * {
+/* Keep the compact orange brand marks crisp against the gradient. */
+html[data-theme="dark"] body :is(.brand-mark,.workspace-brand>span,.preloader__mark),
+html[data-theme="dark"] body :is(.brand-mark,.workspace-brand>span,.preloader__mark) * {
   color:var(--em-ink)!important;
   text-shadow:none!important;
+}
+/* Orange actions use white labels everywhere, including nested arrows/icons. */
+html[data-theme="dark"] body :is(.pill-hot,.pay-button,.support-fab),
+html[data-theme="dark"] body :is(.pill-hot,.pay-button,.support-fab) *,
+html[data-theme="dark"] #app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary,[data-feedback-demo]),
+html[data-theme="dark"] #app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary,[data-feedback-demo]) * {
+  color:#fff!important;
+  text-shadow:0 1px 2px #6b2100!important;
 }
 html[data-theme="dark"] #app :is(.unified-plan-copy,.demo-workspace-banner p),
 html[data-theme="dark"] #app .unified-volume-slider>span,

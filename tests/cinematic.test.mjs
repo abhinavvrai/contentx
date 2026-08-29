@@ -31,11 +31,11 @@ test("missing homepage elements are a safe no-op", () => {
 
 test("motion is an optional, cache-versioned enhancement and keeps the loader fail-safe", async () => {
   const [main, index] = await Promise.all([read("public/site/src/main.js"), read("public/site/index.html")]);
-  assert.match(main, /import\("\.\/cinematic\.js\?v=landscape-contrast-1"\)/);
+  assert.match(main, /import\("\.\/cinematic\.js\?v=ring-moved-1"\)/);
   assert.match(main, /motionRender !== cinematicRender/);
   assert.match(main, /finally\s*\{\s*loader\?\.classList\.add\("is-done"\)/);
-  assert.match(index, /cinematic\.css\?v=cinematic-flow-1/);
-  assert.match(index, /main\.js\?v=landscape-contrast-3/);
+  assert.match(index, /cinematic\.css\?v=ring-moved-1/);
+  assert.match(index, /main\.js\?v=ring-moved-1/);
 });
 
 test("motion respects reduced motion, mobile, visibility and route cleanup", async () => {
@@ -51,4 +51,7 @@ test("motion respects reduced motion, mobile, visibility and route cleanup", asy
   assert.match(css, /@media \(max-width: 800px\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(script, /ILLUSTRATIVE PREVIEW/);
+  assert.match(script, /cx-atmosphere[^`]+cx-orbit"><i><\/i><i><\/i><i><\/i><i><\/i><\/div><span class="cx-satellite"/);
+  assert.doesNotMatch(script, /cx-hero-ribbons/);
+  assert.match(script, /cx-story-rings"><i><\/i><i><\/i><i><\/i><i><\/i><i><\/i><span><\/span>/);
 });

@@ -14,7 +14,7 @@ export function sceneMarkup(kind) {
     : kind === "frames"
       ? '<div class="em-frame-deck"><i><b></b></i><i><b></b></i><i><b></b></i></div><span class="em-frame-spark"></span>'
       : '<div class="em-ribbons"><i></i><i></i><i></i><i></i><i></i></div><span class="em-ribbon-light"></span>';
-  return `<div class="em-scene em-${kind}" aria-hidden="true"><div class="em-scene-glow"></div>${contents}</div>`;
+  return `<div class="em-scene em-scene--${kind}" aria-hidden="true"><div class="em-scene-glow"></div>${contents}</div>`;
 }
 export function enhanceAmbientScenes(root) {
   disposeScenes(); disposeScenes = () => {};

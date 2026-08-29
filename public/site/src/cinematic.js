@@ -15,6 +15,8 @@ export function enhanceCinematic(root) {
   if (!hero || !stats) return;
 
   root.classList.add("cx-cinematic");
+  // Keep the original hero composition; the workflow section receives its
+  // own quieter echo of these rings rather than taking this scene away.
   hero.insertAdjacentHTML("afterbegin", `<div class="cx-atmosphere" aria-hidden="true"><div class="cx-orbit"><i></i><i></i><i></i><i></i></div><span class="cx-satellite"></span></div>`);
   hero.querySelector(".hero-content").insertAdjacentHTML("beforeend", `<div class="cx-motion-tools"><span>SCROLL TO SEE THE FLOW <span aria-hidden="true">↓</span></span><button type="button" class="cx-motion-toggle" aria-pressed="false">Pause motion</button></div>`);
   stats.insertAdjacentHTML("afterend", `
@@ -32,6 +34,7 @@ export function enhanceCinematic(root) {
           <a class="pill pill-hot" href="#workspace">Explore the workspace <span aria-hidden="true">↗</span></a>
         </div>
         <div class="cx-story-visual" aria-hidden="true">
+          <div class="cx-story-rings"><i></i><i></i><i></i><i></i><i></i><span></span></div>
           <div class="cx-story-halo"></div>
           <div class="cx-story-deck">
             <div class="cx-story-card" data-cx-card="0"><div class="cx-card-bar"><b>CX</b><span>Your next big idea</span><small>01 / UPLOAD</small></div><div class="cx-film"><video src="videos/landscape3.mp4" muted loop playsinline preload="metadata" tabindex="-1"></video><span class="cx-film-label">APEX / CAMPAIGN FILM</span></div><div class="cx-file-row"><span>↗</span><div><strong>Everything starts here.</strong><small>Footage · Brand assets · References</small></div><b>3 folders</b></div></div>

@@ -12,11 +12,11 @@ import { enhanceStudioDashboard } from "./studio-workspace.js?v=review-studio-1"
 
 // Load decorative motion independently so a missing effect cannot block the app.
 let cinematic;
-const cinematicReady = import("./cinematic.js?v=landscape-contrast-1")
+const cinematicReady = import("./cinematic.js?v=ring-moved-1")
   .then(module => { cinematic = module; })
   .catch(error => console.warn("Content X motion is unavailable", error));
 let ambient;
-const ambientReady = import("./ambient-scenes.js?v=ember-flow-1")
+const ambientReady = import("./ambient-scenes.js?v=hero-restored-2")
   .then(module => { ambient = module; })
   .catch(error => console.warn("Content X atmosphere is unavailable", error));
 let cinematicRender = 0;
