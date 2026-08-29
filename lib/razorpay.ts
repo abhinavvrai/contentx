@@ -20,6 +20,8 @@ export const servicePlans = {
   podcast_30: { name: "Podcast Edit · 30 minutes", amount: 5000 },
   podcast_45: { name: "Podcast Edit · 45 minutes", amount: 7500 },
   podcast_60: { name: "Podcast Edit · 60 minutes", amount: 10000 },
+  revision_short: { name: "Extra Short-form Revision Round", amount: 300 },
+  revision_long: { name: "Extra Long-form Revision Round", amount: 500 },
 } as const;
 
 export type PlanId = keyof typeof servicePlans;
@@ -28,6 +30,22 @@ export type BillingMode = "monthly" | "one_off";
 const reelPlanIds = new Set<PlanId>(["basic_reel", "better_edit", "growth_reel", "premium_motion", "advanced_reel", "saas_animation"]);
 const longformPlanIds = new Set<PlanId>(["long_basic", "long_standard", "long_premium"]);
 const podcastPlanIds = new Set<PlanId>(["podcast_30", "podcast_45", "podcast_60"]);
+const revisionPlanIds = new Set<PlanId>(["revision_short", "revision_long"]);
+const revisionPolicies = {
+  basic_reel: { service: "video", included: 1 },
+  better_edit: { service: "video", included: 2 },
+  growth_reel: { service: "video", included: 2 },
+  premium_motion: { service: "video", included: 3 },
+  advanced_reel: { service: "video", included: 3 },
+  saas_animation: { service: "video", included: 2 },
+  long_basic: { service: "longform", included: 1 },
+  long_standard: { service: "longform", included: 2 },
+  long_premium: { service: "longform", included: 3 },
+} satisfies Record<string, { service: "video" | "longform"; included: number }>;
+
+export function revisionPolicyForPlan(planId: string) {
+  return revisionPolicies[planId as keyof typeof revisionPolicies] || null;
+}
 const longformScope = {
   long_basic: { includedMinutes: 10, includedRawMinutes: 60 },
   long_standard: { includedMinutes: 10, includedRawMinutes: 120 },
@@ -138,16 +156,17 @@ export function calculateOrder(input: {
   const isReelPlan = reelPlanIds.has(planId);
   const isLongformPlan = longformPlanIds.has(planId);
   const isPodcastPlan = podcastPlanIds.has(planId);
+  const isRevisionPlan = revisionPlanIds.has(planId);
   const usesBillingPremium = ((isReelPlan && planId !== "saas_animation") || isLongformPlan || isPodcastPlan);
   const billing: BillingMode = input.billing === "monthly" ? "monthly" : "one_off";
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 30) {
     throw new Error("Choose between 1 and 30 items.");
   }
   if (!isReelPlan && !isLongformPlan && !isPodcastPlan && quantity !== 1) {
-    throw new Error("Each standalone script payment covers one selected service.");
+    throw new Error("Each standalone payment covers one selected service.");
   }
   if (!isReelPlan && !isLongformPlan && !isPodcastPlan && billing !== "one_off") {
-    throw new Error("Standalone scripts use one-time pricing.");
+    throw new Error("Standalone services use one-time pricing.");
   }
   if (isReelPlan && billing === "monthly" && quantity < 10) {
     throw new Error("Monthly reel production starts at 10 videos.");
@@ -166,8 +185,9 @@ export function calculateOrder(input: {
   }
 
   const unitAmount = plan.amount;
-  const service = isPodcastPlan ? "podcast" : isLongformPlan ? "longform" : "video";
+  const service = isPodcastPlan ? "podcast" : isLongformPlan || planId === "revision_long" ? "longform" : "video";
   const requestedAddOns = Array.isArray(input.addOns) ? [...new Set(input.addOns.filter(value => typeof value === "string"))] : [];
+  if (isRevisionPlan && requestedAddOns.length) throw new Error("Revision round payments cannot include other add-ons.");
   const addOns = requestedAddOns.map(value => {
     const id = value as AddOnId;
     const addOn = serviceAddOns[id];

@@ -289,6 +289,8 @@ async function ensureAuthSchemaColumns(db: D1Database): Promise<void> {
   await ensureColumns(db, "order_selections", [
     ["delivery_format", "TEXT"],
     ["add_ons_json", "TEXT NOT NULL DEFAULT '[]'"],
+    ["project_id", "TEXT"],
+    ["asset_id", "TEXT"],
   ]);
   await ensureColumns(db, "project_briefs", [
     ["reference_url", "TEXT"],

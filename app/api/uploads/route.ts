@@ -28,8 +28,9 @@ import {
   type UploadFile,
   type UploadProject,
 } from "../../../lib/uploads";
-import { AccountError, ensureAccountSchema, getSessionUser, requireSameOrigin, requireSessionUser } from "../../../lib/auth";
+import { AccountError, ensureAccountSchema, getAccountDatabase, getSessionUser, requireSameOrigin, requireSessionUser } from "../../../lib/auth";
 import { notifyOwner, publishNotification } from "../../../lib/notifications";
+import { ensurePaymentSchema, revisionPolicyForPlan } from "../../../lib/razorpay";
 
 type JsonInput = Record<string, unknown>;
 const RECYCLE_BIN_DAYS = 30;
@@ -134,6 +135,7 @@ export async function DELETE(request: Request) {
 }
 
 async function getClientProject(request: Request, projectId: string): Promise<Response> {
+  await Promise.all([ensureAccountSchema(), ensurePaymentSchema()]);
   const access = await authorizeProject(request, projectId);
   const project = access.project;
   const { db } = getUploadBindings();
@@ -152,7 +154,30 @@ async function getClientProject(request: Request, projectId: string): Promise<Re
            AND COALESCE(newer.version_number, 1) > COALESCE(f.version_number, 1))
      ORDER BY f.completed_at DESC LIMIT 200`
   ).bind(project.id).all();
-  return json({ project: publicProject(project), files: files.results, permissions: { canUpload: access.canUpload, accessType: access.accessType } });
+  let revisionPolicy: { service: "video" | "longform"; included: number; purchasedByAsset: Record<string, number> } | null = null;
+  if (access.accessType === "account") {
+    const accountDb = getAccountDatabase();
+    const originalOrder = await accountDb.prepare(`SELECT p.plan_id
+      FROM user_upload_projects u JOIN payment_orders p ON p.razorpay_order_id = u.razorpay_order_id
+      WHERE u.project_id = ? AND p.status IN ('verified', 'captured')
+        AND COALESCE(p.refund_status, 'none') NOT IN ('requested', 'processing', 'refunded') LIMIT 1`)
+      .bind(project.id).first<{ plan_id: string }>();
+    const policy = revisionPolicyForPlan(originalOrder?.plan_id || "");
+    if (policy) {
+      const purchases = await accountDb.prepare(`SELECT s.asset_id, COUNT(*) AS purchased
+        FROM order_selections s JOIN payment_orders p ON p.razorpay_order_id = s.razorpay_order_id
+        WHERE s.project_id = ? AND s.asset_id IS NOT NULL
+          AND p.plan_id IN ('revision_short', 'revision_long')
+          AND p.status IN ('verified', 'captured')
+          AND COALESCE(p.refund_status, 'none') NOT IN ('requested', 'processing', 'refunded')
+        GROUP BY s.asset_id`).bind(project.id).all<{ asset_id: string; purchased: number }>();
+      revisionPolicy = {
+        ...policy,
+        purchasedByAsset: Object.fromEntries(purchases.results.map(item => [item.asset_id, Number(item.purchased || 0)])),
+      };
+    }
+  }
+  return json({ project: publicProject(project), files: files.results, revisionPolicy, permissions: { canUpload: access.canUpload, accessType: access.accessType } });
 }
 
 async function getAccountProjects(request: Request): Promise<Response> {

@@ -61,7 +61,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     </aside>
     <main class="workspace-main">
       <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>Projects</span>${project ? `<b>/ ${escapeHTML(project.name)}</b>` : ""}</div><div>${project ? `<button class="workspace-button" type="button" data-share-project>Share</button><button class="workspace-button primary" type="button" data-upload-files>Upload files</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
-      ${project ? projectSurface(project, files, projectData.permissions?.canUpload !== false, comments, true) : emptyWorkspace()}
+      ${project ? projectSurface(project, files, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy) : emptyWorkspace()}
     </main>
   </div><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
 
@@ -92,25 +92,53 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       actions.refreshRoute();
     }, "is-version-drop");
   });
+  root.querySelectorAll("[data-buy-revision]").forEach(button => button.addEventListener("click", () => {
+    const longform = button.dataset.revisionService === "longform";
+    const price = longform ? 500 : 300;
+    actions.openCheckout({
+      id:longform ? "revision_long" : "revision_short",
+      name:`Extra revision round · ${button.dataset.fileName}`,
+      price,
+      quantity:1,
+      billing:"one_off",
+      unit:"project",
+      badge:"Extra revision for this video",
+      contentType:longform ? "longform" : "video",
+      projectId:project.id,
+      assetId:button.dataset.assetId,
+      returnTo:`workspace?project=${project.id}`,
+      revisionPurchase:true,
+      features:["1 additional revision round", `Attached to ${button.dataset.fileName}`, "Timestamped feedback and version history stay in this workspace"],
+    });
+  }));
   root.querySelector("[data-share-project]")?.addEventListener("click", () => openSharePanel(root, project, shares));
   bindComments(root, project.id, "", actions, true);
 }
 
-function projectSurface(project, files, canUpload, comments = [], canManageComments = false) {
+function projectSurface(project, files, canUpload, comments = [], canManageComments = false, revisionPolicy = null) {
   return `<section class="workspace-project-head"><div><p>PROJECT</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
     ${workspacePulse(files, comments)}
     <section class="workspace-dropbar ${canUpload ? "" : "disabled"}" data-project-drop><span>↑</span><div><b>${canUpload ? "Drop files anywhere here" : "This link is view-only"}</b><small>${canUpload ? "Upload new assets, or drop directly on a file to create its next version." : "Ask the owner to enable uploads on this share link."}</small></div></section>
     ${canUpload ? `<p class="workspace-upload-rules">Allowed uploads: video, audio, image, PDF, text, CSV and subtitle files. Executables, archives, scripts, HTML and SVG are blocked.</p>` : ""}
     <section class="workspace-revision-flow"><article><span>01</span><b>Upload cut</b><small>Raw files and edits land in one project.</small></article><article><span>02</span><b>Drop replacement</b><small>Dropping on a card creates the next version.</small></article><article><span>03</span><b>Share review link</b><small>Send one link with multiple videos, expiry and upload controls.</small></article><article><span>04</span><b>Approve final</b><small>Comments, downloads and decisions stay attached.</small></article></section>
-    <section class="workspace-files"><header><div><h2>Files</h2><span>Latest versions</span></div><p>Open a file to preview, compare versions and leave timestamped feedback.</p></header>${fileToolbar()}<div class="workspace-file-grid">${files.length ? files.map(file => fileCard(file, canUpload)).join("") : `<div class="workspace-empty-files"><span>↑</span><h3>No files yet</h3><p>${canUpload ? "Upload raw footage, references, audio or working files." : "The project owner has not shared any files yet."}</p></div>`}</div></section>
+    <section class="workspace-files"><header><div><h2>Files</h2><span>Latest versions</span></div><p>Open a file to preview, compare versions and leave timestamped feedback.</p></header>${fileToolbar()}<div class="workspace-file-grid">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy)).join("") : `<div class="workspace-empty-files"><span>↑</span><h3>No files yet</h3><p>${canUpload ? "Upload raw footage, references, audio or working files." : "The project owner has not shared any files yet."}</p></div>`}</div></section>
     ${commentsPanel(comments, canManageComments)}
     <section class="workspace-queue" data-workspace-queue></section>`;
 }
 
-function fileCard(file, canUpload) {
+function fileCard(file, canUpload, revisionPolicy = null) {
   const version = Number(file.version_number || 1);
   const count = Number(file.version_count || 1);
-  return `<article class="workspace-file-card ${canUpload ? "" : "view-only"}" data-file-card data-file-id="${escapeHTML(file.id)}" data-asset-id="${escapeHTML(file.asset_id || file.id)}"><button class="workspace-file-preview" type="button" data-file-open><span>${fileGlyph(file.content_type)}</span><em>v${version}</em>${canUpload ? "<i>Drop replacement here</i>" : ""}</button><div class="workspace-file-info"><div><strong title="${escapeHTML(file.original_name)}">${escapeHTML(file.original_name)}</strong><small>${formatBytes(file.size_bytes)} · ${formatDate(file.completed_at)}</small></div>${canUpload ? '<button type="button" data-new-version aria-label="Upload next version">＋</button>' : ""}</div><footer><span>${count} version${count === 1 ? "" : "s"}</span><b>Ready</b></footer></article>`;
+  const assetId = String(file.asset_id || file.id);
+  const purchased = Number(revisionPolicy?.purchasedByAsset?.[assetId] || 0);
+  const allowed = Number(revisionPolicy?.included || 0) + purchased;
+  const used = Math.max(0, count - 1);
+  const isVideo = String(file.content_type || "").startsWith("video/");
+  const exhausted = Boolean(revisionPolicy && isVideo && used >= allowed);
+  const revisionStatus = revisionPolicy && isVideo
+    ? `<div class="workspace-revision-status ${exhausted ? "is-exhausted" : ""}"><span>${Math.min(used, allowed)} of ${allowed} revision round${allowed === 1 ? "" : "s"} used</span>${exhausted ? `<button type="button" data-buy-revision data-asset-id="${escapeHTML(assetId)}" data-file-name="${escapeHTML(file.original_name)}" data-revision-service="${revisionPolicy.service}">Buy another revision · ${revisionPolicy.service === "longform" ? "₹500" : "₹300"}</button>` : `<small>${allowed - used} round${allowed - used === 1 ? "" : "s"} remaining</small>`}</div>`
+    : "";
+  return `<article class="workspace-file-card ${canUpload ? "" : "view-only"}" data-file-card data-file-id="${escapeHTML(file.id)}" data-asset-id="${escapeHTML(assetId)}"><button class="workspace-file-preview" type="button" data-file-open><span>${fileGlyph(file.content_type)}</span><em>v${version}</em>${canUpload ? "<i>Drop replacement here</i>" : ""}</button><div class="workspace-file-info"><div><strong title="${escapeHTML(file.original_name)}">${escapeHTML(file.original_name)}</strong><small>${formatBytes(file.size_bytes)} · ${formatDate(file.completed_at)}</small></div>${canUpload ? '<button type="button" data-new-version aria-label="Upload next version">＋</button>' : ""}</div><footer><span>${count} version${count === 1 ? "" : "s"}</span><b>Ready</b></footer>${revisionStatus}</article>`;
 }
 
 function emptyWorkspace() {

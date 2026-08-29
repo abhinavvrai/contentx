@@ -77,11 +77,11 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=revision-bands-1/);
-  assert.match(html, /contentx-release" content="revision-bands-1/);
-  assert.match(html, /main\.js\?v=revision-bands-1/);
+  assert.match(page, /\/site\/index\.html\?v=revision-reorder-1/);
+  assert.match(html, /contentx-release" content="revision-reorder-1/);
+  assert.match(html, /main\.js\?v=revision-reorder-1/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
-  assert.match(main, /features\.js\?v=revision-bands-1/);
+  assert.match(main, /features\.js\?v=revision-reorder-1/);
   assert.match(main, /uploads\.js\?v=no-video-placeholders-1/);
 });
 
@@ -139,6 +139,8 @@ test("keeps payment totals server-calculated with allowlisted add-ons", async ()
   assert.match(razorpay, /longform_raw_review/);
   assert.match(razorpay, /extra_revision: \{ name: "Extra Revision Round", amount: 300/);
   assert.match(razorpay, /long_extra_revision: \{ name: "Extra Revision Round", amount: 500/);
+  assert.match(razorpay, /revision_short: \{ name: "Extra Short-form Revision Round", amount: 300/);
+  assert.match(razorpay, /revision_long: \{ name: "Extra Long-form Revision Round", amount: 500/);
   assert.match(razorpay, /includedRawMinutes: 60/);
   assert.match(razorpay, /includedRawMinutes: 120/);
   assert.match(razorpay, /includedRawMinutes: 180/);
@@ -154,7 +156,32 @@ test("keeps payment totals server-calculated with allowlisted add-ons", async ()
   assert.match(orderRoute, /requireSessionUser/);
   assert.match(orderRoute, /currency: input\.currency/);
   assert.match(orderRoute, /rawFootageMinutes: input\.rawFootageMinutes/);
+  assert.match(orderRoute, /revisionPolicyForPlan/);
+  assert.match(orderRoute, /This video still has \$\{availableRounds - usedRounds\} revision round available/);
+  assert.match(orderRoute, /project_id, asset_id/);
   assert.match(orderRoute, /order_selections/);
+});
+
+test("offers another paid revision only after a video's allowance is exhausted", async () => {
+  const [workspace, features, uploads, auth, account] = await Promise.all([
+    load("public/site/src/workspace.js"),
+    load("public/site/src/features.js"),
+    load("app/api/uploads/route.ts"),
+    load("lib/auth.ts"),
+    load("public/site/src/account.js"),
+  ]);
+  assert.match(workspace, /used >= allowed/);
+  assert.match(workspace, /Buy another revision · \$\{revisionPolicy\.service === "longform" \? "₹500" : "₹300"\}/);
+  assert.match(workspace, /revisionPurchase:true/);
+  assert.match(workspace, /projectId:project\.id/);
+  assert.match(workspace, /assetId:button\.dataset\.assetId/);
+  assert.match(features, /projectId:plan\.projectId, assetId:plan\.assetId/);
+  assert.match(features, /One more revision round is ready/);
+  assert.match(uploads, /purchasedByAsset/);
+  assert.match(uploads, /COUNT\(\*\) AS purchased/);
+  assert.match(auth, /\["project_id", "TEXT"\]/);
+  assert.match(auth, /\["asset_id", "TEXT"\]/);
+  assert.match(account, /revision_short", "revision_long/);
 });
 
 test("keeps revision promises aligned with the selected package", async () => {

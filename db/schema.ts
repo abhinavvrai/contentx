@@ -216,6 +216,8 @@ export const orderSelections = sqliteTable(
     contentType: text("content_type").notNull(),
     deliveryFormat: text("delivery_format"),
     addOnsJson: text("add_ons_json").notNull().default("[]"),
+    projectId: text("project_id"),
+    assetId: text("asset_id"),
     createdAt: integer("created_at").notNull(),
   },
   table => [index("idx_order_selections_user_created").on(table.userId, table.createdAt)],

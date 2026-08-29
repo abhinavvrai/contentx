@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       p.quantity, p.amount_paise, p.currency, p.status, p.refund_status, p.refund_reason,
       p.refund_amount_paise, p.refund_requested_at, p.refund_updated_at, p.created_at, s.content_type, s.delivery_format,
       s.add_ons_json, b.id AS brief_id, b.title, b.description, b.instructions,
-      b.reference_url, b.status AS brief_status, u.project_id
+      b.reference_url, b.status AS brief_status, COALESCE(u.project_id, s.project_id) AS project_id
       FROM order_selections s
       JOIN payment_orders p ON p.razorpay_order_id = s.razorpay_order_id
       LEFT JOIN project_briefs b ON b.razorpay_order_id = p.razorpay_order_id
@@ -67,11 +67,12 @@ export async function POST(request: Request) {
     if (input.referenceUrl && !referenceUrl) throw new AccountError("Paste at least one valid source link beginning with https://.");
 
     const db = getAccountDatabase();
-    const order = await db.prepare(`SELECT p.razorpay_order_id, p.status, p.refund_status
+    const order = await db.prepare(`SELECT p.razorpay_order_id, p.plan_id, p.status, p.refund_status
       FROM payment_orders p JOIN order_selections s ON s.razorpay_order_id = p.razorpay_order_id
       WHERE p.razorpay_order_id = ? AND s.user_id = ? LIMIT 1`)
-      .bind(orderId, user.id).first<{ razorpay_order_id: string; status: string; refund_status?: string | null }>();
+      .bind(orderId, user.id).first<{ razorpay_order_id: string; plan_id: string; status: string; refund_status?: string | null }>();
     if (!order) throw new AccountError("This order does not belong to your account.", 403);
+    if (["revision_short", "revision_long"].includes(order.plan_id)) throw new AccountError("Revision round payments stay attached to their existing video and do not create a new brief.", 409);
     if (!["verified", "captured"].includes(order.status)) throw new AccountError("Complete the payment before submitting the full project brief.", 409);
     if (order.refund_status === "refunded") throw new AccountError("This payment has been refunded. Choose another paid order to start a project.", 409);
     if (order.refund_status === "requested" || order.refund_status === "processing") throw new AccountError("A refund is already active for this payment, so the project brief is paused.", 409);

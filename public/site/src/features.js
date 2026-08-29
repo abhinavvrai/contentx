@@ -16,7 +16,7 @@ function ownerHeaders(json = true) {
 }
 
 function razorpayPlanId(plan) {
-  const validPlans = new Set(["basic_reel", "better_edit", "growth_reel", "premium_motion", "advanced_reel", "long_basic", "long_standard", "long_premium", "saas_animation", "script_hook", "script_full", "script_research", "podcast_30", "podcast_45", "podcast_60"]);
+  const validPlans = new Set(["basic_reel", "better_edit", "growth_reel", "premium_motion", "advanced_reel", "long_basic", "long_standard", "long_premium", "saas_animation", "script_hook", "script_full", "script_research", "podcast_30", "podcast_45", "podcast_60", "revision_short", "revision_long"]);
   if (validPlans.has(plan.id)) return plan.id;
   const name = String(plan.name || "").toLowerCase();
   if (name.includes("saas animation")) return "saas_animation";
@@ -551,7 +551,9 @@ export function renderAccess(root, actions) {
 
 export function renderCheckout(root, actions) {
   const plan = store.get("cx_checkout", monthlyPlans[1]);
-  const checkoutCopy = plan.marketplace
+  const checkoutCopy = plan.revisionPurchase
+    ? { back: "Back to workspace", eyebrow: "Additional revision round", secure: "Revision attached to this video", note: "After verified payment, one additional revision round is added only to the selected video and its existing version history.", success: "Your additional revision round is active for this video." }
+    : plan.marketplace
     ? { back: "Back to specialist", eyebrow: "Protected marketplace order", secure: "Content X order protection", note: "The provider payout is managed by Content X while your messages, files, reviews and delivery stay connected.", success: "Your protected specialist order and workspace are active." }
     : plan.managedReview
       ? { back: "Back to review", eyebrow: "Hands-off review add-on", secure: "Content X managed review", note: "Your paid request goes directly to the review desk for brief checks, consolidated feedback, revision follow-up and final quality approval.", success: "Your managed review is paid and queued with the Content X review desk." }
@@ -565,7 +567,7 @@ export function renderCheckout(root, actions) {
   root.querySelector('input[name="phone"]').setAttribute("autocomplete", "tel");
   root.querySelector('input[name="email"]').setAttribute("autocomplete", "email");
   root.querySelector(".terms span").textContent = "I agree to the selected package scope, add-ons and revision allowance shown in this order.";
-  root.querySelector(".brand").addEventListener("click", e => { e.preventDefault(); actions.openMarketing(); }); root.querySelector(".back-link").addEventListener("click", plan.marketplace ? actions.openTalentProfile : plan.managedReview ? actions.openReview : actions.openMarketing);
+  root.querySelector(".brand").addEventListener("click", e => { e.preventDefault(); actions.openMarketing(); }); root.querySelector(".back-link").addEventListener("click", plan.revisionPurchase ? () => { location.hash = plan.returnTo || "workspace"; } : plan.marketplace ? actions.openTalentProfile : plan.managedReview ? actions.openReview : actions.openMarketing);
   root.querySelectorAll('.payment-tabs input').forEach(input => input.addEventListener("change", () => { const field = root.querySelector('.payment-fields label'); field.innerHTML = input.value === "Card" ? 'Test card number<input name="paymentRef" required value="4242 4242 4242 4242">' : input.value === "UPI" ? 'UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123">' : 'Bank reference<input name="paymentRef" required placeholder="TEST-TRANSFER">'; }));
   root.querySelector("form").addEventListener("submit", e => {
     e.preventDefault();
@@ -591,8 +593,11 @@ export function renderCheckout(root, actions) {
     root.querySelector(".access-code").textContent = `Access code: ${code}`;
     root.querySelector(".payment-success").classList.add("show");
   });
-  root.querySelector(".payment-success .pill").textContent = "Add project brief →";
-  root.querySelector(".payment-success .pill").addEventListener("click", event => actions.openBrief(event.currentTarget.dataset.orderId || ""));
+  root.querySelector(".payment-success .pill").textContent = plan.revisionPurchase ? "Return to this video →" : "Add project brief →";
+  root.querySelector(".payment-success .pill").addEventListener("click", event => {
+    if (plan.revisionPurchase) location.hash = plan.returnTo || "workspace";
+    else actions.openBrief(event.currentTarget.dataset.orderId || "");
+  });
 
   root.querySelector(".checkout-head>span").textContent = "Secure Razorpay checkout";
   const testBanner = root.querySelector(".test-banner");
@@ -621,7 +626,7 @@ export function renderCheckout(root, actions) {
         fetch("/api/payments/razorpay/order", {
           method:"POST",
           headers:{ "Content-Type":"application/json" },
-          body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.billing || (plan.unit === "month" ? "monthly" : "one_off"), addOns:(plan.addOns || []).map(item => item.id).filter(id => !["longform_extra_minutes", "longform_raw_review"].includes(id)), durationMinutes:plan.durationMinutes, rawFootageMinutes:plan.rawFootageMinutes, currency:activeCurrency, contentType:plan.contentType || "video", deliveryFormat:plan.deliveryFormat || "", name:contact.name, email:contact.email, phone:contact.phone })
+          body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.billing || (plan.unit === "month" ? "monthly" : "one_off"), addOns:(plan.addOns || []).map(item => item.id).filter(id => !["longform_extra_minutes", "longform_raw_review"].includes(id)), durationMinutes:plan.durationMinutes, rawFootageMinutes:plan.rawFootageMinutes, currency:activeCurrency, contentType:plan.contentType || "video", deliveryFormat:plan.deliveryFormat || "", projectId:plan.projectId, assetId:plan.assetId, name:contact.name, email:contact.email, phone:contact.phone })
         })
       ]);
       const config = await configResponse.json(), order = await orderResponse.json();
@@ -646,7 +651,7 @@ export function renderCheckout(root, actions) {
             const payment = { id:verification.paymentId, name:contact.name, phone:contact.phone, email:contact.email, code, plan:plan.name, amount:plan.price, status:"Verified", type:"Razorpay", created:new Date().toLocaleString() };
             store.set("cx_payments", [payment, ...store.get("cx_payments", [])]);
             store.set("cx_access", { email:contact.email, plan:plan.name, paid:true, code, clientId:plan.clientId || "apex" });
-            root.querySelector(".access-code").textContent = "Payment verified · Next, add the project brief and files.";
+            root.querySelector(".access-code").textContent = plan.revisionPurchase ? "Payment verified · One more revision round is ready." : "Payment verified · Next, add the project brief and files.";
             root.querySelector(".payment-success .pill").dataset.orderId = verification.orderId;
             root.querySelector(".payment-success").classList.add("show");
           } catch (error) {

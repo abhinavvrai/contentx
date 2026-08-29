@@ -1,13 +1,13 @@
 import { studio } from "./data.js?v=revision-bands-1";
 import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=revision-bands-1";
-import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=revision-bands-1";
+import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=revision-reorder-1";
 import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=revision-bands-1";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js?v=no-video-placeholders-1";
 import { initProductPolish, polishRoute } from "./polish.js?v=noir-studio-1";
 import { enhanceCreatorTools } from "./creator-tools.js?v=revision-bands-1";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=no-video-placeholders-1";
-import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=no-video-placeholders-1";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=review-studio-1";
+import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=revision-reorder-1";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=revision-reorder-1";
 import { enhanceStudioDashboard } from "./studio-workspace.js?v=review-studio-1";
 
 // Load decorative motion independently so a missing effect cannot block the app.
