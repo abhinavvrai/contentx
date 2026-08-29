@@ -56,7 +56,14 @@ test("workflow and marketplace actions use the vivid orange design system",async
   assert.match(css,/grid-template-columns:1fr; gap:12px/);
   assert.match(main,/ui\.js\?v=workflow-glow-1/);
   assert.match(main,/marketplace\.js\?v=workflow-glow-1/);
-  assert.match(index,/ember\.css\?v=workflow-glow-1/);
+  assert.match(index,/ember\.css\?v=white-gradient-2/);
+});
+test("legacy peach calls to action are vivid gradients with white labels",async()=>{
+  const css=await read("public/site/src/ember.css");
+  assert.match(css,/\.cta-section,\.market-teaser-grid,\.support-panel,\.dash-header,\.project-header,\.review-header/);
+  assert.match(css,/:is\(\.pill-light,\.pill-dark,\.pill-outline\) \*/);
+  assert.match(css,/background:var\(--em-gradient\); color:#fff!important; border-color:#ff883f/);
+  assert.match(css,/background:linear-gradient\(115deg,#ff702c,#ffae4c\); color:#fff!important/);
 });
 test("atmosphere remains optional and shares the route-race guard",async()=>{
   const main = await read("public/site/src/main.js");

@@ -39,6 +39,18 @@ html[data-theme="dark"] #app :is(.workspace-button.primary,[data-feedback-demo])
   background:linear-gradient(115deg,#ff702c,#ffae4c); color:var(--em-ink); border-color:#ffb35e;
   box-shadow:0 9px 32px #ff5c2045;
 }
+/* Replace the legacy peach/dark CTA treatment on colored product surfaces. */
+html[data-theme="dark"] #app :is(.feature-banner,.market-hero,.cta-section,.market-teaser-grid,.support-panel,.dash-header,.project-header,.review-header) :is(.pill-light,.pill-dark,.pill-outline) {
+  background:var(--em-gradient); color:#fff!important; border-color:#ff883f;
+  text-shadow:0 1px 2px #6b2100!important; box-shadow:0 9px 30px #ff5c2038;
+}
+html[data-theme="dark"] #app :is(.feature-banner,.market-hero,.cta-section,.market-teaser-grid,.support-panel,.dash-header,.project-header,.review-header) :is(.pill-light,.pill-dark,.pill-outline) * {
+  color:#fff!important; text-shadow:0 1px 2px #6b2100!important;
+}
+html[data-theme="dark"] #app :is(.feature-banner,.market-hero,.cta-section,.market-teaser-grid,.support-panel,.dash-header,.project-header,.review-header) :is(.pill-light,.pill-dark,.pill-outline):hover {
+  background:linear-gradient(115deg,#ff702c,#ffae4c); color:#fff!important; border-color:#ffb35e;
+  box-shadow:0 12px 36px #ff5c2050;
+}
 html[data-theme="dark"] #app :is(.hero .accent,.section-heading em,.creator-suite-copy h2 em,.faq-section h2 em,.contact-grid h2 em,.market-hero h1 em,.provider-intro h1 em,.dash-header h1 em,.sx-pulse h2 em) {
   color:#ff7828;
   background:linear-gradient(105deg,#ff6425 8%,#ff973b 60%,#ffbd69);
