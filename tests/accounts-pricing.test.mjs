@@ -43,6 +43,7 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   assert.match(features, /data-unified-service="video"/);
   assert.match(features, /data-unified-service="longform"/);
   assert.match(features, /data-unified-service="podcast"/);
+  assert.match(features, /state\.service === "podcast" \? 2 : state\.service === "longform" \? 4 : 10/);
   assert.match(features, /Long-form Basic", price:5000/);
   assert.match(features, /Final video length/);
   assert.match(features, /Raw footage to review/);
@@ -68,11 +69,26 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=security-upload-login-1/);
-  assert.match(html, /contentx-release" content="security-upload-login-1/);
-  assert.match(html, /main\.js\?v=security-upload-login-1/);
-  assert.match(main, /features\.js\?v=security-upload-login-1/);
-  assert.match(main, /uploads\.js\?v=security-upload-login-1/);
+  assert.match(page, /\/site\/index\.html\?v=landscape-contrast-3/);
+  assert.match(html, /contentx-release" content="landscape-contrast-3/);
+  assert.match(html, /main\.js\?v=landscape-contrast-3/);
+  assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
+  assert.match(main, /features\.js\?v=noir-studio-1/);
+  assert.match(main, /uploads\.js\?v=no-video-placeholders-1/);
+});
+
+test("autoplays public preview videos without center overlay controls", async () => {
+  const [ui, marketplace] = await Promise.all([
+    load("public/site/src/ui.js"),
+    load("public/site/src/marketplace.js"),
+  ]);
+  assert.match(ui, /data-preview-autoplay/);
+  assert.match(ui, /muted loop playsinline autoplay preload="auto"/);
+  assert.doesNotMatch(ui, /class="play-work"/);
+  assert.doesNotMatch(ui, /class="center-play"/);
+  assert.doesNotMatch(ui, /class="fake-controls"/);
+  assert.match(marketplace, /muted loop playsinline autoplay preload="auto" data-preview-autoplay/);
+  assert.doesNotMatch(marketplace, /data-preview-video/);
 });
 
 test("lets visitors explore a demo dashboard before login", async () => {
@@ -84,6 +100,10 @@ test("lets visitors explore a demo dashboard before login", async () => {
   assert.match(main, /renderDashboard\(root, actions, \{ demo:true \}\)/);
   assert.match(ui, /Explore the dashboard before paying/);
   assert.match(ui, /data-demo-login/);
+  assert.match(ui, /Good afternoon\./);
+  assert.match(ui, /aria-label="Search workspace"/);
+  assert.doesNotMatch(ui, /Good afternoon, Meera/);
+  assert.doesNotMatch(ui, /◦<i><\/i>/);
 });
 
 test("passes marketing data into pricing so the homepage loader cannot crash", async () => {
@@ -105,6 +125,8 @@ test("keeps payment totals server-calculated with allowlisted add-ons", async ()
   assert.match(razorpay, /advanced_motion_graphics: \{ name: "Advanced Motion Graphics", amount: 1500/);
   assert.match(razorpay, /quick_delivery: \{ name: "Quick Delivery", amount: 700/);
   assert.match(razorpay, /long_basic: \{ name: "Long-form Basic", amount: 5000/);
+  assert.match(razorpay, /Monthly podcast production starts at 2 episodes/);
+  assert.match(razorpay, /Monthly long-form production starts at 4 videos/);
   assert.match(razorpay, /longform_extra_minutes/);
   assert.match(razorpay, /longform_raw_review/);
   assert.match(razorpay, /podcast_script: \{ name: "Podcast Episode Script", amount: 1500/);
@@ -130,36 +152,93 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   assert.match(auth, /RSASSA-PKCS1-v1_5/);
   assert.match(route, /request_otp/);
   assert.match(route, /verify_otp/);
+  assert.match(route, /request_password_reset/);
+  assert.match(route, /reset_password/);
   assert.match(account, /Continue with email code/);
+  assert.match(account, /Forgot password/);
+  assert.match(account, /request_password_reset/);
+  assert.match(account, /reset_password/);
   assert.match(account, /otp-box-grid/);
   assert.match(account, /bindOtpBoxes/);
   assert.match(account, /location\.hash = returningTo/);
   assert.match(account, /accounts\.google\.com\/gsi\/client/);
-  assert.match(account, /Payment details are handled by Razorpay/);
+  assert.match(account, /Free 50 GB account workspace/);
+  assert.match(account, /Clients can review from a private link without creating an account/);
+  assert.doesNotMatch(account, /Protected account access/);
   assert.match(account, /JSON\.stringify\(\{ paid:true, account:true \}\)/);
   assert.doesNotMatch(account, /email:user\.email/);
   assert.doesNotMatch(account, /name:user\.name/);
 });
 
 test("stores password hashes and server-side sessions instead of readable passwords", async () => {
-  const [auth, orderRoute, verifyRoute, razorpay] = await Promise.all([
+  const [auth, orderRoute, verifyRoute, razorpay, schema] = await Promise.all([
     load("lib/auth.ts"),
     load("app/api/payments/razorpay/order/route.ts"),
     load("app/api/payments/razorpay/verify/route.ts"),
     load("lib/razorpay.ts"),
+    load("db/schema.ts"),
   ]);
   assert.match(auth, /PBKDF2/);
-  assert.match(auth, /PASSWORD_ITERATIONS = 310_000/);
+  assert.match(auth, /PASSWORD_ITERATIONS = 100_000/);
+  assert.match(auth, /account_password_resets/);
+  assert.match(auth, /token_hash/);
+  assert.match(auth, /sendTransactionalEmail/);
+  assert.match(auth, /contentXEmailShell/);
   assert.match(auth, /HttpOnly; SameSite=Lax/);
   assert.match(auth, /requireSameOrigin/);
+  assert.match(auth, /ensureAuthSchemaColumns/);
+  assert.match(auth, /UPDATE account_users SET updated_at = created_at/);
   assert.match(auth, /token_hash/);
   assert.doesNotMatch(auth, /password TEXT/);
+  assert.doesNotMatch(auth, /plaintext/i);
+  assert.match(schema, /accountPasswordResets/);
   assert.match(orderRoute, /requireSameOrigin/);
   assert.match(orderRoute, /requireSessionUser/);
   assert.match(orderRoute, /currency: order\.currency/);
   assert.match(verifyRoute, /requireSessionUser/);
   assert.match(verifyRoute, /timingSafeEqual/);
   assert.match(razorpay, /currency: order\.currency/);
+});
+
+test("adds server-backed notification preferences and comment email digesting", async () => {
+  const [notifications, route, account, uploads, features, ui, envExample, schema] = await Promise.all([
+    load("lib/notifications.ts"),
+    load("app/api/notifications/route.ts"),
+    load("public/site/src/account.js"),
+    load("app/api/uploads/route.ts"),
+    load("public/site/src/features.js"),
+    load("public/site/src/ui.js"),
+    load(".env.example"),
+    load("db/schema.ts"),
+  ]);
+  assert.match(notifications, /notification_preferences/);
+  assert.match(notifications, /account_notifications/);
+  assert.match(notifications, /email_notification_queue/);
+  assert.match(notifications, /commentEmailMode: "digest"/);
+  assert.match(notifications, /digestThreshold: 9/);
+  assert.match(notifications, /sendDigestIfReady/);
+  assert.match(notifications, /You have \$\{countLabel\} new Content X comments/);
+  assert.match(route, /update_preferences/);
+  assert.match(route, /test_notification/);
+  assert.match(route, /record_event/);
+  assert.match(route, /mark_read/);
+  assert.match(route, /requireSessionUser/);
+  assert.match(account, /NOTIFICATION_API/);
+  assert.match(account, /notificationSettingsPanel/);
+  assert.match(account, /Digest at 9\+/);
+  assert.match(account, /data-account-notification="emailEnabled"/);
+  assert.match(uploads, /notifyOwner/);
+  assert.match(uploads, /publishNotification/);
+  assert.match(features, /pushServerNotification/);
+  assert.match(ui, /postNotificationEvent/);
+  assert.match(envExample, /RESEND_API_KEY/);
+  assert.match(envExample, /CONTENTX_EMAIL_FROM/);
+  assert.match(envExample, /CONTENTX_OWNER_EMAIL/);
+  assert.match(envExample, /GOOGLE_CLIENT_ID/);
+  assert.match(envExample, /SUPABASE_URL/);
+  assert.match(envExample, /SUPABASE_ANON_KEY/);
+  assert.match(schema, /notificationPreferences/);
+  assert.match(schema, /emailNotificationQueue/);
 });
 
 test("collects the detailed brief after verified payment and opens private uploads", async () => {
@@ -172,7 +251,49 @@ test("collects the detailed brief after verified payment and opens private uploa
   assert.match(account, /Video or episode title/);
   assert.match(account, /currency === "USD"/);
   assert.match(account, /Editing and creative instructions/);
-  assert.match(account, /Reference link/);
+  assert.match(account, /Source links & takes/);
+  assert.match(account, /Take 1 - https:\/\/drive\.google\.com/);
+  assert.match(account, /You can still upload files directly in the next step/);
+});
+
+test("keeps payment history private and adds owner refund controls", async () => {
+  const [schema, razorpay, historyRoute, briefs, account, features] = await Promise.all([
+    load("db/schema.ts"),
+    load("lib/razorpay.ts"),
+    load("app/api/payments/history/route.ts"),
+    load("app/api/briefs/route.ts"),
+    load("public/site/src/account.js"),
+    load("public/site/src/features.js"),
+  ]);
+  assert.match(schema, /refundStatus/);
+  assert.match(razorpay, /ensurePaymentSchemaColumns/);
+  assert.match(historyRoute, /requireSessionUser/);
+  assert.match(historyRoute, /requireOwner/);
+  assert.match(historyRoute, /request_refund/);
+  assert.match(historyRoute, /mark_refunded/);
+  assert.match(historyRoute, /completedProjectStatuses/);
+  assert.match(briefs, /p\.refund_status/);
+  assert.match(briefs, /payment has been refunded/);
+  assert.match(account, /Payment history & refund status/);
+  assert.match(account, /canStartBrief/);
+  assert.match(features, /Finance & refunds/);
+  assert.match(features, /OWNER_TOKEN_KEY/);
+  assert.match(features, /Refund buttons update Content X records only/);
+});
+
+test("lets paid clients attach external source links before uploading files", async () => {
+  const [briefs, account, uploads] = await Promise.all([
+    load("app/api/briefs/route.ts"),
+    load("public/site/src/account.js"),
+    load("public/site/src/uploads.js"),
+  ]);
+  assert.match(briefs, /cleanSourceLinks/);
+  assert.match(briefs, /Each source line needs a valid https:\/\/ link/);
+  assert.match(briefs, /slice\(0, 30\)/);
+  assert.match(account, /Source links & takes/);
+  assert.match(account, /Google Drive, Dropbox, WeTransfer/);
+  assert.match(uploads, /Google Drive, Dropbox, WeTransfer/);
+  assert.match(uploads, /Upload multiple takes, raw files or references/);
 });
 
 test("shows pre-payment tutorials and a safe rollback note", async () => {
@@ -181,7 +302,10 @@ test("shows pre-payment tutorials and a safe rollback note", async () => {
     load("docs/release-history.md"),
   ]);
   assert.match(creatorTools, /prepay-tutorials/);
-  assert.match(creatorTools, /See it before you pay/);
+  assert.match(creatorTools, /Small details. A better workflow./);
+  assert.match(creatorTools, /cx-tutorial-card/);
+  assert.doesNotMatch(creatorTools, /Demo video placeholder/);
+  assert.doesNotMatch(creatorTools, /Coming soon/);
   assert.match(creatorTools, /Explore demo dashboard/);
   assert.match(releaseHistory, /demo-share-usd-1/);
   assert.match(releaseHistory, /pricing-security-dashboard-1/);
@@ -189,10 +313,13 @@ test("shows pre-payment tutorials and a safe rollback note", async () => {
 });
 
 test("shows owner permission controls and Frame-style review flow", async () => {
-  const [features, account, data] = await Promise.all([
+  const [features, account, data, ui, creatorTools, polish] = await Promise.all([
     load("public/site/src/features.js"),
     load("public/site/src/account.js"),
     load("public/site/src/data.js"),
+    load("public/site/src/ui.js"),
+    load("public/site/src/creator-tools.js"),
+    load("public/site/src/polish.css"),
   ]);
   assert.match(data, /Managed content production · private review workspace/);
   assert.match(features, /teamPermissionsView/);
@@ -200,5 +327,26 @@ test("shows owner permission controls and Frame-style review flow", async () => 
   assert.match(features, /Create share links/);
   assert.match(features, /owner-review-flow/);
   assert.match(account, /account-review-panel/);
-  assert.match(account, /Control comments, downloads, uploads, passcode and expiry/);
+  assert.match(account, /Control downloads, uploads, expiry and client review access/);
+  assert.match(ui, /timeline-hover-preview/);
+  assert.match(ui, /comment-input-row/);
+  assert.match(ui, /comment-action-row/);
+  assert.match(ui, /player-play-toggle/);
+  assert.match(ui, /cx_comment_permissions/);
+  assert.match(ui, /data-complete-comment/);
+  assert.match(ui, /data-edit-comment/);
+  assert.match(ui, /data-delete-comment/);
+  assert.match(ui, /edited" : ""/);
+  assert.match(creatorTools, /if \(route !== "review"\)/);
+  assert.doesNotMatch(creatorTools, /caption-workspace-button/);
+  assert.doesNotMatch(creatorTools, /CC Hinglish captions/);
+  assert.doesNotMatch(creatorTools, /Quick replies/);
+  assert.match(polish, /smart-reply-row\{display:none!important\}/);
+  assert.match(polish, /player-play-toggle/);
+  assert.match(polish, /comment-complete-badge/);
+});
+
+test("keeps production upload completion compatible with long R2 upload ids", async () => {
+  const uploadsRoute = await load("app/api/uploads/route.ts");
+  assert.match(uploadsRoute, /cleanText\(input\.uploadId, 2048\)/);
 });

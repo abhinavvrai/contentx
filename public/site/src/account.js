@@ -1,8 +1,9 @@
 const AUTH_API = "/api/auth";
 const BRIEF_API = "/api/briefs";
+const NOTIFICATION_API = "/api/notifications";
 let currentUser = null;
 let sessionChecked = false;
-let accountProviders = { google:{ available:false, clientId:"" }, emailOtp:{ available:false } };
+let accountProviders = { google:{ available:false, clientId:"" }, emailOtp:{ available:false }, passwordReset:{ available:false } };
 let googleScriptPromise = null;
 
 const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" })[character]);
@@ -39,16 +40,19 @@ export function rememberProtectedRoute(route) {
 export function renderAccountAccess(root, actions) {
   const returningTo = localStorage.getItem("cx_return_route") || "workspace";
   root.className = "account-app";
-  root.innerHTML = `<main class="account-access account-access-frame"><section class="account-story"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><div><span class="account-orbit-mark">CX</span><p class="eyebrow light"><span></span>Client review workspace</p><h1>Welcome to your production room.</h1><p>Open projects, upload safe files, compare versions, create share links and keep feedback away from scattered WhatsApp threads.</p><ul><li><b>✓</b> Email OTP, Google or password sign-in</li><li><b>✓</b> Private project files and version stacks</li><li><b>✓</b> Share links with expiry and upload controls</li></ul></div><small>Passwords are never shown to users or stored in readable form.</small></section><section class="account-card account-card-frame"><button class="account-close" type="button" aria-label="Return home">×</button><div class="account-card-logo"><span>CX</span><small>Content X Workspace</small></div><div class="account-toggle" role="tablist" aria-label="Account action"><button class="active" type="button" data-account-tab="login">Sign in</button><button type="button" data-account-tab="register">Create account</button></div><div data-account-panel></div><div class="dashboard-help-strip account-help-strip"><article><span>1</span><strong>Pay package</strong><small>Checkout creates the correct workspace.</small></article><article><span>2</span><strong>Brief & upload</strong><small>Add instructions, footage and references.</small></article><article><span>3</span><strong>Review delivery</strong><small>Comment, approve and download final files.</small></article></div><aside class="account-security"><span>✓</span><p><strong>Protected account access</strong><small>Login stays server-side. Payment details are handled by Razorpay, not stored on this page.</small></p></aside></section></main>`;
+  root.innerHTML = `<main class="account-access account-access-frame"><section class="account-story"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><div><span class="account-orbit-mark">CX</span><p class="eyebrow light"><span></span>Free review workspace</p><h1>Welcome to your production room.</h1><p>Create projects, upload safe files, compare versions, create share links and keep feedback away from scattered WhatsApp threads.</p><ul><li><b>✓</b> Free 50 GB account workspace</li><li><b>✓</b> Private project files and version stacks</li><li><b>✓</b> Share links with expiry and upload controls</li></ul></div><small>Clients can review from a private link without creating an account.</small></section><section class="account-card account-card-frame"><button class="account-close" type="button" aria-label="Return home">×</button><div class="account-card-logo"><span>CX</span><small>Content X Workspace</small></div><div class="account-toggle" role="tablist" aria-label="Account action"><button class="active" type="button" data-account-tab="login">Sign in</button><button type="button" data-account-tab="register">Create account</button></div><div data-account-panel></div><div class="dashboard-help-strip account-help-strip"><article><span>1</span><strong>Create project</strong><small>Start a private workspace for each client.</small></article><article><span>2</span><strong>Upload files</strong><small>Add footage, finals, references and new versions.</small></article><article><span>3</span><strong>Share for review</strong><small>Collect comments, approvals and delivery notes.</small></article></div><aside class="account-security"><span>✓</span><p><strong>Ready to review</strong><small>Sign in with Google, email code, or password to open your workspace.</small></p></aside></section></main>`;
   root.querySelector(".account-close").addEventListener("click", actions.openMarketing);
   root.querySelector(".account-story .brand").addEventListener("click", event => { event.preventDefault(); actions.openMarketing(); });
   const panel = root.querySelector("[data-account-panel]");
   const tabs = [...root.querySelectorAll("[data-account-tab]")];
+  const resetParams = new URLSearchParams((location.hash.split("?")[1] || "").replace(/^#/, ""));
+  const resetToken = resetParams.get("reset");
+  const resetEmail = resetParams.get("email") || "";
 
   function show(mode) {
     tabs.forEach(button => button.classList.toggle("active", button.dataset.accountTab === mode));
     const register = mode === "register";
-    panel.innerHTML = `<p class="eyebrow"><span></span>${register ? "New client account" : "Welcome back"}</p><h2>${register ? "Create your account." : "Sign in to continue."}</h2><p>${register ? "Use Google or verify your email, then keep the same email for checkout and project files." : "Open your workspace, project files, versions and private share links."}</p><div class="account-provider-actions">${accountProviders.google?.available ? `<div data-google-button></div>` : ""}${accountProviders.emailOtp?.available ? `<button type="button" data-account-otp>✉ Continue with email code</button>` : ""}</div>${(accountProviders.google?.available || accountProviders.emailOtp?.available) ? '<div class="account-divider"><span>or continue with password</span></div>' : ""}<form data-password-form>${register ? '<label>Full name<input name="name" autocomplete="name" required placeholder="Your full name"></label>' : ""}<label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><label>Password<input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="10" maxlength="128" required placeholder="10+ character passphrase"></label>${register ? '<small class="password-tip">A long phrase is better than a short complex password.</small>' : ""}<p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Create account →" : "Sign in →"}</button></form>`;
+    panel.innerHTML = `<p class="eyebrow"><span></span>${register ? "New creator account" : "Welcome back"}</p><h2>${register ? "Create your account." : "Sign in to continue."}</h2><p>${register ? "Use Google, email code or a password to open your free review workspace." : "Open your workspace, project files, versions and private share links."}</p><div class="account-provider-actions">${accountProviders.google?.available ? `<div data-google-button></div>` : ""}${accountProviders.emailOtp?.available ? `<button type="button" data-account-otp>✉ Continue with email code</button>` : ""}</div>${(accountProviders.google?.available || accountProviders.emailOtp?.available) ? '<div class="account-divider"><span>or continue with password</span></div>' : ""}<form data-password-form>${register ? '<label>Full name<input name="name" autocomplete="name" required placeholder="Your full name"></label>' : ""}<label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><label>Password<input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="10" maxlength="128" required placeholder="10+ character passphrase"></label>${register ? '<small class="password-tip">A long phrase is better than a short complex password.</small>' : '<button class="account-text-link" type="button" data-forgot-password>Forgot password?</button>'}<p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Create account →" : "Sign in →"}</button></form>`;
     panel.querySelector("[data-password-form]").addEventListener("submit", async event => {
       event.preventDefault();
       const button = event.currentTarget.querySelector("button[type=submit]");
@@ -69,10 +73,16 @@ export function renderAccountAccess(root, actions) {
       }
     });
     panel.querySelector("[data-account-otp]")?.addEventListener("click", () => renderOtpAccess(panel, returningTo, register));
+    panel.querySelector("[data-forgot-password]")?.addEventListener("click", () => renderPasswordResetRequest(panel, returningTo));
     if (accountProviders.google?.available) renderGoogleAccess(panel, returningTo);
   }
 
   tabs.forEach(button => button.addEventListener("click", () => show(button.dataset.accountTab)));
+  if (resetToken) {
+    tabs.forEach(button => button.classList.remove("active"));
+    renderPasswordResetForm(panel, returningTo, resetToken, resetEmail);
+    return;
+  }
   show(returningTo === "checkout" ? "register" : "login");
 }
 
@@ -81,6 +91,41 @@ function finishAccountAccess(user, returningTo) {
   localStorage.setItem("cx_access", JSON.stringify({ paid:true, account:true }));
   localStorage.removeItem("cx_return_route");
   location.hash = returningTo;
+}
+
+function renderPasswordResetRequest(panel, returningTo) {
+  panel.innerHTML = `<button class="account-inline-back" type="button">← Back to sign in</button><p class="eyebrow"><span></span>Password help</p><h2>Reset your password.</h2><p>Enter the email used for your Content X account. If it exists, we’ll send a secure reset link.</p><form data-reset-request><label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">Send reset link →</button></form>`;
+  panel.querySelector(".account-inline-back").addEventListener("click", () => panel.closest(".account-card").querySelector('[data-account-tab="login"]').click());
+  panel.querySelector("[data-reset-request]").addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = event.currentTarget.querySelector("button[type=submit]");
+    const error = event.currentTarget.querySelector("[role=alert]");
+    button.disabled = true; button.textContent = "Sending secure link…"; error.hidden = true;
+    try {
+      await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"request_password_reset", email:new FormData(event.currentTarget).get("email") }) });
+      event.currentTarget.innerHTML = `<div class="account-success"><span>✓</span><h3>Check your email.</h3><p>If this address has an account, a password reset link was sent. The link expires in 60 minutes.</p><button class="pill pill-dark" type="button" data-back-login>Return to sign in</button></div>`;
+      event.currentTarget.querySelector("[data-back-login]").addEventListener("click", () => panel.closest(".account-card").querySelector('[data-account-tab="login"]').click());
+    } catch (failure) {
+      error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Send reset link →";
+    }
+  });
+}
+
+function renderPasswordResetForm(panel, returningTo, token, email) {
+  panel.innerHTML = `<p class="eyebrow"><span></span>New password</p><h2>Create a fresh password.</h2><p>Use at least 10 characters. This will sign out old sessions after the password changes.</p><form data-reset-password><input type="hidden" name="token" value="${escapeHTML(token)}"><label>Email address<input name="email" type="email" autocomplete="email" required value="${escapeHTML(email)}" placeholder="you@company.com"></label><label>New password<input name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required placeholder="10+ character passphrase"></label><small class="password-tip">Never reuse a password from another website.</small><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">Reset password & sign in →</button></form>`;
+  panel.querySelector("[data-reset-password]").addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = event.currentTarget.querySelector("button[type=submit]");
+    const error = event.currentTarget.querySelector("[role=alert]");
+    button.disabled = true; button.textContent = "Resetting…"; error.hidden = true;
+    try {
+      const values = Object.fromEntries(new FormData(event.currentTarget));
+      const result = await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"reset_password", ...values }) });
+      finishAccountAccess(result.user, returningTo);
+    } catch (failure) {
+      error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Reset password & sign in →";
+    }
+  });
 }
 
 function renderOtpAccess(panel, returningTo, register) {
@@ -191,19 +236,91 @@ export async function renderAccountDashboard(root, actions) {
   root.className = "account-app";
   root.innerHTML = `<main class="account-loading"><span></span><h1>Opening your account…</h1></main>`;
   try {
-    const data = await api(BRIEF_API, { cache:"no-store" });
+    const [data, notificationData] = await Promise.all([
+      api(BRIEF_API, { cache:"no-store" }),
+      api(NOTIFICATION_API, { cache:"no-store" }).catch(() => null),
+    ]);
     currentUser = data.user;
     const orders = data.orders || [];
-    root.innerHTML = `<header class="account-head"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><nav><a href="#pricing">Pricing</a><button type="button" data-account-logout>Sign out</button></nav></header><main class="account-dashboard"><section class="account-welcome"><div><p class="eyebrow"><span></span>Client account</p><h1>Hello, ${escapeHTML(data.user.name.split(" ")[0])}.</h1><p>Manage paid orders, send the full project brief and upload footage or references.</p></div><a class="pill pill-hot" href="#home">Choose another package →</a></section><section class="dashboard-help-strip account-help-strip"><article><span>1</span><strong>Open project</strong><small>Every paid order gets its own private workspace.</small></article><article><span>2</span><strong>Upload files</strong><small>Add footage, logos and reference links after the brief.</small></article><article><span>3</span><strong>Review delivery</strong><small>Track versions, comments, approvals and downloads.</small></article></section><section class="account-review-panel"><article><span>Share links</span><strong>Send secure review pages</strong><small>Control comments, downloads, uploads, passcode and expiry for every client link.</small></article><article><span>Versions</span><strong>Keep every cut together</strong><small>Drop a new file on the same asset to make V2, V3 and final delivery easy to follow.</small></article><article><span>Activity</span><strong>Know what changed</strong><small>Views, comments, approvals and downloads stay attached to each project.</small></article></section><section class="account-order-section"><div class="account-section-title"><div><h2>Your projects</h2><p>Detailed briefs and files are collected after payment, so checkout stays quick.</p></div><span>${orders.length} order${orders.length === 1 ? "" : "s"}</span></div><div class="account-orders">${orders.length ? orders.map(orderCard).join("") : `<div class="account-empty"><span>◇</span><h3>No paid projects yet</h3><p>Choose a video or podcast package to start.</p><a class="pill pill-dark" href="#home">See pricing →</a></div>`}</div></section></main>`;
+    const totalPaid = orders.filter(order => ["verified", "captured"].includes(order.status)).reduce((sum, order) => sum + Number(order.amount_paise || 0), 0);
+    const activeRefunds = orders.filter(order => ["requested", "processing"].includes(order.refund_status)).length;
+    root.innerHTML = `<header class="account-head"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><nav><a href="#pricing">Pricing</a><a href="#workspace">Workspace</a><button type="button" data-account-logout>Sign out</button></nav></header><main class="account-dashboard"><section class="account-welcome"><div><p class="eyebrow"><span></span>Free creator account</p><h1>Hello, ${escapeHTML(data.user.name.split(" ")[0])}.</h1><p>Create projects for your own editing clients, upload files, manage versions and collect comments through private share links.</p></div><a class="pill pill-hot" href="#workspace">Open free workspace →</a></section><section class="dashboard-help-strip account-help-strip"><article><span>1</span><strong>Create project</strong><small>Every account gets a free 50 GB review workspace.</small></article><article><span>2</span><strong>Upload files</strong><small>Add videos, audio, images, documents and replacement versions.</small></article><article><span>3</span><strong>Share for review</strong><small>Clients can comment from a secure link without login.</small></article></section><section class="account-review-panel"><article><span>Share links</span><strong>Send secure review pages</strong><small>Control downloads, uploads, expiry and client review access for every project link.</small></article><article><span>Versions</span><strong>Keep every cut together</strong><small>Drop a new file on the same asset to make V2, V3 and final delivery easy to follow.</small></article><article><span>Activity</span><strong>Know what changed</strong><small>Views, comments, approvals and downloads stay attached to each project.</small></article></section>${notificationSettingsPanel(notificationData)}<section class="account-finance-summary"><article><span>Free storage</span><strong>50 GB</strong><small>Included for every account while Content X is free</small></article><article><span>Refunds</span><strong>${activeRefunds}</strong><small>Active refund requests</small></article><article><span>Privacy</span><strong>Private</strong><small>Only you and authorized Content X admins can view account data.</small></article></section><section class="account-order-section"><div class="account-section-title"><div><h2>Paid Content X orders</h2><p>If someone buys editing from Content X, their payment and project brief appears here too.</p></div><span>${orders.length} order${orders.length === 1 ? "" : "s"}</span></div><div class="account-orders">${orders.length ? orders.map(orderCard).join("") : `<div class="account-empty"><span>◇</span><h3>No paid orders yet</h3><p>You can still use the free workspace for your own editing clients.</p><a class="pill pill-dark" href="#workspace">Open workspace →</a></div>`}</div></section><section class="account-order-section account-payment-history"><div class="account-section-title"><div><h2>Payment history & refund status</h2><p>Receipts, payment status and refund updates stay private to your account.</p></div><span>${orders.filter(order => order.refund_status && order.refund_status !== "none").length} refund update${orders.filter(order => order.refund_status && order.refund_status !== "none").length === 1 ? "" : "s"}</span></div><div class="account-payment-list">${orders.length ? orders.map(paymentHistoryCard).join("") : `<div class="account-empty"><span>₹</span><h3>No payment history yet</h3><p>Your receipts will appear here after checkout.</p></div>`}</div></section></main>`;
     root.querySelector(".brand").addEventListener("click", event => { event.preventDefault(); actions.openMarketing(); });
     root.querySelector("[data-account-logout]").addEventListener("click", async () => {
       await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"logout" }) });
       currentUser = null; sessionChecked = true; localStorage.removeItem("cx_access"); actions.openMarketing();
     });
+    bindNotificationSettings(root);
   } catch (error) {
     root.innerHTML = `<main class="account-error"><span>!</span><h1>We couldn’t open your account.</h1><p>${escapeHTML(error.message)}</p><button class="pill pill-dark" type="button">Sign in again</button></main>`;
     root.querySelector("button").addEventListener("click", () => { rememberProtectedRoute("account"); location.hash = "access"; });
   }
+}
+
+function notificationSettingsPanel(data) {
+  const preferences = { emailEnabled:true, inAppEnabled:true, uploadEmail:true, uploadInApp:true, versionEmail:true, versionInApp:true, approvalEmail:true, approvalInApp:true, paymentEmail:true, paymentInApp:true, securityEmail:true, securityInApp:true, commentEmailMode:"digest", commentInApp:true, digestThreshold:9, ...(data?.preferences || {}) };
+  const notifications = Array.isArray(data?.notifications) ? data.notifications : [];
+  const queuedEmails = Array.isArray(data?.queuedEmails) ? data.queuedEmails : [];
+  const rows = [
+    ["upload", "Uploads", "When files or new versions are added."],
+    ["version", "Delivery updates", "When a new cut, delivery or managed review is ready."],
+    ["approval", "Approvals", "When a version is approved or marked complete."],
+    ["payment", "Payments", "Receipts, refund status and checkout updates."],
+    ["security", "Security", "Login and important account changes."],
+  ];
+  const activity = notifications.length ? notifications.slice(0, 5).map(item => `<article data-notification-item="${escapeHTML(item.id)}"><span>${notificationIcon(item.event_type)}</span><div><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(item.message)}</small></div>${item.read_at ? "<em>Read</em>" : `<button type="button" data-mark-notification-read="${escapeHTML(item.id)}">Mark read</button>`}</article>`).join("") : `<div class="account-empty compact"><span>◌</span><h3>No notifications yet</h3><p>Uploads, comments, approvals and payments will appear here.</p></div>`;
+  return `<section class="account-notification-center"><div class="account-section-title"><div><h2>Notification controls</h2><p>Choose what comes by email and what stays inside the website.</p></div><button class="pill pill-dark" type="button" data-test-account-notification>Send test</button></div><div class="notification-control-grid"><article class="notification-master-card"><label><span><strong>Email updates</strong><small>Uses your account email. Comment emails are bundled by default.</small></span><input type="checkbox" data-account-notification="emailEnabled" ${preferences.emailEnabled ? "checked" : ""}></label><label><span><strong>Website notifications</strong><small>Show updates in your Content X dashboard.</small></span><input type="checkbox" data-account-notification="inAppEnabled" ${preferences.inAppEnabled ? "checked" : ""}></label><div><span>Email queue</span><strong>${queuedEmails.length}</strong><small>${queuedEmails.length ? "Recent sent / queued items" : "No email activity yet"}</small></div></article><article class="notification-event-card"><h3>Events</h3>${rows.map(([key, title, copy]) => `<div class="notification-event-row"><div><strong>${title}</strong><small>${copy}</small></div><label>Email<input type="checkbox" data-account-notification="${key}Email" ${preferences[`${key}Email`] ? "checked" : ""}></label><label>Website<input type="checkbox" data-account-notification="${key}InApp" ${preferences[`${key}InApp`] ? "checked" : ""}></label></div>`).join("")}<div class="notification-event-row comment-row"><div><strong>Comments</strong><small>Use digest mode to avoid one email for every single comment.</small></div><label>Email<select data-account-notification="commentEmailMode"><option value="digest" ${preferences.commentEmailMode === "digest" ? "selected" : ""}>Digest at 9+</option><option value="instant" ${preferences.commentEmailMode === "instant" ? "selected" : ""}>Instant</option><option value="off" ${preferences.commentEmailMode === "off" ? "selected" : ""}>Off</option></select></label><label>Website<input type="checkbox" data-account-notification="commentInApp" ${preferences.commentInApp ? "checked" : ""}></label><label>Digest count<input type="number" min="3" max="25" value="${Number(preferences.digestThreshold) || 9}" data-account-notification="digestThreshold"></label></div></article></div><div class="notification-activity-list"><div class="account-section-title small"><div><h3>Recent website notifications</h3><p>Unread items can be marked read without changing email history.</p></div></div>${activity}</div><p class="notification-save-state" data-notification-save-state role="status"></p></section>`;
+}
+
+function bindNotificationSettings(root) {
+  const panel = root.querySelector(".account-notification-center");
+  if (!panel) return;
+  const status = panel.querySelector("[data-notification-save-state]");
+  const current = {};
+  const collect = () => {
+    panel.querySelectorAll("[data-account-notification]").forEach(input => {
+      const key = input.dataset.accountNotification;
+      current[key] = input.type === "checkbox" ? input.checked : input.type === "number" ? Number(input.value) : input.value;
+    });
+    return current;
+  };
+  const save = async () => {
+    status.textContent = "Saving notification settings…";
+    try {
+      await api(NOTIFICATION_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"update_preferences", ...collect() }) });
+      status.textContent = "Saved ✓";
+      setTimeout(() => { if (status.textContent === "Saved ✓") status.textContent = ""; }, 1800);
+    } catch (error) {
+      status.textContent = error.message || "Could not save notification settings.";
+    }
+  };
+  panel.querySelectorAll("[data-account-notification]").forEach(input => input.addEventListener("change", save));
+  panel.querySelector("[data-test-account-notification]")?.addEventListener("click", async event => {
+    event.currentTarget.textContent = "Sending…";
+    try {
+      await api(NOTIFICATION_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"test_notification" }) });
+      event.currentTarget.textContent = "Test sent ✓";
+    } catch (error) {
+      event.currentTarget.textContent = "Try again";
+      status.textContent = error.message || "Could not send test notification.";
+    }
+    setTimeout(() => { event.currentTarget.textContent = "Send test"; }, 2200);
+  });
+  panel.querySelectorAll("[data-mark-notification-read]").forEach(button => button.addEventListener("click", async () => {
+    button.textContent = "Marking…";
+    try {
+      await api(NOTIFICATION_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"mark_read", id:button.dataset.markNotificationRead }) });
+      button.closest("article")?.classList.add("is-read");
+      button.replaceWith(Object.assign(document.createElement("em"), { textContent:"Read" }));
+    } catch (error) {
+      status.textContent = error.message || "Could not update notification.";
+      button.textContent = "Mark read";
+    }
+  }));
+}
+
+function notificationIcon(type) {
+  return type === "upload" ? "↑" : type === "approval" ? "✓" : type === "payment" ? "₹" : type === "comment" ? "◌" : type === "security" ? "⌾" : "•";
 }
 
 function contentUnit(type, quantity) {
@@ -213,10 +330,29 @@ function contentUnit(type, quantity) {
 }
 
 function orderCard(order) {
-  const paid = ["verified", "captured"].includes(order.status);
+  const refundStatus = normalizeRefundStatus(order.refund_status);
+  const refunded = refundStatus === "refunded";
+  const pausedForRefund = refundStatus === "requested" || refundStatus === "processing";
+  const paid = ["verified", "captured"].includes(order.status) && !refunded && !pausedForRefund;
   const hasBrief = Boolean(order.brief_id);
   const addOns = Array.isArray(order.add_ons) ? order.add_ons : [];
-  return `<article class="account-order-card"><header><div><span>${escapeHTML(order.content_type || "video")}</span><small>${new Date(Number(order.created_at)).toLocaleDateString([], { dateStyle:"medium" })}</small></div><b class="${paid ? "paid" : "pending"}">${paid ? "Paid" : "Payment pending"}</b></header><h3>${escapeHTML(order.plan_name)}</h3><p>${Number(order.quantity)} ${contentUnit(order.content_type, Number(order.quantity))} · ${escapeHTML(order.billing === "monthly" ? "Monthly" : "One-time")}</p>${addOns.length ? `<ul>${addOns.map(item => `<li>+ ${escapeHTML(item.name)}</li>`).join("")}</ul>` : ""}<footer><strong>${money(order.amount_paise, order.currency)}</strong><div>${paid ? `<a class="pill pill-dark" href="#brief?order=${encodeURIComponent(order.razorpay_order_id)}">${hasBrief ? "Edit brief" : "Add project brief"}</a>${order.project_id ? `<a class="pill pill-hot" href="#workspace?project=${encodeURIComponent(order.project_id)}">Open workspace</a>` : ""}` : `<span>Finish payment to add the brief</span>`}</div></footer></article>`;
+  const statusLabel = refunded ? "Refunded" : pausedForRefund ? (refundStatus === "processing" ? "Refund processing" : "Refund requested") : paid ? "Paid" : "Payment pending";
+  return `<article class="account-order-card"><header><div><span>${escapeHTML(order.content_type || "video")}</span><small>${new Date(Number(order.created_at)).toLocaleDateString([], { dateStyle:"medium" })}</small></div><b class="${paid ? "paid" : refunded ? "refunded" : "pending"}">${statusLabel}</b></header><h3>${escapeHTML(order.plan_name)}</h3><p>${Number(order.quantity)} ${contentUnit(order.content_type, Number(order.quantity))} · ${escapeHTML(order.billing === "monthly" ? "Monthly" : "One-time")}</p>${addOns.length ? `<ul>${addOns.map(item => `<li>+ ${escapeHTML(item.name)}</li>`).join("")}</ul>` : ""}${pausedForRefund || refunded ? `<aside class="account-refund-note">${refundStatusCopy(refundStatus)}${order.refund_reason ? `<small>Reason: ${escapeHTML(order.refund_reason)}</small>` : ""}</aside>` : ""}<footer><strong>${money(order.amount_paise, order.currency)}</strong><div>${paid ? `<a class="pill pill-dark" href="#brief?order=${encodeURIComponent(order.razorpay_order_id)}">${hasBrief ? "Edit brief" : "Add project brief"}</a>${order.project_id ? `<a class="pill pill-hot" href="#workspace?project=${encodeURIComponent(order.project_id)}">Open workspace</a>` : ""}` : refunded ? `<span>This order is closed after refund</span>` : pausedForRefund ? `<span>Project paused while refund is reviewed</span>` : `<span>Finish payment to add the brief</span>`}</div></footer></article>`;
+}
+
+function paymentHistoryCard(order) {
+  const refundStatus = normalizeRefundStatus(order.refund_status);
+  const statusLabel = refundStatus === "none" ? (["verified", "captured"].includes(order.status) ? "Paid" : "Payment pending") : refundStatusCopy(refundStatus);
+  const refundAmount = Number(order.refund_amount_paise || 0);
+  return `<article class="account-payment-row"><div><strong>${escapeHTML(order.plan_name || "Content X package")}</strong><small>${escapeHTML(order.razorpay_order_id || "Receipt pending")}</small></div><span>${new Date(Number(order.created_at)).toLocaleDateString([], { dateStyle:"medium" })}</span><span>${money(order.amount_paise, order.currency)}</span><b class="finance-status ${refundStatus}">${statusLabel}</b>${refundAmount ? `<em>Refund: ${money(refundAmount, order.currency)}</em>` : "<em>—</em>"}</article>`;
+}
+
+function normalizeRefundStatus(value) {
+  return ["requested", "processing", "refunded", "cancelled"].includes(value) ? value : "none";
+}
+
+function refundStatusCopy(status) {
+  return status === "requested" ? "Refund requested" : status === "processing" ? "Refund processing" : status === "refunded" ? "Refunded" : status === "cancelled" ? "Refund cancelled" : "No refund";
 }
 
 export async function renderProjectBrief(root, actions, route) {
@@ -225,10 +361,10 @@ export async function renderProjectBrief(root, actions, route) {
   try {
     const data = await api(BRIEF_API, { cache:"no-store" });
     const requestedOrder = new URLSearchParams(route.split("?")[1] || "").get("order");
-    const order = data.orders.find(item => item.razorpay_order_id === requestedOrder) || data.orders.find(item => ["verified", "captured"].includes(item.status));
+    const order = data.orders.find(item => item.razorpay_order_id === requestedOrder && canStartBrief(item)) || data.orders.find(canStartBrief);
     if (!order) throw new Error("Complete a package payment before adding the project brief.");
     const addOns = Array.isArray(order.add_ons) ? order.add_ons : [];
-    root.innerHTML = `<header class="account-head"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><a href="#account">Your account</a></header><main class="brief-shell"><section class="brief-intro"><p class="eyebrow light"><span></span>After-payment project setup</p><h1>Tell us exactly what to create.</h1><p>Your package and add-ons are already locked. Now share the creative details and then upload the footage and references.</p><div><span>01 <b>Package paid</b></span><span class="active">02 <b>Project brief</b></span><span>03 <b>Upload files</b></span></div><aside><strong>${escapeHTML(order.plan_name)}</strong><span>${Number(order.quantity)} ${contentUnit(order.content_type, Number(order.quantity))}</span>${addOns.map(item => `<small>+ ${escapeHTML(item.name)}</small>`).join("")}</aside></section><section class="brief-card"><p class="eyebrow"><span></span>Project details</p><h2>${order.brief_id ? "Update your brief." : "Start your brief."}</h2><form><input type="hidden" name="razorpayOrderId" value="${escapeHTML(order.razorpay_order_id)}"><label>Video or episode title<input name="title" required maxlength="140" value="${escapeHTML(order.title || "")}" placeholder="e.g. Why most founders struggle with content"></label><label>What is this content about?<textarea name="description" required maxlength="2500" rows="4" placeholder="Topic, audience, platform and the main message…">${escapeHTML(order.description || "")}</textarea></label><label>Editing and creative instructions<textarea name="instructions" required maxlength="5000" rows="6" placeholder="Pacing, captions, brand colours, shots to keep, shots to avoid, CTA and anything else…">${escapeHTML(order.instructions || "")}</textarea></label><label>Reference link <span>optional</span><input name="referenceUrl" type="url" value="${escapeHTML(order.reference_url || "")}" placeholder="https://youtube.com/… or https://instagram.com/…"><small>You can upload reference files in the next step.</small></label><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">Save brief & upload files →</button></form></section></main>`;
+    root.innerHTML = `<header class="account-head"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><a href="#account">Your account</a></header><main class="brief-shell"><section class="brief-intro"><p class="eyebrow light"><span></span>After-payment project setup</p><h1>Tell us exactly what to create.</h1><p>Your package and add-ons are already locked. Share Drive/source links, tell us which takes matter, then upload any files you want to keep inside the website.</p><div><span>01 <b>Package paid</b></span><span class="active">02 <b>Project brief</b></span><span>03 <b>Upload files</b></span></div><aside><strong>${escapeHTML(order.plan_name)}</strong><span>${Number(order.quantity)} ${contentUnit(order.content_type, Number(order.quantity))}</span>${addOns.map(item => `<small>+ ${escapeHTML(item.name)}</small>`).join("")}</aside></section><section class="brief-card"><p class="eyebrow"><span></span>Project details</p><h2>${order.brief_id ? "Update your brief." : "Start your brief."}</h2><form><input type="hidden" name="razorpayOrderId" value="${escapeHTML(order.razorpay_order_id)}"><label>Video or episode title<input name="title" required maxlength="140" value="${escapeHTML(order.title || "")}" placeholder="e.g. Why most founders struggle with content"></label><label>What is this content about?<textarea name="description" required maxlength="2500" rows="4" placeholder="Topic, audience, platform and the main message…">${escapeHTML(order.description || "")}</textarea></label><label>Editing and creative instructions<textarea name="instructions" required maxlength="5000" rows="6" placeholder="Pacing, captions, brand colours, best takes, shots to keep, shots to avoid, CTA and anything else…">${escapeHTML(order.instructions || "")}</textarea></label><label>Source links & takes <span>optional</span><textarea name="referenceUrl" maxlength="5000" rows="5" placeholder="Take 1 - https://drive.google.com/…&#10;Take 2 - https://dropbox.com/…&#10;References - https://youtube.com/…">${escapeHTML(order.reference_url || "")}</textarea><small>Paste Google Drive, Dropbox, WeTransfer, YouTube, Instagram or any other https link. You can still upload files directly in the next step.</small></label><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">Save brief & upload files →</button></form></section></main>`;
     root.querySelector(".brand").addEventListener("click", event => { event.preventDefault(); actions.openMarketing(); });
     root.querySelector("form").addEventListener("submit", async event => {
       event.preventDefault();
@@ -245,4 +381,8 @@ export async function renderProjectBrief(root, actions, route) {
   } catch (error) {
     root.innerHTML = `<main class="account-error"><span>!</span><h1>Project brief unavailable.</h1><p>${escapeHTML(error.message)}</p><a class="pill pill-dark" href="#account">Return to your account</a></main>`;
   }
+}
+
+function canStartBrief(order) {
+  return ["verified", "captured"].includes(order.status) && !["requested", "processing", "refunded"].includes(order.refund_status);
 }

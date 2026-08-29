@@ -140,24 +140,18 @@ function getTalent() {
 }
 
 function renderSample(sample) {
-  if (sample.kind === "video") return `<div class="market-sample-media"><video src="${escapeHTML(sample.src)}" muted loop playsinline preload="metadata"></video><button type="button" data-preview-video aria-label="Play ${escapeHTML(sample.title)}">▶</button></div>`;
+  if (sample.kind === "video") return `<div class="market-sample-media"><video src="${escapeHTML(sample.src)}" muted loop playsinline autoplay preload="auto" data-preview-autoplay></video></div>`;
   if (sample.kind === "poster") return `<div class="market-poster ${escapeHTML(sample.tone)}"><span>${escapeHTML(sample.copy)}</span></div>`;
   if (sample.kind === "metric") return `<div class="market-metric"><strong>${escapeHTML(sample.metric)}</strong><span>${escapeHTML(sample.copy)}</span></div>`;
   return `<blockquote>“${escapeHTML(sample.copy || sample.url || "Portfolio sample") }”</blockquote>`;
 }
 
 function marketplaceHeader(active = "hire") {
-  if (active === "offer") return `<header class="market-header"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><nav><a href="#offer-services" class="active">Private service listing</a><a href="#provider-workspace">Assigned work</a><span class="provider-private-nav">⌾ Owner-only portfolio</span></nav><div><button class="theme-toggle" data-market-theme aria-label="Toggle theme">${document.documentElement.dataset.theme === "dark" ? "☀" : "☾"}</button><a class="pill pill-hot" href="#provider-workspace">Provider portal</a></div></header>`;
-  return `<header class="market-header"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><nav><a href="#marketplace" class="${active === "hire" ? "active" : ""}">Start a project</a><a href="#offer-services">Offer services</a><a href="#workspace">Client workspace</a></nav><div><button class="theme-toggle" data-market-theme aria-label="Toggle theme">${document.documentElement.dataset.theme === "dark" ? "☀" : "☾"}</button><button class="pill pill-hot" type="button" data-header-brief>Submit private brief</button></div></header>`;
+  if (active === "offer") return `<header class="market-header"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><nav><a href="#offer-services" class="active">Private service listing</a><a href="#provider-workspace">Assigned work</a><span class="provider-private-nav">⌾ Owner-only portfolio</span></nav><div><a class="pill pill-hot" href="#provider-workspace">Provider portal</a></div></header>`;
+  return `<header class="market-header"><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><nav><a href="#marketplace" class="${active === "hire" ? "active" : ""}">Start a project</a><a href="#offer-services">Offer services</a><a href="#workspace">Client workspace</a></nav><div><button class="pill pill-hot" type="button" data-header-brief>Submit private brief</button></div></header>`;
 }
 
 function bindMarketHeader(root, actions) {
-  root.querySelector("[data-market-theme]")?.addEventListener("click", () => {
-    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem("cx_theme", next);
-    root.querySelector("[data-market-theme]").textContent = next === "dark" ? "☀" : "☾";
-  });
   root.querySelector('.market-header .brand')?.addEventListener("click", event => { event.preventDefault(); actions.openMarketing(); });
 }
 
@@ -224,7 +218,7 @@ export function renderTalentProfile(root, actions) {
   root.querySelectorAll("[data-package-index]").forEach(button => button.addEventListener("click", () => { root.querySelectorAll("[data-package-index]").forEach(item => item.classList.toggle("active", item === button)); showPackage(Number(button.dataset.packageIndex)); }));
   showPackage(Math.min(1, profile.packages.length - 1));
   root.querySelector("[data-message-provider]").addEventListener("click", () => openQuestionModal(profile));
-  root.querySelectorAll("[data-preview-video]").forEach(button => button.addEventListener("click", () => { const video = button.parentElement.querySelector("video"); if (video.paused) { video.play(); button.textContent = "Ⅱ"; } else { video.pause(); button.textContent = "▶"; } }));
+  root.querySelectorAll("[data-preview-autoplay]").forEach(video => video.play?.().catch(() => {}));
 }
 
 export function renderProviderOnboarding(root, actions) {

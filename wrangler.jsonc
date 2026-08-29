@@ -21,6 +21,9 @@
     "binding": "ASSETS",
     "run_worker_first": ["/site/*", "/site-v2/*"]
   },
+  "vars": {
+    "CONTENTX_EMAIL_FROM": "Content X <notifications@contentx.co.in>"
+  },
   "d1_databases": [
     {
       "binding": "DB",

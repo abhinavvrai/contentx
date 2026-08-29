@@ -1,6 +1,6 @@
 # Content X Project Guide
 
-Last updated: 21 August 2026  
+Last updated: 28 August 2026
 Production URL: https://contentx.co.in/  
 GitHub repository: https://github.com/abhinavvrai/contentx  
 Production branch: `main`  
@@ -21,6 +21,8 @@ The public website includes:
 - Razorpay checkout backed by Cloudflare APIs and a D1 payment database.
 - Durable project upload spaces backed by R2, with D1 file metadata and private client links.
 - D1-backed client accounts, secure sessions, paid-order history, and post-payment project briefs.
+- Owner-only finance tracking with refund status controls for incomplete paid orders.
+- Server-backed notification preferences, transactional email hooks, forgot-password links and bundled review-comment digests.
 
 ## 2. Production Architecture
 
@@ -46,7 +48,11 @@ The canonical website source is `public/site/`.
 - `public/site/src/advanced.js` contains advanced project and review interactions.
 - `public/site/src/polish.js` contains UI polish and accessibility behavior.
 - `public/site/src/uploads.js` contains client project uploads and owner file management.
+- `public/site/src/cinematic.js` and `cinematic.css` add homepage-only, Frame.io-inspired visual depth using original CSS geometry and existing Content X footage. The optional module adds a pointer-reactive hero, a scroll-led workflow illustration, and entrance reveals; it does not change account or payment behavior. Motion can be paused, respects reduced-motion preferences, and uses a static mobile layout. Observers, listeners, and video playback are cleaned up on route changes. These local changes are not yet production-verified.
+- `public/site/src/noir.css` is the final shared design layer: permanent near-black surfaces, warm copper accents, accessible primary/button text colors, and consistent form, workspace, review, owner and provider styling. The HTML starts with `data-theme="dark"`; theme toggle controls and legacy preference reads are removed. Review comments, version workflow and shareable-link marketing cards use original layered CSS illustrations and existing local footage. Local preview release: `noir-studio-1` (not yet production-verified).
+- `public/site/src/studio-workspace.js`, `studio-workspace.css`, and `review-room.js` extend that dark palette into the product. The demo dashboard has original CSS project artwork, project search/status filtering, grid/list layouts and a next-review shortcut. Real account/shared workspaces have file search/type/sort/open-feedback/version-stack filters, record-derived metrics, and a native-dialog review room with media preview, version selection, side-by-side synchronized video/audio comparison, timestamped version-scoped comments, manager-only complete/reopen, and text export of review notes. Comments use the existing authorized D1 API, not browser storage. Private media supports single HTTP byte ranges for seeking; `lib/media-range.ts` validates ranges. Comment writes validate file/asset ownership within the authorized project. Native preview depends on browser codec support; unsupported formats retain original-file downloads. This is not adaptive transcoding, frame-accurate playback, real-time presence or a final-approval system. Current local release: `review-studio-1`; not yet production-verified or visually browser-tested.
 - CSS is split across `styles.css`, `advanced.css`, `creator-tools.css`, `polish.css`, `services.css`, and `uploads.css`.
+- `ember.css` restores the vivid orange-to-amber brand gradient while retaining black surfaces and dark, contrast-checked primary-button text. The optional `ambient-scenes.js` adds original CSS signal bars, floating edit planes and light ribbons in spare creator-tools, FAQ, contact, marketplace, provider and sign-in columns, plus restrained movement on existing dashboard art. Its observers pause offscreen/background motion, respect reduced-motion settings and clean up on navigation. A shared in-memory pause preference follows the user between the homepage and secondary pages. No extra animations are added to media players or payment forms. Current local appearance release: `ember-flow-1`; not published or visually browser-verified.
 
 Do not treat the root-level `index.html`, `src/`, `videos/`, `vendor/`, or temporary folders as the live website unless the architecture is intentionally changed. The production website currently comes from `public/site/`.
 
@@ -80,6 +86,7 @@ Cloudflare configuration:
 - `www.contentx.co.in/*` redirects permanently to the root domain.
 - Static assets are served from `dist/client` through the `ASSETS` binding.
 - Payment records use the D1 binding `DB`, connected to `contentx-payments`.
+- Refund status is stored with payment records in D1 and should be treated as private payment data.
 
 Manual fallback instructions are in `DEPLOY.md`.
 
@@ -92,6 +99,12 @@ Required variable names are documented in `.env.example`:
 - `RAZORPAY_WEBHOOK_SECRET`
 - `OPENAI_API_KEY`
 - `CONTENTX_OWNER_TOKEN`
+- `GOOGLE_CLIENT_ID`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `RESEND_API_KEY`
+- `CONTENTX_EMAIL_FROM`
+- `CONTENTX_OWNER_EMAIL`
 
 Rules:
 
@@ -116,7 +129,8 @@ Pricing appears in more than one source file. When pricing changes, update every
 | SaaS Animation, up to 30 seconds | ₹9,000 |
 
 - Monthly reel production starts at 10 videos.
-- Monthly podcast production starts at 4 episodes.
+- Monthly long-form production starts at 4 videos.
+- Monthly podcast production starts at 2 episodes.
 - Video and podcast package totals use the displayed base rate; there is no hidden one-off premium.
 
 ### Add-ons
@@ -185,10 +199,11 @@ These areas look functional in the interface but are not yet complete production
 ### Authentication and permissions
 
 - Client sign-up, sign-in, paid-order ownership, project briefs, and upload authorization are server-side and stored in D1.
-- Passwords are salted and hashed with PBKDF2-SHA-256 at 310,000 iterations; plaintext passwords are never stored.
+- Passwords are salted and hashed with PBKDF2-SHA-256 at 100,000 iterations; plaintext passwords are never stored.
 - Session tokens are random, stored only as SHA-256 hashes in D1, and sent through secure HTTP-only SameSite cookies.
 - Repeated failed logins are rate-limited and temporarily blocked.
 - The account screen defaults signed-in users into the workspace/account area and offers Google, email OTP, or password access. OTP requests are rate-limited through the server.
+- Forgot-password recovery uses short-lived email links and stores only hashed reset tokens in D1. Owners must not be given a plaintext password viewer.
 - Provider, marketplace, review-demo, and visible owner-preview permissions still include browser-local demonstration behavior and need role-based server authorization before being treated as production multi-user collaboration.
 
 ### Project and marketplace data
@@ -200,7 +215,10 @@ These areas look functional in the interface but are not yet complete production
 ### Contact and notifications
 
 - Website enquiry forms currently save demo records locally.
-- They do not send email, WhatsApp, or server-side notifications.
+- Logged-in account notification preferences and recent in-app notifications are server-backed.
+- Upload completion, review comments, approvals, delivery/version events, payments and security-style events can queue/send transactional email when `RESEND_API_KEY`, `CONTENTX_EMAIL_FROM` and `CONTENTX_OWNER_EMAIL` are configured.
+- Review comment email defaults to digest mode at 9+ comments to avoid noisy one-email-per-comment behavior.
+- Website enquiry/contact forms still need a complete server-side email workflow if they should notify the team automatically.
 
 ### Caption generation
 
@@ -215,6 +233,10 @@ These areas look functional in the interface but are not yet complete production
 - The Razorpay dashboard webhook URL and production webhook secret must remain configured manually.
 - Package and allowlisted add-on totals are recalculated by the server before Razorpay creates an order.
 - Detailed titles, descriptions, creative instructions, and reference links are collected after verified payment, then connected to the client's private upload project.
+- Clients see only their own payment history and refund status after login.
+- Owner finance controls can record refund states for incomplete orders: none, requested, processing, refunded, or cancelled.
+- Refund controls update Content X records only. Actual money movement should be completed inside Razorpay until a separate backend Razorpay refund endpoint with second owner confirmation is added.
+- Refunded payments are blocked from starting or continuing the post-payment brief/upload flow.
 
 ## 9. Critical Editing Rules
 

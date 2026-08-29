@@ -1,14 +1,17 @@
+import { parseMediaRange } from "../../../lib/media-range";
 import {
   authorizeProject,
   ClientError,
   DEFAULT_MAX_FILE_BYTES,
   DEFAULT_MAX_PROJECT_BYTES,
+  FREE_ACCOUNT_STORAGE_BYTES,
   UPLOAD_PART_BYTES,
   cleanEmail,
   cleanText,
   contentDisposition,
   createDownloadSignature,
   ensureUploadSchema,
+  formatBytes,
   getUploadBindings,
   hashToken,
   json,
@@ -25,7 +28,8 @@ import {
   type UploadFile,
   type UploadProject,
 } from "../../../lib/uploads";
-import { AccountError, getSessionUser, requireSameOrigin } from "../../../lib/auth";
+import { AccountError, ensureAccountSchema, getSessionUser, requireSameOrigin, requireSessionUser } from "../../../lib/auth";
+import { notifyOwner, publishNotification } from "../../../lib/notifications";
 
 type JsonInput = Record<string, unknown>;
 const RECYCLE_BIN_DAYS = 30;
@@ -41,6 +45,8 @@ export async function GET(request: Request) {
     if (action === "admin-files") return getAdminFiles(request, url.searchParams);
     if (action === "versions") return getAssetVersions(request, url.searchParams);
     if (action === "shares") return getProjectShares(request, url.searchParams.get("projectId") || "");
+    if (action === "account-projects") return getAccountProjects(request);
+    if (action === "comments") return getProjectComments(request, url.searchParams);
     if (action === "download") return downloadAdminFile(request, url.searchParams);
     throw new ClientError("Unknown file action.", 404);
   });
@@ -56,6 +62,8 @@ export async function POST(request: Request) {
     if (action === "admin-download-link") return createAdminDownloadLink(request, input);
     if (action === "project-download-link") return createProjectDownloadLink(request, input);
     if (action === "create-share-link") return createProjectShareLink(request, input);
+    if (action === "create-account-project") return createAccountProject(request, input);
+    if (action === "create-comment") return createProjectComment(request, input);
     if (action === "start-upload") return startUpload(request, input);
     if (action === "complete-upload") return completeUpload(request, input);
     if (action === "abort-upload") return abortUpload(request, input);
@@ -78,6 +86,7 @@ export async function PATCH(request: Request) {
     const input = await readJson<JsonInput>(request);
     const action = cleanText(input.action, 40);
     if (action === "share-link") return updateProjectShareLink(request, input);
+    if (action === "comment-status") return updateProjectCommentStatus(request, input);
     if (action === "admin-file-restore") return restoreAdminFile(request, input);
     if (action !== "admin-project-status") throw new ClientError("Unknown file action.", 404);
     await requireOwner(request);
@@ -144,6 +153,67 @@ async function getClientProject(request: Request, projectId: string): Promise<Re
      ORDER BY f.completed_at DESC LIMIT 200`
   ).bind(project.id).all();
   return json({ project: publicProject(project), files: files.results, permissions: { canUpload: access.canUpload, accessType: access.accessType } });
+}
+
+async function getAccountProjects(request: Request): Promise<Response> {
+  await ensureAccountSchema();
+  const user = await requireSessionUser(request);
+  const { db } = getUploadBindings();
+  await ensureDefaultAccountProject(db, user);
+  const projects = await db.prepare(
+    `SELECT p.id AS project_id, p.name, p.client_name, p.client_email, p.status, p.max_file_size,
+      p.created_at, p.updated_at, u.razorpay_order_id,
+      COUNT(CASE WHEN f.status = 'ready' THEN 1 END) AS file_count,
+      COALESCE(SUM(CASE WHEN f.status IN ('uploading', 'ready') THEN f.size_bytes ELSE 0 END), 0) AS total_bytes
+     FROM user_upload_projects u
+     JOIN upload_projects p ON p.id = u.project_id
+     LEFT JOIN upload_files f ON f.project_id = p.id
+     WHERE u.user_id = ?
+     GROUP BY p.id
+     ORDER BY p.updated_at DESC LIMIT 100`
+  ).bind(user.id).all<Record<string, unknown>>();
+  const usage = await accountStorageUsage(db, user.id);
+  return json({ user, projects: projects.results, storage: { usedBytes: usage, quotaBytes: FREE_ACCOUNT_STORAGE_BYTES } });
+}
+
+async function ensureDefaultAccountProject(db: D1Database, user: { id: string; name: string; email: string }): Promise<void> {
+  const existing = await db.prepare("SELECT project_id FROM user_upload_projects WHERE user_id = ? LIMIT 1").bind(user.id).first();
+  if (existing) return;
+  const now = Date.now();
+  const projectId = randomId("prj");
+  await db.batch([
+    db.prepare(`INSERT INTO upload_projects
+      (id, name, client_name, client_email, upload_token_hash, status, max_file_size, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)`)
+      .bind(projectId, "My first review project", user.name, user.email, await hashToken(randomToken()), DEFAULT_MAX_FILE_BYTES, now, now),
+    db.prepare(`INSERT INTO user_upload_projects (project_id, user_id, razorpay_order_id, created_at)
+      VALUES (?, ?, ?, ?)`)
+      .bind(projectId, user.id, `free_${projectId}`, now),
+  ]);
+}
+
+async function createAccountProject(request: Request, input: JsonInput): Promise<Response> {
+  await ensureAccountSchema();
+  requireSameOrigin(request);
+  const user = await requireSessionUser(request);
+  const name = cleanText(input.name, 120);
+  const clientName = cleanText(input.clientName, 120);
+  const clientEmail = input.clientEmail ? cleanEmail(input.clientEmail) : "";
+  if (!name) throw new ClientError("Enter a project name.");
+  if (input.clientEmail && !clientEmail) throw new ClientError("Enter a valid client email.");
+  const { db } = getUploadBindings();
+  const now = Date.now();
+  const projectId = randomId("prj");
+  await db.batch([
+    db.prepare(`INSERT INTO upload_projects
+      (id, name, client_name, client_email, upload_token_hash, status, max_file_size, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)`)
+      .bind(projectId, name, clientName || user.name, clientEmail || user.email, await hashToken(randomToken()), DEFAULT_MAX_FILE_BYTES, now, now),
+    db.prepare(`INSERT INTO user_upload_projects (project_id, user_id, razorpay_order_id, created_at)
+      VALUES (?, ?, ?, ?)`)
+      .bind(projectId, user.id, `free_${projectId}`, now),
+  ]);
+  return json({ project: { id: projectId, name, clientName: clientName || user.name, clientEmail: clientEmail || user.email, status: "active", maxFileSize: DEFAULT_MAX_FILE_BYTES, createdAt: now, updatedAt: now }, storage: { usedBytes: await accountStorageUsage(db, user.id), quotaBytes: FREE_ACCOUNT_STORAGE_BYTES } }, 201);
 }
 
 async function getAdminProjects(request: Request): Promise<Response> {
@@ -227,6 +297,82 @@ async function getProjectShares(request: Request, projectId: string): Promise<Re
   return json({ shares: shares.results });
 }
 
+async function getProjectComments(request: Request, params: URLSearchParams): Promise<Response> {
+  const projectId = cleanText(params.get("projectId"), 80);
+  if (!projectId) throw new ClientError("Choose a project.");
+  await requireProject(request, projectId, "view");
+  const { db } = getUploadBindings();
+  const comments = await db.prepare(`SELECT id, project_id, file_id, asset_id, author_name, author_email,
+    body, timestamp_seconds, status, created_at, updated_at
+    FROM project_review_comments
+    WHERE project_id = ? AND deleted_at IS NULL
+    ORDER BY created_at DESC LIMIT 300`).bind(projectId).all();
+  return json({ comments: comments.results });
+}
+
+async function createProjectComment(request: Request, input: JsonInput): Promise<Response> {
+  await ensureAccountSchema();
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80);
+  if (!projectId) throw new ClientError("Choose a project.");
+  await requireProject(request, projectId, "view");
+  const body = cleanText(input.body, 2000);
+  const authorName = cleanText(input.authorName, 100);
+  const authorEmail = input.authorEmail ? cleanEmail(input.authorEmail) : "";
+  const fileId = cleanText(input.fileId, 80) || null;
+  const assetId = cleanText(input.assetId, 80) || null;
+  const timestamp = input.timestampSeconds === "" || input.timestampSeconds == null ? null : Number(input.timestampSeconds);
+  if (!body) throw new ClientError("Write a comment before sending.");
+  if (authorName.length < 2) throw new ClientError("Enter your name before commenting.");
+  if (input.authorEmail && !authorEmail) throw new ClientError("Enter a valid email address.");
+  if (timestamp !== null && (!Number.isInteger(timestamp) || timestamp < 0 || timestamp > 24 * 60 * 60)) throw new ClientError("Choose a valid timestamp.");
+  const { db } = getUploadBindings();
+  const id = randomId("com");
+  // A timestamp must refer to a ready file in this authorized project, never
+  // to a caller-supplied file/asset from another client's workspace.
+  if (fileId) {
+    const file = await db.prepare("SELECT id, asset_id FROM upload_files WHERE id = ? AND project_id = ? AND status = 'ready' LIMIT 1")
+      .bind(fileId, projectId).first<{ id: string; asset_id: string | null }>();
+    if (!file || (assetId && assetId !== (file.asset_id || file.id))) throw new ClientError("Choose a file from this project.", 400);
+  } else if (assetId || timestamp !== null) {
+    throw new ClientError("Choose a file before adding a timestamp or asset comment.", 400);
+  }
+  const now = Date.now();
+  await db.prepare(`INSERT INTO project_review_comments
+    (id, project_id, file_id, asset_id, author_name, author_email, body, timestamp_seconds, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`)
+    .bind(id, projectId, fileId, assetId, authorName, authorEmail || null, body, timestamp, now, now).run();
+  const owner = await db.prepare(`SELECT u.user_id, a.email
+    FROM user_upload_projects u JOIN account_users a ON a.id = u.user_id
+    WHERE u.project_id = ? LIMIT 1`).bind(projectId).first<{ user_id: string; email: string }>();
+  await publishNotification({
+    recipientUserId: owner?.user_id || null,
+    recipientEmail: owner?.email || null,
+    eventType: "comment",
+    title: "New review comment",
+    message: `${authorName} left feedback on a shared Content X project.`,
+    projectId,
+    actorName: authorName,
+    actorEmail: authorEmail || null,
+    actionUrl: new URL(`/site/index.html#workspace?project=${encodeURIComponent(projectId)}`, request.url).toString(),
+  }).catch(() => undefined);
+  return json({ comment: { id, projectId, fileId, assetId, authorName, authorEmail, body, timestampSeconds: timestamp, status: "open", createdAt: now, updatedAt: now } }, 201);
+}
+
+async function updateProjectCommentStatus(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80);
+  const commentId = cleanText(input.commentId, 80);
+  const status = cleanText(input.status, 20);
+  if (!projectId || !commentId || !["open", "completed", "resolved"].includes(status)) throw new ClientError("Choose a valid comment update.");
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  const result = await db.prepare("UPDATE project_review_comments SET status = ?, updated_at = ? WHERE id = ? AND project_id = ? AND deleted_at IS NULL")
+    .bind(status, Date.now(), commentId, projectId).run();
+  if (!result.meta.changes) throw new ClientError("Comment not found.", 404);
+  return json({ ok: true, status });
+}
+
 async function createProjectShareLink(request: Request, input: JsonInput): Promise<Response> {
   requireSameOrigin(request);
   const projectId = cleanText(input.projectId, 80);
@@ -299,6 +445,24 @@ async function requireProjectManager(request: Request, projectId: string) {
   const project = await db.prepare("SELECT id FROM upload_projects WHERE id = ? LIMIT 1").bind(projectId).first();
   if (!project) throw new ClientError("Project not found.", 404);
   return null;
+}
+
+async function accountStorageUsage(db: D1Database, userId: string): Promise<number> {
+  const usage = await db.prepare(`SELECT COALESCE(SUM(f.size_bytes), 0) AS total_bytes
+    FROM user_upload_projects u
+    JOIN upload_files f ON f.project_id = u.project_id
+    WHERE u.user_id = ? AND f.status IN ('uploading', 'ready')`).bind(userId).first<{ total_bytes: number }>();
+  return Number(usage?.total_bytes || 0);
+}
+
+async function enforceAccountStorageQuota(db: D1Database, projectId: string, incomingBytes: number): Promise<void> {
+  const owner = await db.prepare("SELECT user_id FROM user_upload_projects WHERE project_id = ? LIMIT 1")
+    .bind(projectId).first<{ user_id: string }>();
+  if (!owner) return;
+  const used = await accountStorageUsage(db, owner.user_id);
+  if (used + incomingBytes > FREE_ACCOUNT_STORAGE_BYTES) {
+    throw new ClientError(`This free account has reached its ${formatBytes(FREE_ACCOUNT_STORAGE_BYTES)} storage limit. Delete older files or wait for premium storage.`, 413);
+  }
 }
 
 async function createAdminProject(request: Request, input: JsonInput): Promise<Response> {
@@ -393,6 +557,7 @@ async function startUpload(request: Request, input: JsonInput): Promise<Response
   if (Number(usage?.total_bytes || 0) + sizeBytes > DEFAULT_MAX_PROJECT_BYTES) {
     throw new ClientError("This project has reached its 250 GB upload allowance. Ask Content X to clear space or create a new project.", 413);
   }
+  await enforceAccountStorageQuota(db, project.id, sizeBytes);
   const multipart = await bucket.createMultipartUpload(key, {
     httpMetadata: { contentType },
     customMetadata: { projectId: project.id, fileId, originalName },
@@ -437,7 +602,7 @@ async function completeUpload(request: Request, input: JsonInput): Promise<Respo
   const projectId = cleanText(input.projectId, 80);
   const project = await requireProject(request, projectId, "upload");
   const fileId = cleanText(input.fileId, 80);
-  const uploadId = cleanText(input.uploadId, 240);
+  const uploadId = cleanText(input.uploadId, 2048);
   const parts = Array.isArray(input.parts) ? input.parts.map(item => {
     const value = item as Record<string, unknown>;
     return { partNumber: Number(value.partNumber), etag: cleanText(value.etag, 240) };
@@ -462,9 +627,36 @@ async function completeUpload(request: Request, input: JsonInput): Promise<Respo
     db.prepare("UPDATE upload_files SET status = 'ready', multipart_upload_id = NULL, completed_at = ? WHERE id = ?").bind(now, file.id),
     db.prepare("UPDATE upload_projects SET updated_at = ? WHERE id = ?").bind(now, project.id),
   ]);
+  await notifyCompletedUpload(request, project, file, completed.size).catch(error => console.warn("Content X upload notification failed", error));
   return json({ file: { id: file.id, name: file.original_name, contentType: file.content_type,
     sizeBytes: completed.size, status: "ready", completedAt: now,
     assetId: file.asset_id || file.id, versionNumber: file.version_number || 1 } });
+}
+
+async function notifyCompletedUpload(request: Request, project: UploadProject, file: UploadFile, sizeBytes: number): Promise<void> {
+  const uploader = file.uploader_name || file.uploader_email || "A client";
+  const fileSize = formatBytes(sizeBytes);
+  const actionUrl = new URL(`/site/index.html#owner`, request.url).toString();
+  await notifyOwner({
+    eventType: "upload",
+    title: "New file uploaded to Content X",
+    message: `${uploader} uploaded ${file.original_name} (${fileSize}) to ${project.name}.`,
+    projectId: project.id,
+    actorName: file.uploader_name || null,
+    actorEmail: file.uploader_email || null,
+    actionUrl,
+  });
+  if (project.client_email) {
+    await publishNotification({
+      recipientEmail: project.client_email,
+      eventType: "upload",
+      title: "Your file was uploaded",
+      message: `${file.original_name} (${fileSize}) is now saved in your Content X project workspace.`,
+      projectId: project.id,
+      actorName: "Content X",
+      actionUrl: new URL(`/site/index.html#workspace?project=${encodeURIComponent(project.id)}`, request.url).toString(),
+    });
+  }
 }
 
 async function abortUpload(request: Request, input: JsonInput): Promise<Response> {
@@ -472,7 +664,7 @@ async function abortUpload(request: Request, input: JsonInput): Promise<Response
   const projectId = cleanText(input.projectId, 80);
   const project = await requireProject(request, projectId, "upload");
   const fileId = cleanText(input.fileId, 80);
-  const uploadId = cleanText(input.uploadId, 240);
+  const uploadId = cleanText(input.uploadId, 2048);
   const { db, bucket } = getUploadBindings();
   const file = await db.prepare(
     "SELECT * FROM upload_files WHERE id = ? AND project_id = ? AND multipart_upload_id = ? AND status = 'uploading' LIMIT 1"
@@ -493,16 +685,20 @@ async function downloadAdminFile(request: Request, params: URLSearchParams): Pro
   const file = await db.prepare("SELECT * FROM upload_files WHERE id = ? AND status = 'ready' LIMIT 1")
     .bind(fileId).first<UploadFile>();
   if (!file) throw new ClientError("File not found.", 404);
-  const object = await bucket.get(file.object_key);
+  const range = parseMediaRange(request.headers.get("Range"), Number(file.size_bytes));
+  if (range === false) return new Response(null, { status:416, headers:{ "Content-Range":`bytes */${file.size_bytes}`, "Accept-Ranges":"bytes", "Cache-Control":"private, no-store" } });
+  const object = await bucket.get(file.object_key, range ? { range } : undefined);
   if (!object) throw new ClientError("Stored file not found.", 404);
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("Content-Type", file.content_type || "application/octet-stream");
-  headers.set("Content-Length", String(object.size));
+  headers.set("Content-Length", String(range ? range.length : object.size));
+  headers.set("Accept-Ranges", "bytes");
+  if (range) headers.set("Content-Range", `bytes ${range.offset}-${range.offset + range.length - 1}/${file.size_bytes}`);
   headers.set("Content-Disposition", contentDisposition(file.original_name));
   headers.set("Cache-Control", "private, no-store");
   headers.set("X-Content-Type-Options", "nosniff");
-  return new Response(object.body, { headers });
+  return new Response(object.body, { status:range ? 206 : 200, headers });
 }
 
 function publicProject(project: UploadProject) {

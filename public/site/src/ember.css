@@ -1,0 +1,144 @@
+/* Restore the original vivid Content X orange; keep the permanent black canvas. */
+html[data-theme="dark"] {
+  --em-start:#ff5c20;
+  --em-end:#ff9b35;
+  --em-ink:#241109;
+  --em-gradient:linear-gradient(115deg,var(--em-start),#ff7828 55%,var(--em-end));
+}
+html[data-theme="dark"] body :is(.pill-hot,.pay-button,.brand-mark,.workspace-brand>span),
+html[data-theme="dark"] #app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary),
+html[data-theme="dark"] #app [data-feedback-demo] {
+  background:var(--em-gradient); color:var(--em-ink); border-color:#ff883f;
+  box-shadow:0 7px 26px #ff5c202e;
+}
+/* Keep every orange action readable. Several legacy selectors forced white text
+   after this theme layer, so descendants explicitly inherit the dark ink too. */
+html[data-theme="dark"] body :is(.pill-hot,.pay-button,.brand-mark,.workspace-brand>span,.preloader__mark,.support-fab),
+html[data-theme="dark"] body :is(.pill-hot,.pay-button,.brand-mark,.workspace-brand>span,.preloader__mark,.support-fab) *,
+html[data-theme="dark"] #app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary) * {
+  color:var(--em-ink)!important;
+  text-shadow:none!important;
+}
+html[data-theme="dark"] #app :is(.unified-plan-copy,.demo-workspace-banner p),
+html[data-theme="dark"] #app .unified-volume-slider>span,
+html[data-theme="dark"] #app [data-package-volume] {
+  color:#c6c2ca;
+}
+html[data-theme="dark"] #app :is(.new-project-card,.project-create-card) :is(strong,p,small) {
+  color:#f4f1f4;
+}
+html[data-theme="dark"] #app.marketing-app { width:100%; overflow:hidden; }
+html[data-theme="dark"] body :is(.pill-hot,.pay-button):hover,
+html[data-theme="dark"] #app :is(.workspace-button.primary,[data-feedback-demo]):hover {
+  background:linear-gradient(115deg,#ff702c,#ffae4c); color:var(--em-ink); border-color:#ffb35e;
+  box-shadow:0 9px 32px #ff5c2045;
+}
+html[data-theme="dark"] #app :is(.hero .accent,.section-heading em,.creator-suite-copy h2 em,.faq-section h2 em,.contact-grid h2 em,.market-hero h1 em,.provider-intro h1 em,.dash-header h1 em,.sx-pulse h2 em) {
+  color:#ff7828;
+  background:linear-gradient(105deg,#ff6425 8%,#ff973b 60%,#ffbd69);
+  background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+html[data-theme="dark"] #app :is(.eyebrow span,.progress-row em,.workspace-storage em,.preloader__line span) { background:var(--em-gradient); }
+html[data-theme="dark"] #app .hero {
+  background:radial-gradient(ellipse at 90% 32%,#a039152f,transparent 52%),radial-gradient(ellipse at 76% 70%,#ff6c171c,transparent 60%),#101014;
+}
+html[data-theme="dark"] #app .cx-orbit i {
+  border-color:#ff823e99;
+  background:radial-gradient(ellipse at 35% 8%,#ffad5140,#ff651d1a 30%,#14141b18 65%);
+  box-shadow:inset 0 3px 7px #ffc77fa0,inset 0 -28px 50px #0008,0 -5px 25px #ff651d38;
+}
+html[data-theme="dark"] #app .cx-satellite { background:radial-gradient(circle at 28% 22%,#ffe7ae,#ff8d27 22%,#b53e18 49%,#19131a 78%); }
+html[data-theme="dark"] #app .cx-story-halo { background:radial-gradient(ellipse,#ff631b35,#d3531a16 46%,transparent 70%); }
+html[data-theme="dark"] #app :is(.feature-banner,.sx-focus-card) {
+  border-color:#a5492a; background:radial-gradient(ellipse at 0 0,#b843204d,transparent 70%),linear-gradient(115deg,#30201c,#17181f);
+}
+html[data-theme="dark"] #app :is(.market-hero,.provider-intro,.account-story) { background:radial-gradient(ellipse at 90% 15%,#b73d183b,transparent 60%),linear-gradient(135deg,#211819,#111217 70%); }
+html[data-theme="dark"] #app .sx-pulse { border-color:#9b4a2a; background:radial-gradient(ellipse at 0 0,#a93e1c50,transparent 70%),linear-gradient(130deg,#231c1d,#17191f); }
+html[data-theme="dark"] #app .sx-art-0 { background:radial-gradient(ellipse at 10% 0,#d85a24,transparent 80%),linear-gradient(135deg,#81341f,#23131b); }
+html[data-theme="dark"] #app .sx-art-2 { background:radial-gradient(ellipse at 0 0,#a86129,transparent 85%),#2c1a21; }
+html[data-theme="dark"] #app .cx-link-core { background:var(--em-gradient); color:#241109; box-shadow:0 20px 55px #ff641b40; }
+html[data-theme="dark"] #app .cta-section { background:radial-gradient(ellipse at 50% 110%,#bb41173d,transparent 65%),#111217; }
+
+/* Contained scenery occupies spare editorial columns, never overlays controls. */
+#app .em-scene-host { min-width:0; }
+#app .em-scene { position:relative; width:100%; max-width:460px; height:230px; margin:30px auto 0; overflow:hidden; isolation:isolate; pointer-events:none; contain:layout paint; }
+#app .em-scene-glow { position:absolute; inset:8% -5%; z-index:-1; background:radial-gradient(ellipse,#ff6c192e,transparent 65%); }
+#app .em-scene:after { content:""; position:absolute; bottom:12px; left:14%; right:14%; height:1px; background:linear-gradient(90deg,transparent,#ff792d70,transparent); }
+#app .creator-suite-copy .em-scene { height:210px; margin-top:40px; }
+#app .faq-section .em-scene { height:210px; }
+#app .market-hero aside .em-scene { height:180px; margin-top:24px; }
+#app .provider-intro .em-scene { height:260px; }
+#app .account-story .em-scene { height:190px; margin-top:20px; }
+#app .account-story .em-scene-host>.account-orbit-mark { display:none; }
+#app .em-motion-toggle { position:relative; display:inline-flex; align-items:center; justify-content:center; align-self:flex-start; min-height:36px; margin-top:18px; padding:7px 12px; border:1px solid #8c4c34; border-radius:20px; background:#271c19; color:#ffd6b4; font-size:11px; cursor:pointer; }
+#app :is(.dash-header,.workspace-project-head)>.em-motion-toggle { margin-top:0; }
+#app .em-motion-toggle:hover { border-color:#ff8a41; background:#38241c; }
+#app .em-motion-toggle:focus-visible { outline:2px solid #ffb46a; outline-offset:4px; }
+#app .em-motion-toggle:disabled { cursor:default; }
+
+/* 01 / Signal garden: individually breathing bars over a travelling light path. */
+#app .em-signal { position:absolute; inset:15% 8% 23%; display:flex; align-items:center; justify-content:center; gap:5px; transform:perspective(700px) rotateY(-16deg) rotateZ(-6deg); }
+#app .em-signal i { flex:1; max-width:9px; height:var(--height); border-radius:10px; background:linear-gradient(0deg,#a43818,#ff6a23 45%,#ffc172); box-shadow:0 0 15px #ff701c22; transform-origin:center; animation:em-signal-breathe 3.8s ease-in-out infinite alternate; animation-delay:calc(var(--n) * -140ms); animation-play-state:paused; }
+#app .em-signal-path { position:absolute; left:10%; right:10%; bottom:22%; height:1px; background:linear-gradient(90deg,#ff672025,#ff9c48,#ff672020); transform:rotate(-6deg); }
+#app .em-signal-path b { position:absolute; width:9px; height:9px; top:-4px; border:1px solid #ffe0a8; border-radius:50%; background:#ff7928; box-shadow:0 0 18px #ff762c90; }
+#app .em-signal-path b:nth-child(1) { left:10%; }
+#app .em-signal-path b:nth-child(2) { left:48%; }
+#app .em-signal-path b:nth-child(3) { left:85%; }
+
+/* 02 / Floating edit planes: separate translucent frames with a passing scan. */
+#app .em-frame-deck { position:absolute; inset:18px 0 0; perspective:800px; }
+#app .em-frame-deck>i { position:absolute; width:56%; height:65%; left:15%; top:14%; border:1px solid #ffae6499; border-radius:15px; overflow:hidden; background:linear-gradient(135deg,#ffb45f30,#a13d1815 55%,#19151d80); box-shadow:15px 22px 40px #0005,inset 0 1px 0 #ffdfaa80; transform:rotateY(-25deg) rotateX(20deg) rotateZ(-13deg); animation:em-planes-float 7s ease-in-out infinite alternate; animation-play-state:paused; }
+#app .em-frame-deck>i:nth-child(2) { left:25%; top:23%; animation-delay:-2.2s; border-color:#ff8a4599; }
+#app .em-frame-deck>i:nth-child(3) { left:35%; top:32%; animation-delay:-4.4s; border-color:#ff8a45; background:linear-gradient(145deg,#c6441a66,#271719 70%); }
+#app .em-frame-deck>i:before { content:""; position:absolute; inset:12% 10% 27%; border:1px solid #ffb25a65; border-radius:6px; background:linear-gradient(145deg,#ff813e3d,transparent 70%); }
+#app .em-frame-deck>i:after { content:""; position:absolute; left:10%; bottom:13%; width:48%; height:3px; border-radius:3px; background:linear-gradient(90deg,#ff9d4f,#ff672027); }
+#app .em-frame-deck b { position:absolute; inset:0; background:linear-gradient(115deg,transparent 20%,#ffcf863d 50%,transparent 80%); transform:translateX(-100%); animation:em-scan-pass 8s ease-in-out infinite; animation-play-state:paused; }
+#app .em-frame-spark { position:absolute; width:15px; height:15px; top:16%; right:22%; background:#ffa33d; border-radius:4px; transform:rotate(35deg); box-shadow:0 0 25px #ff6e31a0; }
+
+/* 03 / Light ribbons: a low, sculptural wave, not another homepage orbit. */
+#app .em-ribbons { position:absolute; inset:0; transform:perspective(800px) rotateX(15deg) rotateZ(-12deg); }
+#app .em-ribbons i { position:absolute; left:5%; width:90%; top:26%; height:80px; border:1px solid #ff983f; border-radius:50%; background:linear-gradient(180deg,#ffbf713b,#e656161a 45%,#ff5b2022); box-shadow:inset 0 2px 3px #ffc27880,0 9px 15px #0004; animation:em-ribbon-drift 6.5s ease-in-out infinite alternate; animation-play-state:paused; }
+#app .em-ribbons i:nth-child(2) { top:35%; width:83%; left:8.5%; animation-delay:-1.3s; }
+#app .em-ribbons i:nth-child(3) { top:44%; width:76%; left:12%; animation-delay:-2.6s; }
+#app .em-ribbons i:nth-child(4) { top:53%; width:69%; left:15.5%; animation-delay:-3.9s; }
+#app .em-ribbons i:nth-child(5) { top:62%; width:62%; left:19%; animation-delay:-5.2s; }
+#app .em-ribbon-light { position:absolute; width:55px; height:55px; border-radius:50%; left:18%; top:20%; background:radial-gradient(circle at 30% 24%,#fff0bd,#ff9f3e 28%,#d84a19 55%,#32151b 80%); box-shadow:0 14px 24px #0005; }
+
+/* Existing dashboard art gains its own quiet movement; no media-player changes. */
+#app .sx-project-art i { animation:em-project-drift 8s ease-in-out infinite alternate; animation-play-state:paused; }
+#app .sx-project-art i:nth-child(2) { animation-delay:-2.5s; }
+#app .sx-project-art i:nth-child(3) { animation-delay:-5s; }
+#app .sx-focus-orbits span { animation:em-focus-float 7s ease-in-out infinite alternate; animation-play-state:paused; }
+#app .sx-pulse:after { animation:em-pulse-light 8s ease-in-out infinite alternate; animation-play-state:paused; }
+#app .em-running :is(.em-signal i,.em-frame-deck>i,.em-frame-deck b,.em-ribbons i),
+#app .sx-project-art.em-running i,#app .sx-focus-orbits.em-running span,#app .sx-pulse.em-running:after { animation-play-state:running; }
+@keyframes em-signal-breathe { from { transform:scaleY(.65); opacity:.7; } to { transform:scaleY(1); opacity:1; } }
+@keyframes em-planes-float { from { transform:translateY(0) rotateY(-25deg) rotateX(20deg) rotateZ(-13deg); } to { transform:translateY(-13px) rotateY(-15deg) rotateX(16deg) rotateZ(-9deg); } }
+@keyframes em-scan-pass { 0%,20% { transform:translateX(-110%); } 70%,100% { transform:translateX(110%); } }
+@keyframes em-ribbon-drift { from { transform:translateY(0) rotateX(25deg); } to { transform:translateY(-12px) rotateX(38deg); } }
+@keyframes em-project-drift { from { translate:0 0; } to { translate:0 -9px; } }
+@keyframes em-focus-float { from { translate:0 0; rotate:0deg; } to { translate:0 -10px; rotate:5deg; } }
+@keyframes em-pulse-light { from { opacity:.5; translate:0 0; } to { opacity:1; translate:-15px 10px; } }
+@media (max-width:800px) {
+  #app .em-scene { max-width:380px; height:190px; margin-top:25px; }
+  #app .provider-intro .em-scene { height:210px; }
+  #app .creator-suite-copy .em-scene { height:170px; margin-top:25px; }
+  #app .sx-project-art i,#app .sx-focus-orbits span,#app .sx-pulse:after { animation:none; }
+}
+@media (max-width:1320px) and (min-width:801px) {
+  html[data-theme="dark"] #app .marketing-app .hero { overflow:hidden; }
+  html[data-theme="dark"] #app .marketing-app .hero-product { transform:scale(.92); transform-origin:center right; }
+}
+@media (max-width:560px) {
+  #app .account-story .em-scene { height:140px; }
+  #app .em-signal { gap:4px; }
+  #app .em-ribbons i { height:65px; }
+  #app .workspace-project-head>.em-motion-toggle { margin-top:8px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  #app .em-scene *,#app .sx-project-art i,#app .sx-focus-orbits span,#app .sx-pulse:after { animation:none!important; }
+}
+@media (forced-colors:active) {
+  #app .em-scene { display:none; }
+  html[data-theme="dark"] #app :is(.hero .accent,h1 em,h2 em) { -webkit-text-fill-color:currentColor; background:none; }
+}

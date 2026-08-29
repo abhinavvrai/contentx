@@ -5,6 +5,15 @@ const store = {
   set(key, value) { localStorage.setItem(key, JSON.stringify(value)); },
   remove(key) { localStorage.removeItem(key); }
 };
+const PAYMENT_HISTORY_API = "/api/payments/history";
+const NOTIFICATION_API = "/api/notifications";
+const ADMIN_API = "/api/admin";
+const OWNER_TOKEN_KEY = "cx_owner_upload_token";
+
+function ownerHeaders(json = true) {
+  const token = sessionStorage.getItem(OWNER_TOKEN_KEY) || "";
+  return { "X-ContentX-Owner-Token":token, ...(json ? { "Content-Type":"application/json" } : {}) };
+}
 
 function razorpayPlanId(plan) {
   const validPlans = new Set(["basic_reel", "better_edit", "growth_reel", "premium_motion", "advanced_reel", "long_basic", "long_standard", "long_premium", "saas_animation", "script_hook", "script_full", "script_research", "podcast_30", "podcast_45", "podcast_60"]);
@@ -93,7 +102,42 @@ function money(value, currency = activeCurrency) {
   if (currency === "USD") return `$${roundedUsdFromInr(amount).toLocaleString("en-US")}`;
   return `₹${Math.round(amount).toLocaleString("en-IN")}`;
 }
+function moneyMinor(value, currency = "INR") {
+  const amount = Number(value || 0) / 100;
+  if (currency === "USD") return `$${amount.toLocaleString("en-US", { minimumFractionDigits: amount % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+  return `₹${Math.round(amount).toLocaleString("en-IN")}`;
+}
 function escapeHTML(value = "") { const d = document.createElement("div"); d.textContent = value; return d.innerHTML; }
+function normalizeRefundStatus(value) {
+  return ["requested", "processing", "refunded", "cancelled"].includes(value) ? value : "none";
+}
+function refundLabel(refundStatus, paymentStatus = "") {
+  const status = normalizeRefundStatus(refundStatus);
+  if (status === "requested") return "Refund requested";
+  if (status === "processing") return "Refund processing";
+  if (status === "refunded") return "Refunded";
+  if (status === "cancelled") return "Refund cancelled";
+  return String(paymentStatus).toLowerCase().includes("paid") || ["verified", "captured"].includes(paymentStatus) ? "Paid" : "Payment pending";
+}
+function normalizeLocalPayments(payments = []) {
+  return payments.map(payment => ({
+    ...payment,
+    source:"local",
+    razorpay_order_id:String(payment.razorpay_order_id || payment.orderId || payment.id || ""),
+    plan_name:payment.plan || payment.plan_name,
+    customer_name:payment.name || payment.customer_name,
+    customer_email:payment.email || payment.customer_email,
+    amount_paise:Number(payment.amount_paise || Number(payment.amount || 0) * 100),
+    currency:payment.currency || "INR",
+    status:payment.status || "Paid (test)",
+    refund_status:normalizeRefundStatus(payment.refundStatus || payment.refund_status),
+    refund_reason:payment.refundReason || payment.refund_reason || "",
+    refund_amount_paise:Number(payment.refundAmountPaise || payment.refund_amount_paise || 0),
+    refund_requested_at:payment.refundRequestedAt || payment.refund_requested_at || null,
+    refund_updated_at:payment.refundUpdatedAt || payment.refund_updated_at || null,
+    created_at:payment.created_at || payment.createdAt || payment.id || Date.now(),
+  }));
+}
 function screenMessage(text = "") {
   const directContact = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(text) || /(?:\+?\d[\s().-]*){9,}/.test(text) || /(^|\s)@[a-z0-9_.]{2,}/i.test(text) || /\b(whatsapp|telegram|instagram|insta|snapchat|my\s+(?:account|profile|channel)|username|phone\s+number|email\s+me)\b/i.test(text);
   const links = text.match(/https?:\/\/[^\s]+/gi) || [];
@@ -136,38 +180,36 @@ export function recordNotification(type, title, message, meta = {}) {
     outbox.unshift({ ...item, email: meta.email || client.email || access.email || "demo@apexfitness.in", frequency: settings.frequency, status: settings.frequency === "Instant" ? "Ready to send" : `Queued for ${settings.frequency.toLowerCase()} digest` });
     store.set("cx_email_outbox", outbox.slice(0, 100));
   }
+  pushServerNotification(type, title, message, meta);
   window.dispatchEvent(new CustomEvent("cx:notification", { detail: item }));
   return item;
 }
 
+function pushServerNotification(type, title, message, meta = {}) {
+  if (!["upload", "version", "comment", "reply", "feedback", "approval", "payment", "delivery", "managedReview"].includes(type)) return;
+  fetch(NOTIFICATION_API, {
+    method:"POST",
+    credentials:"same-origin",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      action:"record_event",
+      eventType:type,
+      title,
+      message,
+      projectId:meta.projectId || meta.project || "",
+      actorName:meta.actorName || "",
+      actorEmail:meta.email || meta.actorEmail || "",
+      actionUrl:meta.actionUrl || `${location.origin}${location.pathname}#${type === "upload" ? "workspace" : "review"}`,
+    }),
+  }).catch(() => {});
+}
+
 export function initTheme() {
-  const theme = localStorage.getItem("cx_theme") || "light";
-  document.documentElement.dataset.theme = theme;
-  syncThemeControls();
-}
-
-function syncThemeControls() {
-  const dark = document.documentElement.dataset.theme === "dark";
-  document.querySelectorAll("[data-theme-toggle], [data-market-theme]").forEach(button => {
-    const label = button.dataset.themeLabel || "";
-    button.textContent = `${dark ? "\u2600" : "\u263e"}${label ? ` ${label}` : ""}`;
-    button.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
-    button.setAttribute("aria-pressed", String(dark));
-    button.title = dark ? "Switch to light mode" : "Switch to dark mode";
-  });
-}
-
-export function toggleTheme() {
-  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-  document.documentElement.dataset.theme = next; localStorage.setItem("cx_theme", next);
-  syncThemeControls();
+  // A single, intentional palette; old device preferences cannot restore light mode.
+  document.documentElement.dataset.theme = "dark";
 }
 
 export function enhanceMarketing(root, actions, data = {}) {
-  const navActions = root.querySelector(".nav-actions");
-  if (navActions) {
-    const theme = document.createElement("button"); theme.className = "theme-toggle"; theme.dataset.themeToggle = ""; theme.setAttribute("aria-label", "Toggle dark mode"); theme.textContent = document.documentElement.dataset.theme === "dark" ? "☀" : "☾"; theme.addEventListener("click", toggleTheme); navActions.prepend(theme);
-  }
   const nav = root.querySelector(".site-nav nav");
   if (nav) nav.insertAdjacentHTML("beforeend", '<a href="#contact-form">Contact</a>');
 
@@ -327,7 +369,7 @@ function setupUnifiedPricing(pricing, actions, data) {
 
   const selectedPackage = () => packages[state.service].find(item => item.id === state.planId) || packages[state.service][0];
   const maximumQuantity = () => state.service === "podcast" ? 12 : state.service === "longform" ? 8 : 30;
-  const minimumQuantity = () => state.billing === "monthly" ? (state.service === "podcast" ? 4 : state.service === "longform" ? 2 : 10) : 1;
+  const minimumQuantity = () => state.billing === "monthly" ? (state.service === "podcast" ? 2 : state.service === "longform" ? 4 : 10) : 1;
   const serviceSingular = () => state.service === "podcast" ? "episode" : state.service === "longform" ? "long-form video" : "reel";
   const servicePlural = () => state.service === "podcast" ? "episodes" : state.service === "longform" ? "long-form videos" : "reels";
   const serviceLabel = () => state.service === "podcast" ? "podcast" : state.service === "longform" ? "long-form" : "short-form";
@@ -492,9 +534,8 @@ function openApplication(role) {
 
 export function renderAccess(root, actions) {
   root.className = "access-app";
-  root.innerHTML = `<div class="access-shell"><section class="access-brand"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><div><p class="eyebrow light"><span></span>Private client access</p><h1>Your content operation, <em>organized.</em></h1><p>Projects, files, versions, feedback, messages and approvals live in one secure workspace.</p></div><small>Access activates automatically after a successful payment.</small></section><section class="access-card"><button class="theme-toggle access-theme" data-theme-toggle>${document.documentElement.dataset.theme === "dark" ? "☀" : "☾"}</button><p class="eyebrow"><span></span>Client login</p><h2>Welcome back.</h2><p>Enter the email used at checkout. In this local test build, use the demo button to preview the complete workspace.</p><form><label>Email address<input type="email" name="email" required placeholder="you@company.com"></label><label>Order / access code<input name="code" required placeholder="CX-123456"></label><button class="pill pill-hot" type="submit">Open workspace →</button></form><div class="or"><span></span>TEST MODE<span></span></div><button class="pill pill-dark demo-access">Preview as demo client</button><button class="owner-link">I’m the Content X owner →</button><p class="access-help">No active package? <button data-buy>Choose a plan</button></p></section></div>`;
+  root.innerHTML = `<div class="access-shell"><section class="access-brand"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><div><p class="eyebrow light"><span></span>Private client access</p><h1>Your content operation, <em>organized.</em></h1><p>Projects, files, versions, feedback, messages and approvals live in one secure workspace.</p></div><small>Access activates automatically after a successful payment.</small></section><section class="access-card"><p class="eyebrow"><span></span>Login</p><h2>Welcome back.</h2><p>Enter the email used at checkout. In this local test build, use the demo button to preview the complete workspace.</p><form><label>Email address<input type="email" name="email" required placeholder="you@company.com"></label><label>Order / access code<input name="code" required placeholder="CX-123456"></label><button class="pill pill-hot" type="submit">Open workspace →</button></form><div class="or"><span></span>TEST MODE<span></span></div><button class="pill pill-dark demo-access">Preview as demo client</button><button class="owner-link">I’m the Content X owner →</button><p class="access-help">No active package? <button data-buy>Choose a plan</button></p></section></div>`;
   root.querySelector(".brand").addEventListener("click", e => { e.preventDefault(); actions.openMarketing(); });
-  root.querySelector("[data-theme-toggle]").addEventListener("click", toggleTheme);
   root.querySelector("form").addEventListener("submit", e => { e.preventDefault(); const payments = store.get("cx_payments", []); const data = Object.fromEntries(new FormData(e.currentTarget)); const found = payments.find(p => p.email.toLowerCase() === data.email.toLowerCase() && p.code === data.code); if (!found) return notify("No matching paid order found. Use Demo Client while testing."); store.set("cx_access", { email: data.email, plan: found.plan, paid: true }); actions.openDashboard(true); });
   root.querySelector(".demo-access").addEventListener("click", () => { store.set("cx_access", { email: "demo@apexfitness.in", plan: "Content Growth", paid: true, demo: true }); actions.openDashboard(true); });
   root.querySelector(".owner-link").addEventListener("click", actions.openAdmin);
@@ -509,7 +550,7 @@ export function renderCheckout(root, actions) {
       ? { back: "Back to review", eyebrow: "Hands-off review add-on", secure: "Content X managed review", note: "Your paid request goes directly to the review desk for brief checks, consolidated feedback, revision follow-up and final quality approval.", success: "Your managed review is paid and queued with the Content X review desk." }
       : { back: "Back to pricing", eyebrow: "Activate your workspace", secure: "Payment-gated access", note: "Your client workspace opens only after a successful payment record is created.", success: "Your Content X workspace is active." };
   root.className = "checkout-app";
-  root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span>Secure test checkout</span><button class="theme-toggle" data-theme-toggle>${document.documentElement.dataset.theme === "dark" ? "☀" : "☾"}</button></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="test-banner"><strong>TEST MODE</strong><span>No real payment will be charged. Completing this form unlocks the dashboard on this device.</span></div><form><h3>Contact information</h3><div class="field-pair"><label>Full name<input name="name" required value="Meera Kapoor"></label><label>WhatsApp<input name="phone" required value="+91 98765 43210"></label></div><label>Email<input name="email" type="email" required value="demo@apexfitness.in"></label><h3>Payment method</h3><div class="payment-tabs"><label><input type="radio" name="method" value="UPI" checked><span>UPI</span></label><label><input type="radio" name="method" value="Card"><span>Card</span></label><label><input type="radio" name="method" value="Bank transfer"><span>Bank transfer</span></label></div><div class="payment-fields"><label>UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123"></label></div><label class="terms"><input type="checkbox" required><span>I agree to the scope, two included revisions per video, and ₹300 for each additional revision round.</span></label><button class="pill pill-hot pay-button" type="submit">Complete test payment · ${money(plan.price)}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge)}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-total"><span>Package total<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><strong>${money(plan.price)}</strong></div><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">Enter workspace →</button></div></div>`;
+  root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span>Secure test checkout</span></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="test-banner"><strong>TEST MODE</strong><span>No real payment will be charged. Completing this form unlocks the dashboard on this device.</span></div><form><h3>Contact information</h3><div class="field-pair"><label>Full name<input name="name" required value="Meera Kapoor"></label><label>WhatsApp<input name="phone" required value="+91 98765 43210"></label></div><label>Email<input name="email" type="email" required value="demo@apexfitness.in"></label><h3>Payment method</h3><div class="payment-tabs"><label><input type="radio" name="method" value="UPI" checked><span>UPI</span></label><label><input type="radio" name="method" value="Card"><span>Card</span></label><label><input type="radio" name="method" value="Bank transfer"><span>Bank transfer</span></label></div><div class="payment-fields"><label>UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123"></label></div><label class="terms"><input type="checkbox" required><span>I agree to the scope, two included revisions per video, and ₹300 for each additional revision round.</span></label><button class="pill pill-hot pay-button" type="submit">Complete test payment · ${money(plan.price)}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge)}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-total"><span>Package total<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><strong>${money(plan.price)}</strong></div><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">Enter workspace →</button></div></div>`;
   root.querySelector('input[name="name"]').value = "";
   root.querySelector('input[name="phone"]').value = "";
   root.querySelector('input[name="email"]').value = "";
@@ -517,7 +558,7 @@ export function renderCheckout(root, actions) {
   root.querySelector('input[name="phone"]').setAttribute("autocomplete", "tel");
   root.querySelector('input[name="email"]').setAttribute("autocomplete", "email");
   root.querySelector(".terms span").textContent = "I agree to the selected package scope, add-ons and revision allowance shown in this order.";
-  root.querySelector(".brand").addEventListener("click", e => { e.preventDefault(); actions.openMarketing(); }); root.querySelector(".back-link").addEventListener("click", plan.marketplace ? actions.openTalentProfile : plan.managedReview ? actions.openReview : actions.openMarketing); root.querySelector("[data-theme-toggle]").addEventListener("click", toggleTheme);
+  root.querySelector(".brand").addEventListener("click", e => { e.preventDefault(); actions.openMarketing(); }); root.querySelector(".back-link").addEventListener("click", plan.marketplace ? actions.openTalentProfile : plan.managedReview ? actions.openReview : actions.openMarketing);
   root.querySelectorAll('.payment-tabs input').forEach(input => input.addEventListener("change", () => { const field = root.querySelector('.payment-fields label'); field.innerHTML = input.value === "Card" ? 'Test card number<input name="paymentRef" required value="4242 4242 4242 4242">' : input.value === "UPI" ? 'UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123">' : 'Bank reference<input name="paymentRef" required placeholder="TEST-TRANSFER">'; }));
   root.querySelector("form").addEventListener("submit", e => {
     e.preventDefault();
@@ -618,8 +659,8 @@ export function renderCheckout(root, actions) {
 
 export function enhanceDashboard(root, actions) {
   const user = root.querySelector(".dash-user");
-  if (user) user.insertAdjacentHTML("beforebegin", `<button class="owner-switch" data-owner>⚙ Owner view</button><button class="owner-switch" data-theme-toggle data-theme-label="Theme">${document.documentElement.dataset.theme === "dark" ? "☀" : "☾"} Theme</button>`);
-  root.querySelector("[data-owner]")?.addEventListener("click", actions.openAdmin); root.querySelector("[data-theme-toggle]")?.addEventListener("click", toggleTheme);
+  if (user) user.insertAdjacentHTML("beforebegin", `<button class="owner-switch" data-owner>⚙ Owner view</button>`);
+  root.querySelector("[data-owner]")?.addEventListener("click", actions.openAdmin);
   const nav = root.querySelector(".dash-sidebar nav");
   const client = activeClientContext();
   const unread = store.get("cx_notifications", []).filter(item => !item.read && (item.meta?.clientId === client.id || (client.id === "apex" && !item.meta?.clientId))).length;
@@ -701,7 +742,7 @@ function showShares(root) {
 
 function showAssets(root) {
   const assets = store.get("cx_assets", []); const area = root.querySelector(".project-content");
-  area.innerHTML = `<div class="project-toolbar"><div><button class="pill pill-hot" data-add-assets>↑ Upload images or video</button></div></div><div class="asset-library">${assets.length ? assets.map(a => `<article><span>${a.type.startsWith("video") ? "▶" : a.type.startsWith("image") ? "▧" : "◇"}</span><div><strong>${escapeHTML(a.name)}</strong><small>${(a.size/1024/1024).toFixed(1)} MB · Original quality</small></div><button>•••</button></article>`).join("") : '<div class="empty-state"><span>↑</span><h3>No uploaded assets yet</h3><p>Add original-quality images, video, audio or documents.</p></div>'}</div><input type="file" accept="video/*,image/*,audio/*,.pdf" multiple hidden>`;
+  area.innerHTML = `<div class="project-toolbar"><div><button class="pill pill-hot" data-add-assets>↑ Upload images or video</button></div></div><div class="asset-library">${assets.length ? assets.map(a => `<article><span>${a.type.startsWith("video") ? "▶" : a.type.startsWith("image") ? "▧" : "◇"}</span><div><strong>${escapeHTML(a.name)}</strong><small>${(a.size/1024/1024).toFixed(1)} MB · Original quality</small></div></article>`).join("") : '<div class="empty-state"><span>↑</span><h3>No uploaded assets yet</h3><p>Add original-quality images, video, audio or documents.</p></div>'}</div><input type="file" accept="video/*,image/*,audio/*,.pdf" multiple hidden>`;
   const picker = area.querySelector("input"); area.querySelector("[data-add-assets]").addEventListener("click", () => picker.click()); picker.addEventListener("change", () => { const next = store.get("cx_assets", []); [...picker.files].forEach(f => next.unshift({ id: Date.now()+Math.random(), name:f.name,size:f.size,type:f.type,created:new Date().toLocaleString() })); store.set("cx_assets", next); recordNotification("upload", "New project assets uploaded", `${picker.files.length} original-quality file${picker.files.length === 1 ? "" : "s"} added to Apex Fitness Launch.`); showAssets(root); });
 }
 
@@ -715,14 +756,15 @@ export function enhanceReview(root, actions) {
   const managedSettings = { enabled: true, price: 2500, turnaround: "Within 1 business day", ...store.get("cx_managed_review_settings", {}) };
   const managedRequests = store.get("cx_managed_review_requests", []);
   const activeManagedReview = managedRequests.find(request => request.project === "Apex Fitness Launch" && !["Completed", "Cancelled"].includes(request.status));
-  const headerActions = root.querySelector(".review-head-actions");
-  headerActions?.insertAdjacentHTML("afterbegin", `<button class="review-theme-button" type="button" data-theme-toggle aria-label="Switch colour theme">${document.documentElement.dataset.theme === "dark" ? "\u2600" : "\u263e"}</button>`);
-  root.querySelector(".review-theme-button")?.addEventListener("click", toggleTheme);
-  headerActions?.insertAdjacentHTML("afterbegin", `<button class="pill managed-review-button ${activeManagedReview ? "is-active" : ""}" data-managed-review>${activeManagedReview ? "✓ Managed review active" : "✦ Let Content X review"}</button>`);
-  wrap.insertAdjacentHTML("beforeend", `<canvas class="annotation-canvas" aria-label="Frame annotation canvas"></canvas><div class="watermark">CONTENT X · PREVIEW</div><div class="frame-annotation-toolbar" role="toolbar" aria-label="Frame annotation tools"><div class="annotation-tool-group"><button class="active" data-draw-tool="arrow" title="Arrow"><span>↗</span><small>Arrow</small></button><button data-draw-tool="line" title="Line"><span>╱</span><small>Line</small></button><button data-draw-tool="box" title="Rectangle"><span>□</span><small>Box</small></button><button data-draw-tool="circle" title="Ellipse"><span>○</span><small>Circle</small></button><button data-draw-tool="pencil" title="Free draw"><span>〰</span><small>Draw</small></button><button data-draw-tool="pin" title="Anchored comment"><span>●</span><small>Pin</small></button></div><div class="annotation-options"><div class="annotation-colors" aria-label="Annotation colour">${["#ff5c20","#ffd43b","#56d6a5","#4da3ff","#b985ff","#ffffff"].map((value,index) => `<button class="${index === 0 ? "active" : ""}" data-draw-color="${value}" style="--swatch:${value}" aria-label="Use ${value}"></button>`).join("")}</div><div class="annotation-widths"><button data-draw-width="3">S</button><button class="active" data-draw-width="5">M</button><button data-draw-width="8">L</button></div><span class="annotation-separator"></span><button data-annotation-action="undo" title="Undo">↶</button><button data-annotation-action="redo" title="Redo">↷</button><button data-annotation-action="visibility" title="Show or hide saved annotations">◉</button><button data-annotation-action="clear" title="Clear this draft">⌫</button><button data-annotation-action="close" title="Close annotation tools">×</button></div><div class="annotation-hint"><span>Paused at <strong>00:00</strong></span><em>Draw, then send your comment to attach this markup.</em></div></div>`);
+  const sidePanel = root.querySelector(".comment-panel");
+  sidePanel?.insertAdjacentHTML("afterbegin", `<div class="review-side-tools"><button class="pill managed-review-button ${activeManagedReview ? "is-active" : ""}" data-managed-review>${activeManagedReview ? "✓ Managed review active" : "✦ Content X review"}</button></div>`);
+  wrap.insertAdjacentHTML("beforeend", `<canvas class="annotation-canvas" aria-label="Frame annotation canvas"></canvas><div class="watermark">Content X</div><div class="frame-annotation-toolbar" role="toolbar" aria-label="Frame annotation tools"><div class="annotation-tool-group"><button class="active" data-draw-tool="arrow" title="Arrow"><span>↗</span><small>Arrow</small></button><button data-draw-tool="line" title="Line"><span>╱</span><small>Line</small></button><button data-draw-tool="box" title="Rectangle"><span>□</span><small>Box</small></button><button data-draw-tool="circle" title="Ellipse"><span>○</span><small>Circle</small></button><button data-draw-tool="pencil" title="Free draw"><span>〰</span><small>Draw</small></button><button data-draw-tool="pin" title="Anchored comment"><span>●</span><small>Pin</small></button></div><div class="annotation-options"><div class="annotation-colors" aria-label="Annotation colour">${["#ff5c20","#ffd43b","#56d6a5","#4da3ff","#b985ff","#ffffff"].map((value,index) => `<button class="${index === 0 ? "active" : ""}" data-draw-color="${value}" style="--swatch:${value}" aria-label="Use ${value}"></button>`).join("")}</div><div class="annotation-widths"><button data-draw-width="3">S</button><button class="active" data-draw-width="5">M</button><button data-draw-width="8">L</button></div><span class="annotation-separator"></span><button data-annotation-action="undo" title="Undo">↶</button><button data-annotation-action="redo" title="Redo">↷</button><button data-annotation-action="visibility" title="Show or hide saved annotations">◉</button><button data-annotation-action="clear" title="Clear this draft">⌫</button><button data-annotation-action="close" title="Close annotation tools">×</button></div><div class="annotation-hint"><span>Paused at <strong>00:00</strong></span><em>Draw, then send your comment to attach this markup.</em></div></div>`);
   const controls = root.querySelector(".player-controls");
   controls?.insertAdjacentHTML("beforeend", '<button class="download-review" title="Download disabled by owner">↓</button>');
   const settings = store.get("cx_review_settings", { watermark: true, download: false });
+  video.setAttribute("controlsList", "nodownload noplaybackrate noremoteplayback");
+  video.setAttribute("disablePictureInPicture", "");
+  if (!settings.download) video.addEventListener("contextmenu", event => event.preventDefault());
   wrap.querySelector(".watermark").hidden = !settings.watermark;
   const download = root.querySelector(".download-review");
   download.disabled = !settings.download;
@@ -730,10 +772,10 @@ export function enhanceReview(root, actions) {
   const annotations = initFrameAnnotations(wrap, video, root);
   const commentForm = root.querySelector(".comment-form");
   if (commentForm) {
-    commentForm.insertAdjacentHTML("afterbegin", `<div class="comment-mode-row"><button type="button" data-comment-scope="public"><span>◉</span> Public comment⌄</button><button type="button" data-range-comment><span>↔</span> Mark range</button><button type="button" data-toggle-annotations><span>✎</span> Annotate frame</button></div>`);
+    commentForm.insertAdjacentHTML("afterbegin", `<div class="comment-mode-row"><button type="button" data-range-comment><span>↔</span> Mark range</button><button type="button" data-toggle-annotations><span>✎</span> Annotate</button></div>`);
     commentForm.insertAdjacentHTML("beforeend", '<input type="file" class="comment-attachment" accept="image/*,video/*,audio/*,.pdf" multiple hidden><div class="attachment-chips"></div>');
     const picker = commentForm.querySelector(".comment-attachment");
-    const addLink = commentForm.querySelector('div:nth-of-type(3) button[type="button"]') || commentForm.querySelector('button[type="button"]');
+    const addLink = commentForm.querySelector('.comment-action-row button[type="button"]') || commentForm.querySelector('button[type="button"]');
     if (addLink) { addLink.textContent = "＋ Attach files"; addLink.addEventListener("click", () => picker.click()); }
     picker.addEventListener("change", () => { commentForm.querySelector(".attachment-chips").innerHTML = [...picker.files].slice(0,6).map(file => `<span>${file.type.startsWith("video") ? "▶" : file.type.startsWith("image") ? "▧" : "◇"} ${escapeHTML(file.name)}</span>`).join(""); recordNotification("upload", "Comment attachments added", `${Math.min(picker.files.length,6)} attachment${picker.files.length === 1 ? "" : "s"} were added to review feedback.`); });
     commentForm.querySelector("[data-toggle-annotations]").addEventListener("click", () => annotations.open());
@@ -828,7 +870,7 @@ function renderOwnerGate(root, actions) {
 export function renderAdmin(root, actions) {
   if (!store.get("cx_owner_access")) return renderOwnerGate(root, actions);
   root.className = "admin-app"; const leads = store.get("cx_leads", []), apps = store.get("cx_applications", []), payments = store.get("cx_payments", []), moderation = store.get("cx_moderation", []), settings = store.get("cx_review_settings", { watermark:true, download:false }), managedRequests = store.get("cx_managed_review_requests", []), managedSettings = { enabled:true, price:2500, turnaround:"Within 1 business day", ...store.get("cx_managed_review_settings", {}) };
-  root.innerHTML = `<div class="admin-shell"><aside><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X<small>Owner control room</small></span></a><nav><button class="active" data-admin="overview">⌂ Overview</button><button data-admin="clients">● Clients <b>3</b></button><button data-admin="moderation">◷ Approval queue <b>${moderation.filter(x=>x.status==="Pending").length}</b></button><button data-admin="applications">✦ Talent applications <b>${apps.length}</b></button><button data-admin="leads">↗ Enquiries <b>${leads.length}</b></button><button data-admin="payments">₹ Payments <b>${payments.length}</b></button><button data-admin="team">◇ Team</button><button data-admin="managed-review">✦ Managed review <b>${managedRequests.filter(item=>!["Completed","Cancelled"].includes(item.status)).length}</b></button><button data-admin="settings">⚙ Review controls</button></nav><div><button data-client-view>← Client workspace</button><button data-theme-toggle data-theme-label="Theme">${document.documentElement.dataset.theme === "dark" ? "☀" : "☾"} Theme</button></div></aside><main><header><div><p>Owner workspace</p><h1>Operations overview</h1></div><button class="pill pill-hot" data-add-client>+ Add client</button></header><section class="admin-content"></section></main></div>`;
+  root.innerHTML = `<div class="admin-shell"><aside><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X<small>Owner control room</small></span></a><nav><button class="active" data-admin="overview">⌂ Overview</button><button data-admin="clients">● Clients <b>3</b></button><button data-admin="users">◎ Website users</button><button data-admin="moderation">◷ Approval queue <b>${moderation.filter(x=>x.status==="Pending").length}</b></button><button data-admin="applications">✦ Talent applications <b>${apps.length}</b></button><button data-admin="leads">↗ Enquiries <b>${leads.length}</b></button><button data-admin="payments">₹ Payments <b>${payments.length}</b></button><button data-admin="team">◇ Team</button><button data-admin="managed-review">✦ Managed review <b>${managedRequests.filter(item=>!["Completed","Cancelled"].includes(item.status)).length}</b></button><button data-admin="settings">⚙ Review controls</button></nav><div><button data-client-view>← Client workspace</button></div></aside><main><header><div><p>Owner workspace</p><h1>Operations overview</h1></div><button class="pill pill-hot" data-add-client>+ Add offline-paid client</button></header><section class="admin-content"></section></main></div>`;
   root.querySelector(".admin-shell>aside>div")?.insertAdjacentHTML("beforeend", '<button data-owner-lock>⌾ Lock owner session</button>');
   const content = root.querySelector(".admin-content");
   const ownerReviewFlow = () => `<section class="owner-review-flow"><article><span>Share links</span><h3>Secure client links</h3><p>Control comments, downloads, uploads, passcode and expiry before sending a review link.</p></article><article><span>Version stack</span><h3>V1 → V2 → Final</h3><p>New uploads stay attached to the same file, so revisions do not scatter across folders.</p></article><article><span>Activity log</span><h3>Views and downloads</h3><p>See who opened, commented, approved or downloaded each asset.</p></article><article><span>Team scope</span><h3>Client-by-client access</h3><p>Owner keeps full control while managers and editors get only the projects you assign.</p></article></section>`;
@@ -851,12 +893,97 @@ export function renderAdmin(root, actions) {
   };
   const overview = () => content.innerHTML = `<div class="admin-stats"><article><span>₹</span><div><strong>${money(payments.reduce((s,p)=>s+Number(p.amount||0),0))}</strong><small>Recorded revenue</small></div></article><article><span>●</span><div><strong>3</strong><small>Active clients</small></div></article><article><span>◷</span><div><strong>${moderation.filter(x=>x.status==="Pending").length}</strong><small>Pending approvals</small></div></article><article><span>✦</span><div><strong>${apps.length}</strong><small>Talent applications</small></div></article></div>${ownerReviewFlow()}<div class="admin-columns"><section><div class="dash-section-head"><div><h2>Projects needing attention</h2><p>Review status across active clients.</p></div></div><div class="admin-table"><div><strong>Apex Fitness Launch</strong><span>Waiting on client review</span><b class="status in-review"><i></i>In review</b></div><div><strong>Founder Story Series</strong><span>2 open comments</span><b class="status editing"><i></i>Editing</b></div><div><strong>Product Walkthrough</strong><span>Ready to deliver</span><b class="status approved"><i></i>Approved</b></div></div></section><section class="control-card"><h2>Preview protection</h2><p>These rules apply to client review files.</p><label><span>Show Content X watermark<small>Protect previews before approval</small></span><input type="checkbox" data-setting="watermark" ${settings.watermark?"checked":""}></label><label><span>Allow client download<small>Turn off until payment or approval</small></span><input type="checkbox" data-setting="download" ${settings.download?"checked":""}></label></section></div>`;
   const table = (items, type) => { if(!items.length) return `<div class="empty-state"><span>✦</span><h3>No ${type} yet</h3><p>New submissions from the website will appear here.</p></div>`; return `<div class="management-table"><div class="management-head"><span>Name</span><span>Type</span><span>Contact</span><span>Status</span></div>${items.map(i=>`<article><strong>${escapeHTML(i.name||i.email)}</strong><span>${escapeHTML(i.role||i.interest||i.plan||"")}</span><span>${escapeHTML(i.email||i.phone||"")}</span><select data-record="${i.id}" data-kind="${type}"><option>New</option><option>Contacted</option><option>Shortlisted</option><option>Closed</option></select></article>`).join("")}</div>`; };
-  const clients = () => content.innerHTML = `<div class="dash-section-head"><div><h2>Clients & access</h2><p>Manage packages, project count and workspace access.</p></div></div><div class="client-admin-grid"><article><span>AF</span><h3>Apex Fitness</h3><p>Content Growth · 3 projects</p><strong>Workspace active</strong><button>Manage access →</button></article><article><span>NS</span><h3>Nivara Studio</h3><p>Creator Starter · 2 projects</p><strong>Workspace active</strong><button>Manage access →</button></article><article><span>OL</span><h3>Orbit Labs</h3><p>One-off Premium · 1 project</p><strong>Project complete</strong><button>Manage access →</button></article></div>`;
+  const paymentFinanceView = async () => {
+    const localRecords = normalizeLocalPayments(payments);
+    const token = sessionStorage.getItem(OWNER_TOKEN_KEY) || "";
+    content.innerHTML = `<div class="dash-section-head"><div><h2>Finance & refunds</h2><p>Track client payments, see refund status, and control incomplete-order refund records.</p></div><span class="status briefing"><i></i>Loading live payments</span></div><div class="empty-state"><span>₹</span><h3>Opening finance records…</h3><p>Checking the protected payment database.</p></div>`;
+    let liveRecords = [];
+    let liveError = "";
+    if (token) {
+      try {
+        const response = await fetch(PAYMENT_HISTORY_API, { cache:"no-store", headers:ownerHeaders(false) });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Live payment history could not be opened.");
+        liveRecords = (payload.payments || []).map(item => ({ ...item, source:"server" }));
+      } catch (error) {
+        liveError = error.message || "Live payment history could not be opened.";
+      }
+    }
+    const liveIds = new Set(liveRecords.map(item => item.razorpay_order_id));
+    const records = [...liveRecords, ...localRecords.filter(item => !liveIds.has(item.razorpay_order_id))];
+    const paidTotal = records.filter(item => ["verified", "captured", "paid (test)", "verified"].includes(String(item.status).toLowerCase())).reduce((sum,item)=>sum+Number(item.amount_paise||0),0);
+    const refundTotal = records.filter(item => item.refund_status === "refunded").reduce((sum,item)=>sum+Number(item.refund_amount_paise||0),0);
+    const activeRefunds = records.filter(item => ["requested","processing"].includes(item.refund_status)).length;
+    content.innerHTML = `<div class="dash-section-head"><div><h2>Finance & refunds</h2><p>Payment records are private. Clients can see only their own history; owner can see all records.</p></div><span class="status ${token && !liveError ? "approved" : "briefing"}"><i></i>${token && !liveError ? "Live database connected" : "Owner token needed for live DB"}</span></div>${!token ? financeTokenCard() : liveError ? `<div class="finance-warning"><strong>Live payment database locked.</strong><span>${escapeHTML(liveError)}</span><form data-finance-token-form><input type="password" name="token" placeholder="Owner token"><button>Unlock live records</button></form></div>` : ""}<section class="finance-stats"><article><span>Paid</span><strong>${moneyMinor(paidTotal, records[0]?.currency || "INR")}</strong><small>Recorded in checkout history</small></article><article><span>Refund queue</span><strong>${activeRefunds}</strong><small>Requested or processing</small></article><article><span>Refunded</span><strong>${moneyMinor(refundTotal, records[0]?.currency || "INR")}</strong><small>Marked refunded by owner</small></article></section>${financeTable(records)}`;
+  };
+  const financeTokenCard = () => `<div class="finance-warning"><strong>Unlock live finance records</strong><span>Enter the owner token to load protected D1 payment history. Without it, only local/test checkout records are shown.</span><form data-finance-token-form><input type="password" name="token" placeholder="Owner token"><button>Unlock live records</button></form></div>`;
+  const financeTable = records => {
+    if (!records.length) return `<div class="empty-state"><span>₹</span><h3>No payment records yet</h3><p>Verified Razorpay orders and test checkout records will appear here.</p></div>`;
+    return `<div class="finance-table"><div class="finance-head"><span>Client / order</span><span>Package</span><span>Amount</span><span>Status</span><span>Refund control</span></div>${records.map(record => {
+      const refunded = record.refund_status === "refunded";
+      const activeRefund = record.refund_status === "requested" || record.refund_status === "processing";
+      const completed = ["completed","delivered","closed","approved"].includes(String(record.brief_status || record.project_status || "").toLowerCase());
+      const canQueueRefund = !refunded && !activeRefund && !completed && ["verified", "captured", "paid (test)", "verified"].includes(String(record.status).toLowerCase());
+      return `<article><div><strong>${escapeHTML(record.customer_name || record.name || "Client")}</strong><small>${escapeHTML(record.customer_email || record.email || "No email")} · ${escapeHTML(record.razorpay_order_id || record.id || "")}</small></div><span>${escapeHTML(record.plan_name || record.plan || "Content X package")}<small>${escapeHTML(record.billing === "monthly" ? "Monthly" : record.billing ? "One-time" : record.type || "")}</small></span><span>${moneyMinor(record.amount_paise, record.currency || "INR")}<small>${record.created_at ? new Date(Number(record.created_at)).toLocaleDateString([], { dateStyle:"medium" }) : escapeHTML(record.created || "")}</small></span><b class="finance-status ${escapeHTML(record.refund_status || "none")}">${refundLabel(record.refund_status, record.status)}</b><div class="finance-actions">${canQueueRefund ? `<button data-refund-action="request_refund" data-refund-source="${escapeHTML(record.source)}" data-refund-id="${escapeHTML(record.razorpay_order_id)}">Request refund</button>` : ""}${activeRefund ? `<button data-refund-action="mark_processing" data-refund-source="${escapeHTML(record.source)}" data-refund-id="${escapeHTML(record.razorpay_order_id)}">Processing</button><button data-refund-action="mark_refunded" data-refund-source="${escapeHTML(record.source)}" data-refund-id="${escapeHTML(record.razorpay_order_id)}">Mark refunded</button><button data-refund-action="cancel_refund" data-refund-source="${escapeHTML(record.source)}" data-refund-id="${escapeHTML(record.razorpay_order_id)}">Cancel</button>` : ""}${completed && !refunded ? "<small>Completed projects are locked from this refund queue.</small>" : ""}${refunded ? `<small>${record.refund_updated_at ? `Refunded ${new Date(Number(record.refund_updated_at)).toLocaleDateString([], { dateStyle:"medium" })}` : "Refund completed"}</small>` : ""}</div></article>`;
+    }).join("")}</div><p class="finance-footnote">Refund buttons update Content X records only. Complete the actual payout in Razorpay dashboard until a second-confirmation Razorpay refund API is connected.</p>`;
+  };
+  const clients = () => content.innerHTML = `<div class="dash-section-head"><div><h2>Clients & access</h2><p>Manage packages, project count and workspace access. Use “offline paid” when a client paid by bank transfer.</p></div><button class="pill pill-hot" data-add-client>+ Add offline-paid client</button></div><div class="client-admin-grid"><article><span>AF</span><h3>Apex Fitness</h3><p>Content Growth · 3 projects</p><strong>Workspace active</strong><button>Manage access →</button></article><article><span>NS</span><h3>Nivara Studio</h3><p>Creator Starter · 2 projects</p><strong>Workspace active</strong><button>Manage access →</button></article><article><span>OL</span><h3>Orbit Labs</h3><p>One-off Premium · 1 project</p><strong>Project complete</strong><button>Manage access →</button></article></div>`;
+  const usersView = async () => {
+    const token = sessionStorage.getItem(OWNER_TOKEN_KEY) || "";
+    content.innerHTML = `<div class="dash-section-head"><div><h2>Website users</h2><p>Registered client accounts and emails are visible only after owner verification.</p></div><button class="pill pill-hot" data-add-client>+ Add offline-paid client</button></div>${token ? '<div class="empty-state"><span>◎</span><h3>Loading users…</h3><p>Checking the protected account database.</p></div>' : ownerTokenCard("Unlock user list")}`;
+    if (!token) return;
+    try {
+      const response = await fetch(ADMIN_API, { cache:"no-store", headers:ownerHeaders(false) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "User list could not be opened.");
+      const users = payload.users || [];
+      content.innerHTML = `<div class="dash-section-head"><div><h2>Website users</h2><p>Usernames are safe to show; emails are owner/team-only. Passwords are never readable.</p></div><button class="pill pill-hot" data-add-client>+ Add offline-paid client</button></div><section class="finance-stats admin-user-stats"><article><span>Users</span><strong>${payload.summary?.users || users.length}</strong><small>Registered accounts</small></article><article><span>Paid</span><strong>${payload.summary?.paidOrders || 0}</strong><small>Website + offline records</small></article><article><span>Projects</span><strong>${payload.summary?.projects || 0}</strong><small>Client workspaces</small></article></section><div class="admin-users-table"><div><span>Name</span><span>Email</span><span>Orders</span><span>Projects</span><span>Sessions</span></div>${users.length ? users.map(user => `<article><strong>${escapeHTML(user.name || "Client")}</strong><span>${escapeHTML(user.email || "")}</span><b>${Number(user.orders || 0)}</b><b>${Number(user.projects || 0)}</b><em>${Number(user.active_sessions || 0) ? "Active" : "Signed out"}</em></article>`).join("") : `<div class="empty-state"><span>◎</span><h3>No users yet</h3><p>Google, OTP, password and offline-paid clients will appear here.</p></div>`}</div><aside class="team-security-note compact"><span>⌾</span><p><strong>Password safety</strong><small>You can see name, email, order/project count and status. Real passwords are hashed and cannot be viewed by anyone, including owner.</small></p></aside>`;
+    } catch (error) {
+      content.innerHTML = `<div class="dash-section-head"><div><h2>Website users</h2><p>Registered client accounts and emails are protected.</p></div></div><div class="finance-warning"><strong>Live user database locked.</strong><span>${escapeHTML(error.message || "Could not load users.")}</span><form data-finance-token-form><input type="password" name="token" placeholder="Owner token"><button>Unlock users</button></form></div>`;
+    }
+  };
   const moderationView = () => { content.innerHTML=`<div class="dash-section-head"><div><h2>Communication approval queue</h2><p>Review external media links before they appear in client or applicant conversations.</p></div></div><div class="moderation-list">${moderation.length?moderation.map(item=>`<article><span>${item.source==="chat"?"↗":"◌"}</span><div><strong>${escapeHTML(item.author)} submitted a ${escapeHTML(item.source)} link</strong><p>${escapeHTML(item.text)}</p><small>${escapeHTML(item.created)}</small></div><em class="moderation-status ${item.status.toLowerCase()}">${escapeHTML(item.status)}</em><div><button data-moderate="Approved" data-id="${item.id}">Approve</button><button data-moderate="Rejected" data-id="${item.id}">Reject</button></div></article>`).join(""):'<div class="empty-state"><span>✓</span><h3>Approval queue is clear</h3><p>Submitted media links will appear here.</p></div>'}</div>`; };
   const managedReviewView = () => { content.innerHTML = `<div class="dash-section-head"><div><h2>Content X managed review</h2><p>Set the hands-off review price and manage paid review requests.</p></div><span class="status ${managedSettings.enabled ? "approved" : "briefing"}"><i></i>${managedSettings.enabled ? "Available to clients" : "Paused"}</span></div><div class="managed-review-admin"><aside><p class="eyebrow"><span></span>Service settings</p><h3>You decide the review fee.</h3><p>Clients see this price before payment. The review desk then handles feedback, revision follow-up and final quality approval.</p><label>Project fee (₹)<input type="number" min="500" step="100" value="${managedSettings.price}" data-managed-price></label><label>Review turnaround<select data-managed-turnaround>${["Within 4 hours","Within 1 business day","Within 2 business days","Custom schedule"].map(value=>`<option ${value===managedSettings.turnaround?"selected":""}>${value}</option>`).join("")}</select></label><label class="managed-toggle"><span><strong>Offer managed review</strong><small>Show the add-on inside the client review screen</small></span><input type="checkbox" data-managed-enabled ${managedSettings.enabled?"checked":""}></label><button class="pill pill-hot" data-save-managed-review>Save service settings</button></aside><section><div class="dash-section-head"><div><h2>Review queue</h2><p>Paid requests appear here automatically.</p></div></div><div class="managed-request-list">${managedRequests.length ? managedRequests.map(item=>`<article><div><span>CX</span><p><strong>${escapeHTML(item.project)} · ${escapeHTML(item.version)}</strong><small>${escapeHTML(item.clientName)} · ${escapeHTML(item.created)}</small></p></div><strong>${money(item.price)}</strong><select data-managed-status="${item.id}">${["Paid · Review queued","Reviewing brief","Reviewing cut","Feedback sent to editor","Checking revision","Completed","Cancelled"].map(status=>`<option ${status===item.status?"selected":""}>${status}</option>`).join("")}</select></article>`).join("") : '<div class="empty-state"><span>✦</span><h3>No managed reviews yet</h3><p>Paid client requests will appear in this queue.</p></div>'}</div></section></div>`; };
-  root.querySelectorAll("[data-admin]").forEach(btn => btn.addEventListener("click", () => { root.querySelectorAll("[data-admin]").forEach(b=>b.classList.toggle("active",b===btn)); const view=btn.dataset.admin; if(view==="overview") overview(); else if(view==="clients") clients(); else if(view==="moderation") moderationView(); else if(view==="applications") content.innerHTML=`<div class="dash-section-head"><div><h2>Talent & idea applications</h2><p>Private contact details are visible only in Owner view.</p></div></div>${table(apps,"applications")}`; else if(view==="leads") content.innerHTML=`<div class="dash-section-head"><div><h2>Website enquiries</h2><p>Messages submitted through your public website.</p></div></div>${table(leads,"leads")}`; else if(view==="payments") content.innerHTML=`<div class="dash-section-head"><div><h2>Payment records</h2><p>Test checkout records and access codes.</p></div></div>${table(payments,"payments")}`; else if(view==="team") content.innerHTML=teamPermissionsView(); else if(view==="managed-review") managedReviewView(); else { overview(); content.querySelector(".control-card")?.scrollIntoView({behavior:"smooth"}); } }));
-  content.addEventListener("change", e => { if(e.target.matches("[data-setting]")){settings[e.target.dataset.setting]=e.target.checked;store.set("cx_review_settings",settings);notify("Review protection updated.");} if(e.target.matches("[data-managed-status]")){const item=managedRequests.find(request=>request.id===Number(e.target.dataset.managedStatus));if(!item)return;item.status=e.target.value;item.updated=new Date().toLocaleString();store.set("cx_managed_review_requests",managedRequests);recordNotification(item.status==="Completed"?"approval":"managedReview",`Managed review: ${item.status}`,`${item.project} · ${item.version} has moved to ${item.status}.`,{email:item.clientEmail});notify("Client review status and email activity updated.");} }); content.addEventListener("click",e=>{const save=e.target.closest("[data-save-managed-review]");if(save){managedSettings.price=Math.max(500,Number(content.querySelector("[data-managed-price]").value||2500));managedSettings.turnaround=content.querySelector("[data-managed-turnaround]").value;managedSettings.enabled=content.querySelector("[data-managed-enabled]").checked;store.set("cx_managed_review_settings",managedSettings);managedReviewView();return notify("Managed review pricing saved.");}const button=e.target.closest("[data-moderate]");if(!button)return;const item=moderation.find(x=>x.id===Number(button.dataset.id));if(!item)return;item.status=button.dataset.moderate;item.reviewed=new Date().toLocaleString();store.set("cx_moderation",moderation);moderationView();notify(`Link ${item.status.toLowerCase()}. Status is now visible in chat.`);});
-  root.querySelector("[data-client-view]").addEventListener("click", () => actions.openDashboard(true)); root.querySelector("[data-theme-toggle]").addEventListener("click", toggleTheme); root.querySelector("[data-owner-lock]").addEventListener("click", () => { store.remove("cx_owner_access"); actions.refreshRoute(); notify("Owner session locked on this device."); }); root.querySelector(".brand").addEventListener("click", e=>{e.preventDefault();actions.openMarketing();}); root.querySelector("[data-add-client]").addEventListener("click", () => notify("Client invitation draft created.")); overview();
+  root.querySelectorAll("[data-admin]").forEach(btn => btn.addEventListener("click", async () => { root.querySelectorAll("[data-admin]").forEach(b=>b.classList.toggle("active",b===btn)); const view=btn.dataset.admin; if(view==="overview") overview(); else if(view==="clients") clients(); else if(view==="users") await usersView(); else if(view==="moderation") moderationView(); else if(view==="applications") content.innerHTML=`<div class="dash-section-head"><div><h2>Talent & idea applications</h2><p>Private contact details are visible only in Owner view.</p></div></div>${table(apps,"applications")}`; else if(view==="leads") content.innerHTML=`<div class="dash-section-head"><div><h2>Website enquiries</h2><p>Messages submitted through your public website.</p></div></div>${table(leads,"leads")}`; else if(view==="payments") await paymentFinanceView(); else if(view==="team") content.innerHTML=teamPermissionsView(); else if(view==="managed-review") managedReviewView(); else { overview(); content.querySelector(".control-card")?.scrollIntoView({behavior:"smooth"}); } }));
+  content.addEventListener("submit", e => { const form=e.target.closest("[data-finance-token-form]"); if(!form)return; e.preventDefault(); const token=String(new FormData(form).get("token")||"").trim(); if(!token)return notify("Enter the owner token to unlock live records."); sessionStorage.setItem(OWNER_TOKEN_KEY, token); const activeView = root.querySelector("[data-admin].active")?.dataset.admin; if (activeView === "users") usersView(); else paymentFinanceView(); });
+  content.addEventListener("change", e => { if(e.target.matches("[data-setting]")){settings[e.target.dataset.setting]=e.target.checked;store.set("cx_review_settings",settings);notify("Review protection updated.");} if(e.target.matches("[data-managed-status]")){const item=managedRequests.find(request=>request.id===Number(e.target.dataset.managedStatus));if(!item)return;item.status=e.target.value;item.updated=new Date().toLocaleString();store.set("cx_managed_review_requests",managedRequests);recordNotification(item.status==="Completed"?"approval":"managedReview",`Managed review: ${item.status}`,`${item.project} · ${item.version} has moved to ${item.status}.`,{email:item.clientEmail});notify("Client review status and email activity updated.");} }); content.addEventListener("click",async e=>{const refund=e.target.closest("[data-refund-action]");if(refund){const action=refund.dataset.refundAction,id=refund.dataset.refundId,source=refund.dataset.refundSource;const reason=action==="request_refund"?prompt("Why is this incomplete order being refunded?"):"";if(action==="request_refund"&&reason===null)return;const note=action==="mark_refunded"?prompt("Optional note after you complete the payout in Razorpay/dashboard:", "Refund completed by owner."):"";refund.disabled=true;refund.textContent="Updating…";try{if(source==="server"){const response=await fetch(PAYMENT_HISTORY_API,{method:"POST",headers:ownerHeaders(),body:JSON.stringify({action,razorpayOrderId:id,reason,note})});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload.error||"Refund status could not be updated.");}else{const nextStatus=action==="request_refund"?"requested":action==="mark_processing"?"processing":action==="mark_refunded"?"refunded":"cancelled";const now=Date.now();const index=payments.findIndex(item=>String(item.razorpay_order_id||item.orderId||item.id)===String(id));if(index>=0){payments[index]={...payments[index],refundStatus:nextStatus,refundReason:reason||payments[index].refundReason||"",refundAmountPaise:nextStatus==="cancelled"?0:Number(payments[index].amount||0)*100,refundRequestedAt:payments[index].refundRequestedAt||now,refundUpdatedAt:now,refundNote:note||""};store.set("cx_payments",payments);}}await paymentFinanceView();notify(action==="mark_refunded"?"Refund marked complete. Confirm the real payout is done in Razorpay.":"Refund record updated.");}catch(error){notify(error.message||"Refund record could not be updated.");await paymentFinanceView();}return;}const save=e.target.closest("[data-save-managed-review]");if(save){managedSettings.price=Math.max(500,Number(content.querySelector("[data-managed-price]").value||2500));managedSettings.turnaround=content.querySelector("[data-managed-turnaround]").value;managedSettings.enabled=content.querySelector("[data-managed-enabled]").checked;store.set("cx_managed_review_settings",managedSettings);managedReviewView();return notify("Managed review pricing saved.");}const button=e.target.closest("[data-moderate]");if(!button)return;const item=moderation.find(x=>x.id===Number(button.dataset.id));if(!item)return;item.status=button.dataset.moderate;item.reviewed=new Date().toLocaleString();store.set("cx_moderation",moderation);moderationView();notify(`Link ${item.status.toLowerCase()}. Status is now visible in chat.`);});
+  root.querySelector("[data-client-view]").addEventListener("click", () => actions.openDashboard(true));  root.querySelector("[data-owner-lock]").addEventListener("click", () => { store.remove("cx_owner_access"); actions.refreshRoute(); notify("Owner session locked on this device."); }); root.querySelector(".brand").addEventListener("click", e=>{e.preventDefault();actions.openMarketing();}); root.querySelector("[data-add-client]").addEventListener("click", event => { event.preventDefault(); event.stopPropagation(); openOfflinePaidClientModal(() => root.querySelector('[data-admin="users"]')?.click()); }); overview();
+}
+
+function ownerTokenCard(title = "Unlock live records") {
+  return `<div class="finance-warning"><strong>${escapeHTML(title)}</strong><span>Enter the private owner token to load protected database records. Emails are not shown without this.</span><form data-finance-token-form><input type="password" name="token" placeholder="Owner token"><button>Unlock</button></form></div>`;
+}
+
+function openOfflinePaidClientModal(onComplete) {
+  const token = sessionStorage.getItem(OWNER_TOKEN_KEY) || "";
+  const { layer, close } = openLayer(`<p class="eyebrow"><span></span>Bank transfer / offline payment</p><h2>Add a paid client manually</h2><p class="advanced-subcopy">Use this when someone already paid you outside the website. The client will sign in with this same email and see the paid workspace.</p><form class="advanced-form offline-client-form">${!token ? '<label>Owner token<input name="ownerToken" type="password" required placeholder="Private owner token"></label>' : ""}<div class="field-pair"><label>Client name<input name="name" required autocomplete="name" placeholder="Client or business name"></label><label>Email<input name="email" type="email" required autocomplete="email" placeholder="client@company.com"></label></div><label>Project / workspace title<input name="projectTitle" required placeholder="e.g. Founder Reel Batch"></label><div class="field-pair"><label>Package<select name="planId"><option value="basic_reel">Basic reel · ₹1,500</option><option value="better_edit">Standard clean edit · ₹2,000</option><option value="growth_reel">Standard + motion · ₹2,500</option><option value="premium_motion">Premium motion · ₹3,500</option><option value="advanced_reel">Premium · ₹5,000</option><option value="long_basic">Long-form Basic · ₹5,000</option><option value="podcast_30">Podcast · ₹5,000</option></select></label><label>Billing<select name="billing"><option value="one_off">One-time / per project</option><option value="monthly">Monthly</option></select></label></div><div class="field-pair"><label>Quantity<input name="quantity" type="number" min="1" max="30" value="1"></label><label>Amount received (₹)<input name="amountRupees" type="number" min="1" value="1500"></label></div><label>Private payment note<textarea name="note" rows="3" placeholder="Bank transfer ref, date, or internal note. Not shown as password or public info."></textarea></label><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">Create paid client workspace →</button></form>`);
+  const form = layer.querySelector("form");
+  form.querySelector('[name="planId"]').addEventListener("change", event => {
+    const prices = { basic_reel:1500, better_edit:2000, growth_reel:2500, premium_motion:3500, advanced_reel:5000, long_basic:5000, podcast_30:5000 };
+    form.elements.amountRupees.value = prices[event.target.value] || 1500;
+  });
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = form.querySelector("button[type=submit]");
+    const error = form.querySelector("[role=alert]");
+    const values = Object.fromEntries(new FormData(form));
+    const suppliedToken = String(values.ownerToken || "").trim();
+    if (suppliedToken) sessionStorage.setItem(OWNER_TOKEN_KEY, suppliedToken);
+    button.disabled = true; button.textContent = "Creating workspace…"; error.hidden = true;
+    try {
+      const response = await fetch(ADMIN_API, { method:"POST", headers:ownerHeaders(), body:JSON.stringify({ action:"create_offline_client", ...values }) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Offline paid client could not be created.");
+      close();
+      notify("Offline-paid client created. They can sign in with that email and open their workspace.");
+      onComplete?.(payload);
+    } catch (failure) {
+      error.textContent = failure.message || "Could not create this client.";
+      error.hidden = false;
+      button.disabled = false;
+      button.textContent = "Create paid client workspace →";
+    }
+  });
 }
 
 export function canAccessWorkspace() { return Boolean(store.get("cx_access")); }

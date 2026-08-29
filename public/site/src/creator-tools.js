@@ -67,13 +67,19 @@ function addMarketingSuite(root) {
   root.querySelectorAll("[data-open-caption]").forEach(button => button.addEventListener("click", openAICaptionStudio)); root.querySelectorAll("[data-open-scan]").forEach(button => button.addEventListener("click", openSmartScan));
 }
 
+export function tutorialVisual(index) {
+  if (index === "01") return `<div class="cx-tutorial-art cx-review-scene" aria-hidden="true"><div class="cx-mini-frame"><div class="cx-mini-bar"><b>CX</b><span>APEX / REVIEW</span><i></i></div><div class="cx-mini-footage"><video src="videos/landscape3.mp4" muted loop playsinline preload="metadata" data-preview-autoplay tabindex="-1"></video><span class="cx-focus-pin">+</span><div class="cx-mini-timeline"><i></i><b>00:12</b></div></div></div><div class="cx-note-float"><span>MK</span><p><b>00:12 · Client feedback</b>Bring the music up here.</p><i>✓</i></div><span class="cx-art-label">FEEDBACK, RIGHT ON THE FRAME</span></div>`;
+  if (index === "02") return `<div class="cx-tutorial-art cx-version-scene" aria-hidden="true"><div class="cx-version-sheet cx-version-sheet--one"><span>V1</span><i></i><small>First cut</small></div><div class="cx-version-sheet cx-version-sheet--two"><span>V2</span><i></i><small>Feedback applied</small></div><div class="cx-version-sheet cx-version-sheet--three"><span>V3 <b>✓</b></span><i></i><strong>The final feeling.</strong><small>One project. Every version.</small></div><span class="cx-art-label">NOT ANOTHER “FINAL_FINAL”</span></div>`;
+  return `<div class="cx-tutorial-art cx-share-scene" aria-hidden="true"><div class="cx-share-orbit"><i></i><i></i><i></i></div><div class="cx-link-core">↗</div><span class="cx-share-person cx-share-person--one">CLIENT</span><span class="cx-share-person cx-share-person--two">EDITOR</span><span class="cx-share-person cx-share-person--three">TEAM</span><div class="cx-link-float"><span>⌾</span><b>One link. Everyone aligned.</b><i>↗</i></div><span class="cx-art-label">SEND THE WORK. KEEP THE CONTEXT.</span></div>`;
+}
+
 function addPrePaymentTutorials(root) {
   if (root.querySelector(".prepay-tutorials")) return; const pricing = root.querySelector("#pricing"); if (!pricing) return;
-  pricing.insertAdjacentHTML("beforebegin", `<section class="prepay-tutorials section-shell"><div class="section-heading split"><div><p class="eyebrow"><span></span>See it before you pay</p><h2>Preview the workspace flow <em>before checkout.</em></h2></div><p>Video walkthroughs will be added here later. For now, these quick cards explain what clients can do inside the Content X workspace after payment.</p></div><div class="tutorial-video-grid">${[
-    ["Review comments", "01", "Click the timeline, leave a timestamped note and keep feedback attached to the correct version."],
-    ["Version workflow", "02", "Drop a replacement on the same file so V2, V3 and final delivery stay together."],
-    ["Shareable links", "03", "Create a review link, copy it instantly, then share it by WhatsApp, email or social."],
-  ].map(([title,index,copy]) => `<article><div class="tutorial-placeholder"><span>${index}</span><strong>Coming soon</strong><small>Demo video placeholder</small></div><div><span>Workflow</span><h3>${title}</h3><p>${copy}</p></div></article>`).join("")}</div><div class="tutorial-actions"><a class="pill pill-hot" href="#workspace">Explore demo dashboard →</a><a class="pill pill-dark" href="#access">Login / create account</a></div></section>`);
+  pricing.insertAdjacentHTML("beforebegin", `<section class="prepay-tutorials section-shell"><div class="section-heading split"><div><p class="eyebrow"><span></span>Small details. A better workflow.</p><h2>The work flows.<br><em>The details stay.</em></h2></div><p>See how feedback, versions and sharing fit together before checkout. Three little things that make a big difference.</p></div><div class="tutorial-video-grid">${[
+    ["Review comments", "01", "Click the timeline, leave a timestamped note and keep feedback attached to the correct version.", ["Timeline", "Comment", "Resolve"]],
+    ["Version workflow", "02", "Drop a replacement on the same file so V2, V3 and final delivery stay together.", ["V1", "V2", "Final"]],
+    ["Shareable links", "03", "Create a review link, copy it instantly, then share it by WhatsApp, email or social.", ["Private link", "Uploads", "Expiry"]],
+  ].map(([title,index,copy,tags]) => `<article class="cx-tutorial-card">${tutorialVisual(index)}<div class="cx-tutorial-copy"><span>0${Number(index)} / WORKSPACE PREVIEW</span><h3>${title}</h3><p>${copy}</p><div class="cx-tutorial-tags">${tags.map(tag => `<span>${tag}</span>`).join("")}</div><a href="${index === "03" ? "#workspace" : "#review"}">${index === "01" ? "Explore video feedback" : index === "02" ? "Explore version review" : "Explore the workspace"} <span aria-hidden="true">↗</span></a></div></article>`).join("")}</div><div class="tutorial-actions"><a class="pill pill-hot" href="#workspace">Explore demo dashboard →</a><a class="pill pill-dark" href="#access">Login / create account</a></div></section>`);
 }
 
 function openHookPlanner() {
@@ -170,8 +176,27 @@ function simplifyShortFormPricing(root) {
 }
 
 function addWorkspaceSupport(root, route) {
-  const header = root.querySelector(route === "review" ? ".review-head-actions" : ".dash-header > div:last-child, .project-header-actions"); if (header && !header.querySelector("[data-open-support]")) { const button = document.createElement("button"); button.className = "workspace-support-button"; button.dataset.openSupport = ""; button.textContent = "Help & support"; button.addEventListener("click", openSupportDesk); header.prepend(button); const captions = document.createElement("button"); captions.className = "workspace-support-button caption-workspace-button"; captions.dataset.openCaption = ""; captions.textContent = "CC Hinglish captions"; captions.addEventListener("click", openAICaptionStudio); header.prepend(captions); }
-  if (route === "review") { const commands = root.querySelector(".review-command-bar"); if (commands && !commands.querySelector("[data-open-scan]")) { const button = document.createElement("button"); button.dataset.openScan = ""; button.textContent = "✦ Smart scan"; button.addEventListener("click", openSmartScan); commands.append(button); } const form = root.querySelector(".comment-form"); if (form && !form.querySelector(".smart-reply-row")) { const row = document.createElement("div"); row.className = "smart-reply-row"; row.innerHTML = `<span>Quick replies</span><button type="button">Approved—please keep this style.</button><button type="button">Please tighten this section.</button>`; form.prepend(row); row.querySelectorAll("button").forEach(button => button.addEventListener("click", () => { const input = form.querySelector("textarea"); input.value = button.textContent; input.focus(); })); } }
+  if (route !== "review") {
+    const header = root.querySelector(".dash-header > div:last-child, .project-header-actions");
+    if (header && !header.querySelector("[data-open-support]")) {
+      const button = document.createElement("button");
+      button.className = "workspace-support-button";
+      button.dataset.openSupport = "";
+      button.textContent = "Help & support";
+      button.addEventListener("click", openSupportDesk);
+      header.prepend(button);
+    }
+  }
+  if (route === "review") {
+    const commands = root.querySelector(".review-command-bar");
+    if (commands && !commands.querySelector("[data-open-scan]")) {
+      const button = document.createElement("button");
+      button.dataset.openScan = "";
+      button.textContent = "✦ Smart scan";
+      button.addEventListener("click", openSmartScan);
+      commands.append(button);
+    }
+  }
 }
 
 function addPremiumInteractions(root) {

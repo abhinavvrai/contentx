@@ -72,3 +72,32 @@ test("groups replacement uploads into versions and supports controlled share lin
   assert.match(workspace, /data-share-status/);
   assert.match(workspace, /workspace-revision-flow/);
 });
+
+test("adds free account workspaces with 50 GB quota and review comments", async () => {
+  const [route, storage, schema, workspace, account] = await Promise.all([
+    readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/uploads.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/account.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(storage, /FREE_ACCOUNT_STORAGE_BYTES = 50 \* 1024 \* 1024 \* 1024/);
+  assert.match(storage, /project_review_comments/);
+  assert.match(schema, /projectReviewComments/);
+  assert.match(route, /account-projects/);
+  assert.match(route, /create-account-project/);
+  assert.match(route, /ensureDefaultAccountProject/);
+  assert.match(route, /enforceAccountStorageQuota/);
+  assert.match(route, /comment-status/);
+  assert.match(route, /createProjectComment/);
+  assert.match(route, /requireProject\(request, projectId, "view"\)/);
+  assert.match(route, /publishNotification/);
+  assert.match(workspace, /Your free review workspace is ready/);
+  assert.match(workspace, /50 GB/);
+  assert.match(workspace, /Create project/);
+  assert.match(workspace, /workspace-comments/);
+  assert.match(workspace, /create-comment/);
+  assert.match(workspace, /data-comment-complete/);
+  assert.match(account, /Open free workspace/);
+});

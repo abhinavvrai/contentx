@@ -28,7 +28,8 @@ export async function GET(request: Request) {
     const user = await requireSessionUser(request);
     const db = getAccountDatabase();
     const orders = await db.prepare(`SELECT p.razorpay_order_id, p.plan_id, p.plan_name, p.billing,
-      p.quantity, p.amount_paise, p.currency, p.status, p.created_at, s.content_type, s.delivery_format,
+      p.quantity, p.amount_paise, p.currency, p.status, p.refund_status, p.refund_reason,
+      p.refund_amount_paise, p.refund_requested_at, p.refund_updated_at, p.created_at, s.content_type, s.delivery_format,
       s.add_ons_json, b.id AS brief_id, b.title, b.description, b.instructions,
       b.reference_url, b.status AS brief_status, u.project_id
       FROM order_selections s
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
       .bind(user.id).all<Record<string, unknown>>();
     return json({
       user,
-      orders: orders.results.map(order => ({
+      orders: orders.results.map((order: Record<string, unknown>) => ({
         ...order,
         add_ons: parseAddOns(order.add_ons_json),
         add_ons_json: undefined,
@@ -58,20 +59,22 @@ export async function POST(request: Request) {
     const title = cleanText(input.title, 140);
     const description = cleanText(input.description, 2500);
     const instructions = cleanText(input.instructions, 5000);
-    const referenceUrl = cleanUrl(input.referenceUrl);
+    const referenceUrl = cleanSourceLinks(input.referenceUrl);
     if (!orderId) throw new AccountError("Choose the paid order for this brief.");
     if (!title) throw new AccountError("Add a title for the video or episode.");
     if (!description) throw new AccountError("Add a short project description.");
     if (!instructions) throw new AccountError("Tell us what you want the final edit to achieve.");
-    if (input.referenceUrl && !referenceUrl) throw new AccountError("Enter a valid reference link beginning with https://.");
+    if (input.referenceUrl && !referenceUrl) throw new AccountError("Paste at least one valid source link beginning with https://.");
 
     const db = getAccountDatabase();
-    const order = await db.prepare(`SELECT p.razorpay_order_id, p.status
+    const order = await db.prepare(`SELECT p.razorpay_order_id, p.status, p.refund_status
       FROM payment_orders p JOIN order_selections s ON s.razorpay_order_id = p.razorpay_order_id
       WHERE p.razorpay_order_id = ? AND s.user_id = ? LIMIT 1`)
-      .bind(orderId, user.id).first<{ razorpay_order_id: string; status: string }>();
+      .bind(orderId, user.id).first<{ razorpay_order_id: string; status: string; refund_status?: string | null }>();
     if (!order) throw new AccountError("This order does not belong to your account.", 403);
     if (!["verified", "captured"].includes(order.status)) throw new AccountError("Complete the payment before submitting the full project brief.", 409);
+    if (order.refund_status === "refunded") throw new AccountError("This payment has been refunded. Choose another paid order to start a project.", 409);
+    if (order.refund_status === "requested" || order.refund_status === "processing") throw new AccountError("A refund is already active for this payment, so the project brief is paused.", 409);
 
     const now = Date.now();
     const existing = await db.prepare("SELECT id FROM project_briefs WHERE razorpay_order_id = ? AND user_id = ? LIMIT 1")
@@ -118,15 +121,29 @@ function cleanText(value: unknown, maximum: number): string {
   return typeof value === "string" ? value.trim().slice(0, maximum) : "";
 }
 
-function cleanUrl(value: unknown): string {
-  const text = cleanText(value, 1000);
+function cleanSourceLinks(value: unknown): string {
+  const text = cleanText(value, 5000);
   if (!text) return "";
-  try {
-    const url = new URL(text);
-    return url.protocol === "https:" ? url.toString() : "";
-  } catch {
-    return "";
+  const lines = text.split(/\r?\n|,/).map(line => line.trim()).filter(Boolean).slice(0, 30);
+  const cleaned: string[] = [];
+  for (const line of lines) {
+    const urls = [...line.matchAll(/https:\/\/[^\s<>"']+/gi)].map(match => match[0]);
+    if (!urls.length) throw new AccountError("Each source line needs a valid https:// link. Put non-link notes in the instructions box.");
+    let safeLine = cleanText(line.replace(/[\u0000-\u001f\u007f]/g, " "), 500);
+    for (const rawUrl of urls) {
+      let normalized = "";
+      try {
+        const url = new URL(rawUrl);
+        normalized = url.protocol === "https:" ? url.toString() : "";
+      } catch {
+        normalized = "";
+      }
+      if (!normalized) throw new AccountError("Source links must begin with https://.");
+      safeLine = safeLine.replace(rawUrl, normalized);
+    }
+    cleaned.push(safeLine);
   }
+  return cleaned.join("\n");
 }
 
 function parseAddOns(value: unknown): unknown[] {
