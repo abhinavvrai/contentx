@@ -9,7 +9,8 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   for (const price of [1500, 2000, 3500]) {
     assert.match(features, new RegExp(`price:${price}`));
   }
-  for (const plan of ["Basic", "Standard", "Premium"]) assert.match(features, new RegExp(`name:"${plan}"`));
+  for (const plan of ["Basic", "Standard"]) assert.match(features, new RegExp(`name:"${plan}"`));
+  assert.match(features, /name:"Premium · Motion Plus"/);
   assert.match(features, /1 reel up to 60 seconds/);
   assert.match(features, /Quick Delivery", price:700/);
   assert.match(features, />Short-form</);
@@ -19,11 +20,15 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   assert.match(features, /state\.billing === "monthly" \? Math\.max\(minimumQuantity\(\), state\.quantity\) : 1/);
   assert.match(features, /range:"₹2,000–₹2,500"/);
   assert.match(features, /range:"₹3,500–₹5,000"/);
-  assert.match(features, /availableAddOns:\["motion_graphics", "reel_script", "cover_design", "extra_revision"\]/);
+  assert.match(features, /availableAddOns:\["motion_graphics", "reel_script", "cover_design", "quick_delivery", "extra_revision"\]/);
   assert.match(features, /availableAddOns:\["advanced_motion_graphics", "reel_script", "cover_design", "rush_delivery", "extra_revision"\]/);
   assert.match(features, /Extra B-roll \+ Sound Design", price:500/);
   assert.match(features, /Motion Graphics", price:500/);
-  assert.match(features, /Advanced Motion Graphics", price:1500/);
+  assert.match(features, /Advanced Motion Upgrade", price:1500/);
+  assert.match(features, /₹3,500 Motion Plus/);
+  assert.match(features, /tracked graphics, masking, compositing and custom animated scenes/);
+  assert.match(features, /Total: ₹5,000 per reel/);
+  assert.match(features, /For Basic or Standard/);
   assert.match(features, /Optional upgrades for \$\{plan\.name\}/);
   assert.match(features, /addOnsRevealed:false/);
   assert.match(features, /Show add-ons for \$\{plan\.name\}/);
@@ -77,11 +82,11 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=revision-reorder-1/);
-  assert.match(html, /contentx-release" content="revision-reorder-1/);
-  assert.match(html, /main\.js\?v=revision-reorder-1/);
+  assert.match(page, /\/site\/index\.html\?v=package-clarity-1/);
+  assert.match(html, /contentx-release" content="package-clarity-1/);
+  assert.match(html, /main\.js\?v=package-clarity-1/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
-  assert.match(main, /features\.js\?v=revision-reorder-1/);
+  assert.match(main, /features\.js\?v=package-clarity-1/);
   assert.match(main, /uploads\.js\?v=no-video-placeholders-1/);
 });
 
@@ -130,7 +135,7 @@ test("keeps payment totals server-calculated with allowlisted add-ons", async ()
   assert.match(razorpay, /reel_script: \{ name: "Instagram Reel Script", amount: 500/);
   assert.match(razorpay, /broll_sfx: \{ name: "B-roll \+ Sound Design", amount: 500/);
   assert.match(razorpay, /motion_graphics: \{ name: "Motion Graphics", amount: 500/);
-  assert.match(razorpay, /advanced_motion_graphics: \{ name: "Advanced Motion Graphics", amount: 1500/);
+  assert.match(razorpay, /advanced_motion_graphics: \{ name: "Advanced Motion Upgrade", amount: 1500/);
   assert.match(razorpay, /quick_delivery: \{ name: "Quick Delivery", amount: 700/);
   assert.match(razorpay, /long_basic: \{ name: "Long-form Basic", amount: 5000/);
   assert.match(razorpay, /Monthly podcast production starts at 2 episodes/);
