@@ -59,7 +59,7 @@ export const studio = {
     }
   ],
   faqs: [
-    ["How do revisions work?", "Every project includes two revision rounds. Additional rounds are ₹300 each, agreed before work begins."],
+    ["How do revisions work?", "Revision rounds follow your package: Basic includes 1, Standard includes 2 and Premium includes 3. Additional rounds are ₹300 for short-form and ₹500 for long-form."],
     ["Where do I send my footage?", "After your project is confirmed, your private workspace unlocks. Upload footage, logos, fonts, references and briefs directly into its folders."],
     ["Can my team review a video?", "Yes. Share a secure review link so teammates can watch, comment at exact timestamps and approve without downloading the file."],
     ["Do you offer monthly packages?", "Yes. Monthly retainers are quoted around your video volume, complexity and turnaround requirements."],

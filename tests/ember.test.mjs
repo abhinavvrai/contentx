@@ -54,8 +54,8 @@ test("workflow and marketplace actions use the vivid orange design system",async
   assert.match(css,/\.creator-suite-grid \.creator-card::before/);
   assert.match(css,/@keyframes em-review-pulse/);
   assert.match(css,/grid-template-columns:1fr; gap:12px/);
-  assert.match(main,/ui\.js\?v=workflow-glow-1/);
-  assert.match(main,/marketplace\.js\?v=workflow-glow-1/);
+  assert.match(main,/ui\.js\?v=revision-bands-1/);
+  assert.match(main,/marketplace\.js\?v=revision-bands-1/);
   assert.match(index,/ember\.css\?v=workflow-scenes-1/);
 });
 test("legacy peach calls to action are vivid gradients with white labels",async()=>{

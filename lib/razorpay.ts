@@ -29,10 +29,10 @@ const reelPlanIds = new Set<PlanId>(["basic_reel", "better_edit", "growth_reel",
 const longformPlanIds = new Set<PlanId>(["long_basic", "long_standard", "long_premium"]);
 const podcastPlanIds = new Set<PlanId>(["podcast_30", "podcast_45", "podcast_60"]);
 const longformScope = {
-  long_basic: { includedMinutes: 10, includedRawHours: 1 },
-  long_standard: { includedMinutes: 10, includedRawHours: 2 },
-  long_premium: { includedMinutes: 10, includedRawHours: 3 },
-} satisfies Record<string, { includedMinutes: number; includedRawHours: number }>;
+  long_basic: { includedMinutes: 10, includedRawMinutes: 60 },
+  long_standard: { includedMinutes: 10, includedRawMinutes: 120 },
+  long_premium: { includedMinutes: 10, includedRawMinutes: 180 },
+} satisfies Record<string, { includedMinutes: number; includedRawMinutes: number }>;
 
 export const serviceAddOns = {
   broll_sfx: { name: "B-roll + Sound Design", amount: 500, service: "video" },
@@ -47,7 +47,7 @@ export const serviceAddOns = {
   long_chapters: { name: "Chapters + Description", amount: 700, service: "longform" },
   long_shorts: { name: "2 Shorts From Long Video", amount: 1500, service: "longform" },
   long_motion: { name: "Advanced Motion Pack", amount: 2000, service: "longform" },
-  long_extra_revision: { name: "Extra Revision Round", amount: 300, service: "longform" },
+  long_extra_revision: { name: "Extra Revision Round", amount: 500, service: "longform" },
   long_rush_delivery: { name: "Priority Delivery", amount: 1000, service: "longform" },
   podcast_script: { name: "Podcast Episode Script", amount: 1500, service: "podcast" },
   podcast_notes: { name: "Show Notes & Chapters", amount: 500, service: "podcast" },
@@ -126,6 +126,7 @@ export function calculateOrder(input: {
   billing: unknown;
   addOns?: unknown;
   durationMinutes?: unknown;
+  rawFootageMinutes?: unknown;
   rawFootageHours?: unknown;
   currency?: unknown;
 }) {
@@ -179,17 +180,21 @@ export function calculateOrder(input: {
   if (isLongformPlan) {
     const scope = longformScope[planId as keyof typeof longformScope];
     const durationMinutes = Number(input.durationMinutes || scope.includedMinutes);
-    const rawFootageHours = Number(input.rawFootageHours || scope.includedRawHours);
+    const legacyRawHours = Number(input.rawFootageHours);
+    const rawFootageMinutes = Number(input.rawFootageMinutes ?? (Number.isFinite(legacyRawHours) && legacyRawHours > 0 ? legacyRawHours * 60 : scope.includedRawMinutes));
     if (!Number.isInteger(durationMinutes) || durationMinutes < scope.includedMinutes || durationMinutes > 60) {
       throw new Error("Long-form final length must match the selected package and stay within 60 minutes.");
     }
-    if (!Number.isInteger(rawFootageHours) || rawFootageHours < scope.includedRawHours || rawFootageHours > 10) {
-      throw new Error("Raw footage review must match the selected long-form scope and stay within 10 hours.");
+    if (!Number.isInteger(rawFootageMinutes) || rawFootageMinutes < scope.includedRawMinutes || rawFootageMinutes > 600 || rawFootageMinutes % 15 !== 0) {
+      throw new Error("Raw footage review must use 15-minute steps, match the selected package, and stay within 600 minutes.");
     }
     const extraMinutes = durationMinutes - scope.includedMinutes;
-    const extraRawHours = rawFootageHours - scope.includedRawHours;
+    const extraRawMinutes = rawFootageMinutes - scope.includedRawMinutes;
     if (extraMinutes) adjustments.push({ id: "longform_extra_minutes", name: `Extra final length · ${extraMinutes} min`, unitAmount: extraMinutes * 400, totalAmount: extraMinutes * 400 * quantity });
-    if (extraRawHours) adjustments.push({ id: "longform_raw_review", name: `Extra raw footage review · ${extraRawHours} hr`, unitAmount: extraRawHours * 600, totalAmount: extraRawHours * 600 * quantity });
+    if (extraRawMinutes) {
+      const rawFootageBands = extraRawMinutes / 15;
+      adjustments.push({ id: "longform_raw_review", name: `Extra raw footage review · ${extraRawMinutes} min`, unitAmount: rawFootageBands * 200, totalAmount: rawFootageBands * 200 * quantity });
+    }
   }
   const adjustmentAmount = adjustments.reduce((total, item) => total + item.totalAmount, 0);
   const subtotalAmount = baseAmount + addOnAmount + adjustmentAmount;

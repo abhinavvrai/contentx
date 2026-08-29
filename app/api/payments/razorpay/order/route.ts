@@ -8,13 +8,14 @@ export async function POST(request: Request) {
     requireSameOrigin(request);
     await Promise.all([ensureAccountSchema(), ensurePaymentSchema()]);
     const user = await requireSessionUser(request);
-    const input = await request.json() as { planId?: string; quantity?: number; billing?: string; addOns?: string[]; durationMinutes?: number; rawFootageHours?: number; currency?: string; contentType?: string; deliveryFormat?: string; name?: string; email?: string; phone?: string };
+    const input = await request.json() as { planId?: string; quantity?: number; billing?: string; addOns?: string[]; durationMinutes?: number; rawFootageMinutes?: number; rawFootageHours?: number; currency?: string; contentType?: string; deliveryFormat?: string; name?: string; email?: string; phone?: string };
     const order = calculateOrder({
       planId: input.planId || "",
       quantity: input.quantity,
       billing: input.billing,
       addOns: input.addOns,
       durationMinutes: input.durationMinutes,
+      rawFootageMinutes: input.rawFootageMinutes,
       rawFootageHours: input.rawFootageHours,
       currency: input.currency,
     });

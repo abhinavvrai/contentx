@@ -47,6 +47,14 @@ test("presents Basic, Standard and Premium with quantified scopes", async () => 
   assert.match(features, /Long-form Basic", price:5000/);
   assert.match(features, /Final video length/);
   assert.match(features, /Raw footage to review/);
+  assert.match(features, /long_extra_revision", name:"Extra Revision Round", price:500/);
+  assert.match(features, /extra_revision", name:"Extra Revision Round", price:300/);
+  assert.match(features, /includedRawMinutes:60/);
+  assert.match(features, /includedRawMinutes:120/);
+  assert.match(features, /includedRawMinutes:180/);
+  assert.match(features, /step="15"/);
+  assert.match(features, /price:\(extraRawMinutes \/ 15\) \* 200/);
+  assert.match(features, /rawFootageMinutes:plan\.rawFootageMinutes/);
   assert.match(features, /Instagram Reel Script/);
   assert.match(features, /Podcast Episode Script/);
   assert.match(features, /One-off \+20%/);
@@ -69,11 +77,11 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=workflow-scenes-1/);
-  assert.match(html, /contentx-release" content="workflow-scenes-1/);
-  assert.match(html, /main\.js\?v=workflow-scenes-1/);
+  assert.match(page, /\/site\/index\.html\?v=revision-bands-1/);
+  assert.match(html, /contentx-release" content="revision-bands-1/);
+  assert.match(html, /main\.js\?v=revision-bands-1/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
-  assert.match(main, /features\.js\?v=noir-studio-1/);
+  assert.match(main, /features\.js\?v=revision-bands-1/);
   assert.match(main, /uploads\.js\?v=no-video-placeholders-1/);
 });
 
@@ -129,6 +137,13 @@ test("keeps payment totals server-calculated with allowlisted add-ons", async ()
   assert.match(razorpay, /Monthly long-form production starts at 4 videos/);
   assert.match(razorpay, /longform_extra_minutes/);
   assert.match(razorpay, /longform_raw_review/);
+  assert.match(razorpay, /extra_revision: \{ name: "Extra Revision Round", amount: 300/);
+  assert.match(razorpay, /long_extra_revision: \{ name: "Extra Revision Round", amount: 500/);
+  assert.match(razorpay, /includedRawMinutes: 60/);
+  assert.match(razorpay, /includedRawMinutes: 120/);
+  assert.match(razorpay, /includedRawMinutes: 180/);
+  assert.match(razorpay, /rawFootageMinutes % 15/);
+  assert.match(razorpay, /extraRawMinutes \/ 15/);
   assert.match(razorpay, /podcast_script: \{ name: "Podcast Episode Script", amount: 1500/);
   assert.match(razorpay, /const subtotalAmount = baseAmount \+ addOnAmount \+ adjustmentAmount/);
   assert.match(razorpay, /const billingPremiumAmount = billing === "one_off" && usesBillingPremium \? Math\.round\(subtotalAmount \* 0\.2\) : 0/);
@@ -138,7 +153,24 @@ test("keeps payment totals server-calculated with allowlisted add-ons", async ()
   assert.match(razorpay, /currency: order\.currency/);
   assert.match(orderRoute, /requireSessionUser/);
   assert.match(orderRoute, /currency: input\.currency/);
+  assert.match(orderRoute, /rawFootageMinutes: input\.rawFootageMinutes/);
   assert.match(orderRoute, /order_selections/);
+});
+
+test("keeps revision promises aligned with the selected package", async () => {
+  const [data, creatorTools, ui, marketplace] = await Promise.all([
+    load("public/site/src/data.js"),
+    load("public/site/src/creator-tools.js"),
+    load("public/site/src/ui.js"),
+    load("public/site/src/marketplace.js"),
+  ]);
+  for (const source of [data, creatorTools, ui, marketplace]) {
+    assert.doesNotMatch(source, /Every project includes two revision rounds/);
+    assert.doesNotMatch(source, /Each video includes two consolidated revision rounds/);
+    assert.doesNotMatch(source, /Two revision rounds included unless stated otherwise/);
+  }
+  assert.match(data, /Basic includes 1, Standard includes 2 and Premium includes 3/);
+  assert.match(data, /₹300 for short-form and ₹500 for long-form/);
 });
 
 test("offers verified email OTP and Google identity sign-in", async () => {
