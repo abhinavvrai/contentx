@@ -82,9 +82,9 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=frame-contrast-1/);
-  assert.match(html, /contentx-release" content="frame-contrast-1/);
-  assert.match(html, /main\.js\?v=frame-contrast-1/);
+  assert.match(page, /\/site\/index\.html\?v=frame-flow-1/);
+  assert.match(html, /contentx-release" content="frame-flow-1/);
+  assert.match(html, /main\.js\?v=frame-flow-1/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
   assert.match(main, /features\.js\?v=auth-health-1/);
   assert.match(main, /uploads\.js\?v=no-video-placeholders-1/);
@@ -117,6 +117,20 @@ test("lets visitors explore a demo dashboard before login", async () => {
   assert.match(ui, /aria-label="Search workspace"/);
   assert.doesNotMatch(ui, /Good afternoon, Meera/);
   assert.doesNotMatch(ui, /◦<i><\/i>/);
+});
+
+test("keeps the workspace shell visible while projects refresh", async () => {
+  const [workspace, styles] = await Promise.all([
+    load("public/site/src/workspace.js"),
+    load("public/site/src/frame-workspace.css"),
+  ]);
+  assert.match(workspace, /const existingShell = root\.querySelector\("\.workspace-shell"\)/);
+  assert.match(workspace, /existingShell\.classList\.add\("is-refreshing"\)/);
+  assert.match(workspace, /workspaceOpeningShell\(\)/);
+  assert.match(workspace, /renderVersion !== workspaceRenderVersion/);
+  assert.doesNotMatch(workspace, /Opening your workspace…/);
+  assert.match(styles, /workspace-shell\.is-refreshing::after/);
+  assert.match(styles, /workspace-opening-shell/);
 });
 
 test("passes marketing data into pricing so the homepage loader cannot crash", async () => {

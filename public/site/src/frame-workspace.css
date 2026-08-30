@@ -97,6 +97,7 @@ html[data-theme="dark"] #app:is(.workspace-app,.dashboard-app,.account-app) {
 #app .workspace-user small { font-size:8px; }
 
 #app .workspace-main { grid-column:3; min-height:100dvh; background:var(--fx-bg); }
+#app .workspace-shell { --workspace-gutter:clamp(18px,2.35vw,34px); }
 #app .workspace-topbar {
   position:sticky;
   top:0;
@@ -112,7 +113,7 @@ html[data-theme="dark"] #app:is(.workspace-app,.dashboard-app,.account-app) {
 #app .workspace-button.primary { border:0; background:linear-gradient(135deg,var(--fx-orange),var(--fx-amber)); color:#fff; box-shadow:0 8px 22px #ff672a24; }
 #app .workspace-button.primary:hover { filter:brightness(1.08); }
 
-#app .workspace-project-head { align-items:center; padding:22px 24px 15px; }
+#app .workspace-project-head { align-items:center; padding:24px var(--workspace-gutter) 16px; }
 #app .workspace-project-head p { display:none; }
 #app .workspace-project-head h1 { margin:0; font-size:24px; letter-spacing:-.035em; }
 #app .workspace-project-head>div:first-child>span { margin-top:5px; font-size:10px; }
@@ -123,7 +124,7 @@ html[data-theme="dark"] #app:is(.workspace-app,.dashboard-app,.account-app) {
 #app .sx-pulse {
   grid-template-columns:minmax(170px,.7fr) 1.3fr;
   min-height:0;
-  margin:0 24px 16px;
+  margin:0 var(--workspace-gutter) 16px;
   padding:16px 18px;
   border:1px solid var(--fx-line);
   border-radius:10px;
@@ -147,18 +148,18 @@ html[data-theme="dark"] #app:is(.workspace-app,.dashboard-app,.account-app) {
 #app :is(.sx-library-tools,.sx-dashboard-tools) :is(input,select) { min-height:32px; font-size:11px; }
 #app :is(.sx-library-tools,.sx-dashboard-tools)>span { font-size:9px; }
 
-#app .workspace-dropbar { margin:0 24px; padding:10px 12px; border-radius:8px; }
+#app .workspace-dropbar { margin:0 var(--workspace-gutter); padding:10px 12px; border-radius:8px; }
 #app .workspace-dropbar>span { width:30px; height:30px; border-radius:7px; }
 #app .workspace-dropbar b { font-size:11px; }
 #app .workspace-dropbar small { font-size:9px; }
-#app .workspace-upload-rules { margin:8px 24px 0; padding:8px 11px; font-size:9px; }
-#app .workspace-revision-flow { margin:12px 24px 0; gap:8px; }
+#app .workspace-upload-rules { margin:8px var(--workspace-gutter) 0; padding:8px 11px; font-size:9px; }
+#app .workspace-revision-flow { margin:12px var(--workspace-gutter) 0; gap:8px; }
 #app .workspace-revision-flow article { padding:12px; border-radius:9px; }
 #app .workspace-revision-flow article:after { animation:none; }
 #app .workspace-revision-flow b { font-size:11px; }
 #app .workspace-revision-flow small { font-size:9px; }
 
-#app .workspace-files { padding:20px 24px 28px; }
+#app .workspace-files { padding:20px var(--workspace-gutter) 28px; }
 #app .workspace-files h2,#app .workspace-comments h2 { font-size:17px; }
 #app .workspace-files>header>p,#app .workspace-comments>header p { font-size:9px; }
 #app .workspace-file-grid { grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:14px; margin-top:14px; }
@@ -175,7 +176,45 @@ html[data-theme="dark"] #app .workspace-file-card {
 #app .workspace-file-info { padding:11px 12px 6px; }
 #app .workspace-file-info strong { font-size:11px; }
 #app .workspace-file-info small,#app .workspace-file-card>footer { font-size:9px; }
-#app .workspace-comments { margin:0 24px 50px; border-radius:10px; }
+#app .workspace-comments { margin:0 var(--workspace-gutter) 50px; border-radius:10px; }
+
+/* Keep navigation stable while project data refreshes. */
+#app .workspace-shell { position:relative; }
+#app .workspace-shell::after { content:""; position:fixed; z-index:70; top:0; left:296px; width:0; height:2px; background:linear-gradient(90deg,var(--fx-orange),var(--fx-amber)); opacity:0; pointer-events:none; }
+#app .workspace-shell.is-refreshing::after { width:calc(100vw - 296px); opacity:1; animation:workspaceRouteProgress .72s ease-in-out infinite alternate; }
+#app .workspace-shell.is-refreshing .workspace-main { opacity:.82; transition:opacity var(--fx-fast); }
+@keyframes workspaceRouteProgress { from{ transform:scaleX(.16); transform-origin:left; } to{ transform:scaleX(1); transform-origin:left; } }
+
+/* First entry uses an aligned shell instead of a disruptive full-screen spinner. */
+#app .workspace-opening-shell { overflow:hidden; }
+#app .workspace-opening-shell :is(.workspace-opening-line,.workspace-opening-brand,.workspace-opening-nav,.workspace-opening-projects,.workspace-opening-toolbar,.workspace-opening-cards i,.workspace-rail nav span) { display:block; border-radius:7px; background:linear-gradient(100deg,#1a1b22 20%,#272831 40%,#1a1b22 60%); background-size:220% 100%; animation:workspaceSkeleton 1.25s ease-in-out infinite; }
+#app .workspace-opening-shell .workspace-rail nav span { width:34px; height:34px; }
+#app .workspace-opening-brand { width:116px; height:30px; margin:6px 8px 24px; }
+#app .workspace-opening-nav { height:34px; margin:7px 0; }
+#app .workspace-opening-nav.short { width:72%; }
+#app .workspace-opening-projects { height:168px; margin-top:28px; }
+#app .workspace-opening-line.compact { width:170px; height:12px; }
+#app .workspace-opening-line.action { width:104px; height:30px; }
+#app .workspace-opening-content { padding:34px var(--workspace-gutter); }
+#app .workspace-opening-line.title { width:min(380px,58%); height:34px; }
+#app .workspace-opening-line.subtitle { width:220px; height:11px; margin-top:12px; }
+#app .workspace-opening-toolbar { height:74px; margin-top:34px; }
+#app .workspace-opening-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:22px; }
+#app .workspace-opening-cards i { height:190px; }
+@keyframes workspaceSkeleton { to{ background-position:-220% 0; } }
+
+/* Review layout: separate status from tools and keep every edge on one grid. */
+html[data-theme="dark"] #app.review-app .review-stage { padding:16px 20px 12px; }
+html[data-theme="dark"] #app.review-app .stage-status { min-height:34px; display:grid; grid-template-columns:auto minmax(120px,1fr) auto; align-items:center; justify-content:initial; gap:10px; margin-bottom:12px; }
+html[data-theme="dark"] #app.review-app .stage-status>.media-format-chip { display:none; }
+html[data-theme="dark"] #app.review-app .stage-status>span:not(.status):not(.media-format-chip) { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+html[data-theme="dark"] #app.review-app .review-command-bar { grid-column:3; justify-self:end; display:flex; align-items:center; gap:6px; }
+html[data-theme="dark"] #app.review-app .player-controls { gap:9px; }
+html[data-theme="dark"] #app.review-app .version-bar { gap:8px; }
+html[data-theme="dark"] #app.review-app .comment-head,
+html[data-theme="dark"] #app.review-app .comment-filter,
+html[data-theme="dark"] #app.review-app .comment-form { padding-inline:14px; }
+html[data-theme="dark"] #app.review-app .comment { margin-inline:10px; }
 
 /* Demo dashboard: media-first, compact, and intentionally low-copy. */
 html[data-theme="dark"] #app .dashboard-shell { grid-template-columns:216px minmax(0,1fr); background:var(--fx-bg); }
@@ -331,6 +370,16 @@ html[data-theme="dark"] #app.review-app .comment:focus-within .comment-tools :is
   #app .sx-pulse-metrics { margin-top:12px; }
   #app .account-settings-shell { grid-template-columns:56px 210px minmax(0,1fr); }
   #app .account-settings-content { width:min(760px,calc(100% - 28px)); }
+  #app .workspace-shell::after { left:56px; }
+  #app .workspace-shell.is-refreshing::after { width:calc(100vw - 56px); }
+}
+@media(max-width:960px) and (min-width:761px) {
+  html[data-theme="dark"] #app.review-app .review-stage { padding:12px; }
+  html[data-theme="dark"] #app.review-app .stage-status { grid-template-columns:auto 1fr; align-items:center; }
+  html[data-theme="dark"] #app.review-app .stage-status>span:not(.status):not(.media-format-chip) { display:none; }
+  html[data-theme="dark"] #app.review-app .review-command-bar { grid-column:2; justify-self:end; }
+  html[data-theme="dark"] #app.review-app .player-controls { gap:6px; }
+  html[data-theme="dark"] #app.review-app .player-controls [data-frame-step] { display:none; }
 }
 @media(max-width:620px) {
   #app .workspace-shell { display:block; }
@@ -361,6 +410,11 @@ html[data-theme="dark"] #app.review-app .comment:focus-within .comment-tools :is
   html[data-theme="dark"] #app.dashboard-app .project-toolbar>div { display:none; }
   html[data-theme="dark"] #app.dashboard-app .project-toolbar>label { width:100%; }
   html[data-theme="dark"] #app.dashboard-app .file-row { grid-template-columns:1fr 48px 92px; }
+  #app .workspace-opening-shell .workspace-sidebar { display:none; }
+  #app .workspace-opening-cards { grid-template-columns:1fr; }
+  #app .workspace-opening-cards i:not(:first-child) { display:none; }
+  #app .workspace-shell::after { left:0; }
+  #app .workspace-shell.is-refreshing::after { width:100vw; }
 }
 @media(prefers-reduced-motion:reduce) {
   #app :is(.workspace-rail a,.workspace-rail button,.workspace-button,.workspace-file-card,.project-card,.sx-project-art i) { transition:none!important; transform:none!important; }

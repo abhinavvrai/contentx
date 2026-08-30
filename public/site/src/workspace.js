@@ -15,6 +15,7 @@ const formatBytes = bytes => {
 const fileGlyph = type => String(type || "").startsWith("video/") ? "▶" : String(type || "").startsWith("image/") ? "▧" : String(type || "").startsWith("audio/") ? "♫" : "◇";
 const formatDate = value => value ? new Date(Number(value)).toLocaleDateString([], { dateStyle:"medium" }) : "—";
 const SAFE_WORKSPACE_EXTENSIONS = new Set(["mp4","mov","m4v","webm","mkv","avi","mp3","wav","m4a","aac","flac","ogg","jpg","jpeg","png","webp","gif","heic","heif","pdf","txt","md","csv","srt","vtt"]);
+let workspaceRenderVersion = 0;
 
 async function api(url, options = {}) {
   const response = await fetch(url, { credentials:"same-origin", ...options });
@@ -26,8 +27,12 @@ async function api(url, options = {}) {
 const bearerHeaders = (token, json = false) => ({ ...(token ? { Authorization:`Bearer ${token}` } : {}), ...(json ? { "Content-Type":"application/json" } : {}) });
 
 export async function renderClientWorkspace(root, actions, route) {
+  const renderVersion = ++workspaceRenderVersion;
+  const existingShell = root.querySelector(".workspace-shell");
   root.className = "workspace-app";
-  root.innerHTML = `<main class="workspace-loading"><span></span><h1>Opening your workspace…</h1></main>`;
+  root.setAttribute("aria-busy", "true");
+  if (existingShell) existingShell.classList.add("is-refreshing");
+  else root.innerHTML = workspaceOpeningShell();
   try {
     const account = await api(`${UPLOAD_API}?action=account-projects`, { cache:"no-store" });
     const projects = account.projects || [];
@@ -39,10 +44,22 @@ export async function renderClientWorkspace(root, actions, route) {
       api(`${UPLOAD_API}?action=shares&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }),
       api(`${UPLOAD_API}?action=comments&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }),
     ]) : [{ project:null, files:[], permissions:{ canUpload:false } }, { shares:[] }, { comments:[] }];
+    if (renderVersion !== workspaceRenderVersion) return;
     renderWorkspaceShell(root, actions, account.user, projects, selected, projectData, shareData.shares || [], account.storage || {}, commentData.comments || []);
+    root.removeAttribute("aria-busy");
   } catch (error) {
+    if (renderVersion !== workspaceRenderVersion) return;
     root.innerHTML = `<main class="workspace-error"><span>!</span><h1>Workspace unavailable.</h1><p>${escapeHTML(error.message)}</p><a class="workspace-button primary" href="#account">Return to account</a></main>`;
+    root.removeAttribute("aria-busy");
   }
+}
+
+function workspaceOpeningShell() {
+  return `<div class="workspace-shell workspace-opening-shell" aria-label="Opening workspace">
+    <aside class="workspace-rail"><span class="workspace-rail-brand">CX</span><nav><span></span><span></span><span></span></nav></aside>
+    <aside class="workspace-sidebar"><div class="workspace-opening-brand"></div><div class="workspace-opening-nav"></div><div class="workspace-opening-nav short"></div><div class="workspace-opening-projects"></div></aside>
+    <main class="workspace-main"><header class="workspace-topbar"><span class="workspace-opening-line compact"></span><span class="workspace-opening-line action"></span></header><section class="workspace-opening-content"><span class="workspace-opening-line title"></span><span class="workspace-opening-line subtitle"></span><div class="workspace-opening-toolbar"></div><div class="workspace-opening-cards"><i></i><i></i><i></i></div></section></main>
+  </div>`;
 }
 
 function renderWorkspaceShell(root, actions, user, projects, selected, projectData, shares, storage, comments) {
