@@ -139,7 +139,7 @@ export function enhanceReviewSuite(root, actions) {
     [38, "Join Apex Fitness today."]
   ] : [[0, `${activeProject.name} begins with a clear, human opening.`],[4, `This story was created for ${activeClient.name}.`],[11, "The visual direction builds trust before introducing the offer."],[20, "Each scene supports the approved message and brand tone."],[31, "The final call to action brings the story together."],[38, `${activeClient.name} · final review line.`]];
   transcript.innerHTML = `<header><div><strong>Interactive transcript</strong><small>Click any line to jump to that moment.</small></div><button data-close-transcript>×</button></header><label>⌕ <input placeholder="Search transcript"></label><div>${transcriptLines.map(([time, text]) => `<button data-transcript-time="${time}"><span>${fmt(time)}</span><p>${safe(text)}</p></button>`).join("")}</div>`;
-  panel.insertBefore(transcript, commentForm);
+  commentForm.before(transcript);
 
   const filter = root.querySelector(".comment-filter");
   filter?.insertAdjacentHTML("beforeend", `<label class="comment-search">⌕<input placeholder="Search"></label>`);
@@ -305,7 +305,7 @@ function setActiveNav(root, active) { root.querySelectorAll(".dash-sidebar nav b
 function applyClientDashboard(root, client, actions) {
   const user = root.querySelector(".dash-user");
   if (user) { user.querySelector("b").textContent = client.contactInitials; const text = user.querySelector("span"); text.innerHTML = `${safe(client.contactName)}<small>${safe(client.name)}</small>`; }
-  const greeting = root.querySelector(".dash-header h1"); if (greeting) greeting.textContent = "Good afternoon.";
+  const greeting = root.querySelector(".dash-header h1"); if (greeting) greeting.textContent = "Projects";
   const storage = root.querySelector(".storage"); if (storage) { storage.querySelector("small").textContent = client.storageLabel; storage.querySelector("em").style.width = `${client.storage}%`; }
   const projectCount = root.querySelector('[data-dash="projects"] b'); if (projectCount) projectCount.textContent = client.projects.length;
   const reviewCount = client.projects.filter(project => project.status === "In review" || project.status === "Editing").length;
@@ -324,7 +324,7 @@ function applyClientDashboard(root, client, actions) {
   }
   const grid = root.querySelector(".project-grid");
   if (grid) {
-    grid.innerHTML = `${client.projects.map(project => `<article class="project-card" data-client-project="${project.id}"><div class="project-card-top"><span class="folder-icon" style="--project:${safe(project.color)}">▰</span><button type="button" data-project-menu>•••</button></div><p>${safe(client.name)}</p><h3>${safe(project.name)}</h3><small>${safe(project.type)} · ${safe(project.format)}</small><div class="project-meta"><span class="status ${project.status.toLowerCase().replaceAll(" ", "-")}"><i></i>${safe(project.status)}</span><span>${project.files} files</span></div><div class="progress-row"><i><em style="width:${project.progress}%;--project:${safe(project.color)}"></em></i><span>${project.progress}%</span></div><footer><span>Due ${safe(project.due)}</span><b>${safe(client.contactInitials)}</b></footer></article>`).join("")}<button class="new-project-card" data-client-new-project><span>+</span><strong>Start a new project</strong><small>Create a private workspace for ${safe(client.name)}.</small></button>`;
+    grid.innerHTML = `${client.projects.map((project,index) => `<article class="project-card" data-client-project="${project.id}" style="--project:${safe(project.color)};--art-index:${index}"><div class="project-card-top"><div class="cx-project-poster"><i></i><i></i><span>${safe(client.initials)}</span></div><span class="cx-lock" aria-label="Private project">⌁</span><span class="card-hover-arrow">Open →</span></div><div class="cx-card-copy"><h3>${safe(project.name)}</h3><p>${safe(client.name)}</p><small>${safe(project.type)} · ${safe(project.format)}</small></div><footer><span class="status ${project.status.toLowerCase().replaceAll(" ", "-")}"><i></i>${safe(project.status)}</span><span>${project.files} assets</span><button type="button" data-project-menu aria-label="Project options">•••</button></footer></article>`).join("")}<button class="new-project-card" data-client-new-project><span class="cx-new-project-plus">+</span><strong>New project</strong><small>Create a private space for ${safe(client.name)}</small></button>`;
     grid.querySelectorAll("[data-client-project]").forEach(card => card.addEventListener("click", event => { if (event.target.closest("[data-project-menu]")) return openClientProjectActions(client, card.dataset.clientProject); local.set("cx_active_project", card.dataset.clientProject); actions.openProject(); }));
     grid.querySelector("[data-client-new-project]")?.addEventListener("click", () => openClientProjectModal(client, actions));
   }

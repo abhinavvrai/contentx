@@ -56,29 +56,25 @@ export function enhanceFileLibrary(root, files, comments) {
 // The signed-out dashboard is explicitly a sample-data view. Preserve its actions.
 export function enhanceStudioDashboard(root) {
   const grid = root.querySelector(".project-grid");
-  if (!grid || root.querySelector(".sx-dashboard-tools")) return;
+  if (!grid || root.dataset.dashboardEnhanced === "true") return;
+  root.dataset.dashboardEnhanced = "true";
   const cards = [...grid.querySelectorAll(".project-card")];
-  const heading = root.querySelector(".dash-header h1");
-  if (heading) heading.innerHTML = 'Projects';
-  root.querySelector(".demo-workspace-banner p")?.replaceChildren(document.createTextNode("Preview the workflow. Sign in when you are ready to use real files."));
-  root.querySelector(".dashboard-help-strip")?.remove();
-  cards.forEach((card, index) => {
-    const top = card.querySelector(".project-card-top");
-    top?.insertAdjacentHTML("afterbegin", `<div class="sx-project-art sx-art-${index % 3}" aria-hidden="true"><i></i><i></i><i></i><span>${String(index+1).padStart(2,"0")}</span></div>`);
+  cards.forEach(card => {
     card.setAttribute("tabindex", "0"); card.setAttribute("role", "group");
     card.setAttribute("aria-label", card.querySelector("h3")?.textContent || "Project");
     card.addEventListener("keydown", event => { if (event.target === card && ["Enter", " "].includes(event.key)) { event.preventDefault(); card.click(); } });
   });
   const section = root.querySelector(".project-section");
-  section.querySelector(".dash-section-head").insertAdjacentHTML("afterend", `<div class="sx-dashboard-tools"><label class="sx-search"><span aria-hidden="true">⌕</span><input type="search" data-project-search placeholder="Search your projects…" aria-label="Search your projects"></label><label>Status<select data-project-filter><option value="all">All projects</option><option value="In review">In review</option><option value="Editing">Editing</option><option value="Briefing">Briefing</option><option value="Approved">Approved</option></select></label><span data-project-results role="status"></span></div><p class="sx-no-results" data-project-empty hidden>No projects match. Clear your search or choose another status.</p>`);
-  const search = root.querySelector("[data-project-search]"), filter = root.querySelector("[data-project-filter]");
+  section.insertAdjacentHTML("beforeend", `<p class="sx-no-results" data-project-empty hidden>No projects match your search.</p>`);
+  const search = root.querySelector(".cx-product-topbar input");
+  let filter = "active";
   const update = () => {
     let count = 0;
-    cards.forEach(card => { card.hidden = !card.textContent.toLowerCase().includes(search.value.trim().toLowerCase()) || (filter.value !== "all" && card.querySelector(".status")?.textContent.trim() !== filter.value); if (!card.hidden) count++; });
-    root.querySelector("[data-project-results]").textContent = `${count} of ${cards.length} projects`;
+    cards.forEach(card => { card.hidden = !card.textContent.toLowerCase().includes(search.value.trim().toLowerCase()) || (filter === "active" && card.querySelector(".status")?.textContent.trim() === "Approved"); if (!card.hidden) count++; });
     root.querySelector("[data-project-empty]").hidden = count > 0;
   };
-  search.addEventListener("input", update); filter.addEventListener("change", update);
-  root.querySelectorAll(".view-switch button").forEach((button,index) => { button.setAttribute("aria-label", index ? "List view" : "Grid view"); button.setAttribute("aria-pressed", String(index === 0)); button.addEventListener("click", () => root.querySelectorAll(".view-switch button").forEach(item => item.setAttribute("aria-pressed", String(item === button)))); });
+  search.addEventListener("input", update);
+  root.querySelectorAll(".cx-filter").forEach((button,index) => button.addEventListener("click", () => { filter = index ? "all" : "active"; root.querySelectorAll(".cx-filter").forEach(item => item.classList.toggle("active", item === button)); update(); }));
+  root.querySelectorAll(".view-switch button").forEach((button,index) => { button.setAttribute("aria-pressed", String(index === 0)); button.addEventListener("click", () => { grid.classList.toggle("cx-list-view", index === 1); root.querySelectorAll(".view-switch button").forEach(item => { item.classList.toggle("active", item === button); item.setAttribute("aria-pressed", String(item === button)); }); }); });
   update();
 }

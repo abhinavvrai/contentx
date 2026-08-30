@@ -82,9 +82,9 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=frame-unified-1/);
-  assert.match(html, /contentx-release" content="frame-unified-1/);
-  assert.match(html, /main\.js\?v=frame-unified-1/);
+  assert.match(page, /\/site\/index\.html\?v=frame-native-1/);
+  assert.match(html, /contentx-release" content="frame-native-1/);
+  assert.match(html, /main\.js\?v=frame-native-1/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
   assert.match(main, /features\.js\?v=auth-health-1/);
   assert.match(main, /uploads\.js\?v=no-video-placeholders-1/);
@@ -111,11 +111,12 @@ test("lets visitors explore a demo dashboard before login", async () => {
   ]);
   assert.doesNotMatch(main, /route\.startsWith\("workspace"\) \|\|/);
   assert.match(main, /renderDashboard\(root, actions, \{ demo:true \}\)/);
-  assert.match(ui, /Explore the dashboard before paying/);
+  assert.match(ui, /Demo workspace · Sign in/);
   assert.match(ui, /data-demo-login/);
-  assert.match(ui, /Good afternoon\./);
-  assert.match(ui, /aria-label="Search workspace"/);
-  assert.doesNotMatch(ui, /Good afternoon, Meera/);
+  assert.match(ui, /<h1>Projects<\/h1>/);
+  assert.match(ui, /aria-label="Search Content X"/);
+  assert.match(ui, /class="cx-app-rail"/);
+  assert.doesNotMatch(ui, /Good afternoon/);
   assert.doesNotMatch(ui, /◦<i><\/i>/);
 });
 

@@ -445,3 +445,137 @@ html[data-theme="dark"] #app.review-app .comment:focus-within .comment-tools :is
 @media(prefers-reduced-motion:reduce) {
   #app :is(.workspace-rail a,.workspace-rail button,.workspace-button,.workspace-file-card,.project-card,.sx-project-art i) { transition:none!important; transform:none!important; }
 }
+
+/* Frame-native release: original Content X production shell and review experience. */
+#app .cx-icon { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+html[data-theme="dark"] #app .dashboard-shell { grid-template-columns:58px 218px minmax(0,1fr); min-height:100dvh; }
+#app .cx-app-rail { position:fixed; inset:0 auto 0 0; z-index:30; width:58px; display:flex; flex-direction:column; align-items:center; padding:12px 8px; border-right:1px solid #202129; background:#090a0e; }
+#app :is(.cx-app-rail,.review-global-rail) nav { display:grid; gap:6px; margin-top:22px; }
+#app :is(.cx-app-rail,.review-global-rail) button,#app .cx-rail-brand { width:36px; height:36px; display:grid; place-items:center; border:0; border-radius:9px; background:transparent; color:#747681; cursor:pointer; text-decoration:none; transition:background var(--fx-fast),color var(--fx-fast); }
+#app .cx-rail-brand { background:linear-gradient(135deg,var(--fx-orange),var(--fx-amber)); color:#fff; font:950 9px/1 inherit; box-shadow:0 8px 22px #ff692a2e; }
+#app.review-app button.cx-rail-brand { background:linear-gradient(135deg,var(--fx-orange),var(--fx-amber)); color:#fff; box-shadow:0 8px 22px #ff692a2e; }
+#app :is(.cx-app-rail,.review-global-rail) nav button:hover,#app :is(.cx-app-rail,.review-global-rail) nav button.active { background:#23242c; color:#fff; }
+#app .cx-rail-bottom { display:grid; gap:7px; margin-top:auto; }
+#app :is(.cx-app-rail,.review-global-rail) .cx-rail-avatar { background:#3a241c; color:#ffb08b; font:900 8px/1 inherit; }
+html[data-theme="dark"] #app .dash-sidebar { position:fixed; inset:0 auto 0 58px; width:218px; padding:12px 10px; background:#111218; }
+#app .dash-workspace { min-height:52px; display:grid; grid-template-columns:1fr auto; align-content:center; padding:3px 8px 12px; border-bottom:1px solid var(--fx-line); }
+#app .dash-workspace strong { font-size:11px; }
+#app .dash-workspace small { grid-column:1; margin-top:3px; color:#747681; font-size:8px; }
+#app .dash-workspace button { grid-column:2; grid-row:1/3; border:0; background:transparent; color:#676873; cursor:pointer; }
+#app .dash-sidebar nav { margin-top:12px; gap:2px; }
+#app .dash-sidebar nav>small { margin:14px 9px 5px; color:#5d5f69; font:800 7px/1 inherit; letter-spacing:.13em; }
+#app .dash-sidebar nav button { height:34px; grid-template-columns:19px 1fr auto; gap:7px; padding:0 9px; border-radius:7px; font-size:9px; }
+#app .dash-sidebar nav button .cx-icon { width:14px; height:14px; }
+#app .dash-sidebar nav button>span { font-size:9px; }
+#app .dash-sidebar .storage { padding:12px 8px; }
+html[data-theme="dark"] #app .dash-main { grid-column:3; min-width:0; padding:0 30px 60px; }
+#app .cx-product-topbar { height:52px; position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:5px; margin:0 -30px; padding:0 24px; border-bottom:1px solid var(--fx-line); background:#101117eb; backdrop-filter:blur(14px); }
+#app .cx-product-topbar label { width:min(520px,54vw); height:32px; display:flex; align-items:center; gap:8px; margin:auto; padding:0 10px; border:1px solid #343640; border-radius:8px; background:#181920; color:#747681; }
+#app .cx-product-topbar label .cx-icon { width:14px; }
+#app .cx-product-topbar input { width:100%; border:0!important; outline:0; background:transparent!important; color:#fff!important; font-size:9px; }
+#app .cx-product-topbar button { width:31px; height:31px; display:grid; place-items:center; border:0; border-radius:7px; background:transparent; color:#858791; cursor:pointer; }
+#app .cx-product-topbar button:hover { background:#22232b; color:#fff; }
+#app .dash-header { min-height:92px; padding:24px 0 18px; }
+#app .dash-header h1 { margin:3px 0 0; font-size:25px; }
+#app .dash-header>div>p { display:block; color:#747681; font-size:8px; }
+#app .dash-header .pill-hot { min-height:34px; gap:7px; padding:0 13px; border-radius:8px; font-size:9px; }
+#app .dash-header .pill-hot .cx-icon { width:13px; }
+#app.dashboard-app .dash-header>.workspace-support-button { display:none; }
+#app .cx-demo-chip { min-height:32px; padding:0 10px; border:1px solid #353640; border-radius:7px; background:#181920; color:#aaaab4; font:750 8px/1 inherit; cursor:pointer; }
+#app .project-section { margin-top:18px; }
+#app .dash-section-head { min-height:38px; align-items:center; }
+#app .dash-section-head h2 { font-size:15px; }
+#app .dash-section-head p { display:block; margin-top:4px; color:#70727c; font-size:8px; }
+#app .cx-project-actions { display:flex; align-items:center; gap:5px; }
+#app :is(.cx-filter,.cx-sort) { min-height:29px; padding:0 10px; border:1px solid #30323b; border-radius:7px; background:#17181f; color:#8f919b; font:750 8px/1 inherit; cursor:pointer; }
+#app .cx-filter.active { border-color:#6a4538; background:#2a1b17; color:#ff9d70; }
+#app .view-switch { border-color:#30323b; border-radius:7px; background:#17181f; }
+#app .view-switch button { width:28px; height:25px; display:grid; place-items:center; color:#71737d; }
+#app .view-switch button.active { background:#2a2b34; color:#fff; }
+#app .view-switch .cx-icon { width:13px; height:13px; }
+#app .project-grid { grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; margin-top:14px; }
+html[data-theme="dark"] #app .project-card { min-height:268px; overflow:hidden; padding:0; border-color:#2e3039; border-radius:9px; background:#17181f; }
+#app .project-card-top { min-height:174px; position:relative; margin:0; overflow:hidden; border-radius:8px 8px 0 0; background:#111218; }
+#app .cx-project-poster { position:absolute; inset:0; overflow:hidden; background:radial-gradient(circle at 68% 22%,color-mix(in srgb,var(--project) 85%,white) 0 3%,transparent 4%),linear-gradient(145deg,color-mix(in srgb,var(--project) 42%,#171820),#14151b 70%); }
+#app .cx-project-poster::before,#app .cx-project-poster::after,#app .cx-project-poster i { content:""; position:absolute; border:1px solid color-mix(in srgb,var(--project) 70%,transparent); border-radius:50%; transform:rotate(-17deg); }
+#app .cx-project-poster::before { width:240px; height:110px; right:-55px; top:14px; }
+#app .cx-project-poster::after { width:220px; height:96px; left:-80px; bottom:-40px; }
+#app .cx-project-poster i:first-child { width:180px; height:75px; right:-28px; top:46px; }
+#app .cx-project-poster i:nth-child(2) { width:150px; height:58px; left:4px; bottom:-10px; }
+#app .cx-project-poster span { position:absolute; left:16px; bottom:14px; color:#fff; font:950 24px/1 inherit; letter-spacing:-.06em; opacity:.92; }
+#app .cx-lock { position:absolute; top:11px; right:11px; z-index:2; width:24px; height:24px; display:grid; place-items:center; border:1px solid #ffffff19; border-radius:6px; background:#111218a8; color:#ccc; font-size:12px; }
+#app .project-card .card-hover-arrow { z-index:3; right:12px; bottom:12px; top:auto; color:#fff; font-size:8px; }
+#app .cx-card-copy { padding:12px 13px 9px; }
+#app .cx-card-copy h3 { margin:0; color:#fff; font-size:12px; }
+#app .cx-card-copy p { margin-top:5px; color:#a4a5ae; font-size:8px; }
+#app .cx-card-copy small { display:block; margin-top:3px; color:#666872; font-size:7px; }
+#app .project-card>footer { height:38px; display:flex; align-items:center; gap:8px; margin:0 12px; padding:0; border-top:1px solid #292b33; }
+#app .project-card>footer>span:nth-child(2) { margin-left:auto; color:#777984; font-size:7px; }
+#app .project-card>footer button { border:0; background:transparent; color:#666872; cursor:pointer; }
+#app .project-card .status { padding:4px 6px; font-size:7px; }
+#app .new-project-card { min-height:268px; border-color:#33353e; border-radius:9px; background:#13141a; }
+#app .new-project-card>.cx-icon { width:34px; height:34px; margin-bottom:12px; padding:8px; border:1px solid #383a43; border-radius:9px; color:#ff8e57; }
+#app .new-project-card>.cx-new-project-plus { width:34px; height:34px; display:grid; place-items:center; margin-bottom:12px; border:1px solid #383a43; border-radius:9px; background:#1a1b22; color:#ff8e57; font-size:18px; }
+#app .new-project-card strong { color:#e9e7e9; font-size:10px; }
+#app .new-project-card small { color:#73757e; }
+#app .project-grid.cx-list-view { grid-template-columns:1fr; }
+#app .project-grid.cx-list-view .project-card { min-height:72px; display:grid; grid-template-columns:110px minmax(0,1fr) 210px; align-items:center; }
+#app .project-grid.cx-list-view .project-card-top { min-height:70px; }
+#app .project-grid.cx-list-view .cx-card-copy { padding:0 16px; }
+#app .project-grid.cx-list-view .project-card>footer { margin:0 14px 0 0; border:0; }
+
+/* Review viewer: persistent global rail, clean player, comments and asset details. */
+#app.review-app .review-global-rail { position:fixed; inset:0 auto 0 0; z-index:50; width:54px; display:flex; flex-direction:column; align-items:center; padding:10px 7px; border-right:1px solid #23242c; background:#090a0e; }
+#app.review-app .review-global-rail .cx-rail-avatar { margin-top:auto; }
+#app.review-app .review-header { left:54px; height:54px; padding:0 14px; background:#101117f2; }
+#app.review-app .review-layout { inset:54px 0 0 54px; grid-template-columns:minmax(0,1fr) clamp(300px,27vw,370px); }
+#app.review-app .review-breadcrumb { min-width:0; display:flex; align-items:center; gap:7px; }
+#app.review-app .review-breadcrumb :is(strong,small) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#app.review-app .review-breadcrumb strong { font-size:9px; }
+#app.review-app .review-breadcrumb span,#app.review-app .review-breadcrumb small { color:#777984; font-size:8px; }
+#app.review-app .review-position { margin-left:auto; color:#777984; font-size:8px; }
+#app.review-app .version-select { margin-left:9px; }
+#app.review-app .review-head-actions { margin-left:9px; }
+#app.review-app .review-head-actions .pill { min-height:31px; padding:0 10px; border-radius:7px; font-size:8px; }
+#app.review-app .review-head-actions .cx-icon { width:12px; height:12px; margin-right:5px; }
+html[data-theme="dark"] #app.review-app .review-stage { padding:12px 16px 10px; background:#131419; }
+#app.review-app .player-wrap { border:1px solid #292a31; border-radius:6px; background:#08090c; box-shadow:0 20px 60px #0005; }
+#app.review-app .version-bar { height:60px; }
+#app.review-app .comment-panel { max-width:none; border-left:1px solid #292a31; background:#15161c; color:#f4f1f3; }
+#app.review-app .comment-tabs { height:45px; display:flex; align-items:flex-end; gap:4px; padding:0 13px; border-bottom:1px solid #292a31; }
+#app.review-app .comment-tabs button { height:38px; position:relative; padding:0 9px; border:0; background:transparent; color:#7f818b; font:800 9px/1 inherit; cursor:pointer; }
+#app.review-app .comment-tabs button span { margin-left:4px; color:#666872; font-size:7px; }
+#app.review-app .comment-tabs button.active { color:#fff; }
+#app.review-app .comment-tabs button.active::after { content:""; position:absolute; right:8px; bottom:0; left:8px; height:2px; background:var(--fx-orange); }
+#app.review-app .review-comments-view { min-height:0; flex:1; display:flex; flex-direction:column; }
+#app.review-app .review-comments-view[hidden],#app.review-app .review-details-view[hidden] { display:none!important; }
+#app.review-app .comment-head { height:58px; border-color:#292a31; background:#15161c; }
+#app.review-app .comment-filter { height:40px; border-color:#292a31; background:#15161c; }
+#app.review-app .comments { background:#121319; }
+#app.review-app .comment { border-color:#292a31; background:#15161c; }
+#app.review-app .comment-form { border-color:#292a31; background:#111218; }
+#app.review-app .comment-form textarea { border-color:#373943; background:#191a21!important; color:#fff!important; }
+#app.review-app .review-details-view { min-height:0; flex:1; overflow:auto; padding:22px 18px; }
+#app.review-app .review-details-view>div { padding-bottom:20px; border-bottom:1px solid #2b2c34; }
+#app.review-app .review-details-view small { color:#ff8e57; font:850 7px/1 inherit; letter-spacing:.12em; }
+#app.review-app .review-details-view h2 { margin-top:8px; font-size:18px; }
+#app.review-app .review-details-view p { margin-top:6px; color:#858791; font-size:9px; }
+#app.review-app .review-details-view dl { margin:8px 0 22px; }
+#app.review-app .review-details-view dl div { display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #26272f; font-size:9px; }
+#app.review-app .review-details-view dt { color:#777984; }
+#app.review-app .review-details-view dd { color:#e9e7e9; }
+
+@media(max-width:760px) {
+  #app .cx-app-rail { display:none; }
+  html[data-theme="dark"] #app .dashboard-shell { display:block; }
+  html[data-theme="dark"] #app .dash-sidebar { position:static; width:100%; }
+  html[data-theme="dark"] #app .dash-main { padding:0 14px 46px; }
+  #app .cx-product-topbar { margin:0 -14px; padding:0 12px; }
+  #app .cx-product-topbar label { width:100%; }
+  #app .cx-product-topbar>button { display:none; }
+  #app .cx-project-actions :is(.cx-filter,.cx-sort) { display:none; }
+  #app.review-app .review-global-rail { display:none; }
+  #app.review-app .review-header { left:0; height:60px; }
+  #app.review-app .review-layout { inset:60px 0 0; }
+  #app.review-app .review-position { display:none; }
+}
