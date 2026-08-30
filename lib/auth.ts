@@ -358,12 +358,21 @@ export async function registerAccount(request: Request, input: Record<string, un
   const passwordHash = await derivePasswordHash(password, salt, PASSWORD_ITERATIONS);
   const id = `usr_${crypto.randomUUID().replaceAll("-", "")}`;
   const now = Date.now();
-  await db.prepare(`INSERT INTO account_users
-    (id, name, email, password_hash, password_salt, password_iterations, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-    .bind(id, name, email, passwordHash, salt, PASSWORD_ITERATIONS, now, now).run();
+  const token = randomToken(32);
+  const tokenHash = await sha256(token);
+  await db.batch([
+    db.prepare(`INSERT INTO account_users
+      (id, name, email, password_hash, password_salt, password_iterations, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(id, name, email, passwordHash, salt, PASSWORD_ITERATIONS, now, now),
+    db.prepare("DELETE FROM account_sessions WHERE expires_at <= ?").bind(now),
+    db.prepare(`INSERT INTO account_sessions
+      (token_hash, user_id, expires_at, created_at, last_seen_at, user_agent)
+      VALUES (?, ?, ?, ?, ?, ?)`)
+      .bind(tokenHash, id, now + SESSION_TTL_MS, now, now, cleanText(request.headers.get("user-agent"), 240) || null),
+  ]);
   const user = { id, name, email, createdAt: now };
-  return { user, token: await createSession(request, user.id) };
+  return { user, token };
 }
 
 export async function loginAccount(request: Request, input: Record<string, unknown>): Promise<{ user: AccountUser; token: string }> {

@@ -1,6 +1,6 @@
-import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-3";
+import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-4";
 import { openReviewRoom } from "./review-room.js?v=frame-account-1";
-import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-3";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-4";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";

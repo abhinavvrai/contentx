@@ -10,10 +10,19 @@ const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character =>
 const money = (value, currency = "INR") => currency === "USD" ? `$${Math.round(Number(value || 0) / 100).toLocaleString("en-US")}` : `₹${Math.round(Number(value || 0) / 100).toLocaleString("en-IN")}`;
 
 async function api(url, options = {}) {
-  const response = await fetch(url, { credentials:"same-origin", ...options });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || "This request could not be completed.");
-  return body;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const response = await fetch(url, { credentials:"same-origin", ...options, signal:controller.signal });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || "This request could not be completed.");
+    return body;
+  } catch (error) {
+    if (error?.name === "AbortError") throw new Error("This is taking longer than expected. Your account may already be ready—try signing in, or try again.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function refreshAccountSession(force = false) {

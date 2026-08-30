@@ -82,13 +82,13 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=frame-native-3/);
-  assert.match(html, /contentx-release" content="frame-native-3/);
-  assert.match(html, /main\.js\?v=frame-native-3/);
+  assert.match(page, /\/site\/index\.html\?v=frame-native-4/);
+  assert.match(html, /contentx-release" content="frame-native-4/);
+  assert.match(html, /main\.js\?v=frame-native-4/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
   assert.match(main, /features\.js\?v=auth-health-1/);
   assert.match(main, /uploads\.js\?v=frame-native-3/);
-  assert.match(main, /account\.js\?v=frame-native-3/);
+  assert.match(main, /account\.js\?v=frame-native-4/);
 });
 
 test("autoplays public preview videos without center overlay controls", async () => {
@@ -269,6 +269,9 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   assert.match(account, /otp-box-grid/);
   assert.match(account, /bindOtpBoxes/);
   assert.match(account, /location\.hash = returningTo/);
+  assert.match(account, /new AbortController\(\)/);
+  assert.match(account, /controller\.abort\(\)/);
+  assert.match(account, /taking longer than expected/);
   assert.match(account, /accounts\.google\.com\/gsi\/client/);
   assert.match(account, /Free 50 GB account workspace/);
   assert.match(account, /Clients can review from a private link without creating an account/);
@@ -276,6 +279,9 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   assert.match(account, /JSON\.stringify\(\{ paid:true, account:true \}\)/);
   assert.doesNotMatch(account, /email:user\.email/);
   assert.doesNotMatch(account, /name:user\.name/);
+  assert.match(auth, /const tokenHash = await sha256\(token\)/);
+  assert.match(auth, /await db\.batch\(\[/);
+  assert.match(auth, /return \{ user, token \}/);
 });
 
 test("stores password hashes and server-side sessions instead of readable passwords", async () => {
