@@ -6,8 +6,8 @@ import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceR
 import { initProductPolish, polishRoute } from "./polish.js?v=noir-studio-1";
 import { enhanceCreatorTools } from "./creator-tools.js?v=revision-bands-1";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=no-video-placeholders-1";
-import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderAccountDashboard, renderProjectBrief } from "./account.js?v=frame-account-1";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=frame-account-1";
+import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-unified-1";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=frame-unified-1";
 import { enhanceStudioDashboard } from "./studio-workspace.js?v=frame-account-1";
 
 // Load decorative motion independently so a missing effect cannot block the app.
@@ -34,7 +34,7 @@ const actions = {
   openProject: () => go("project"),
   openReview: () => go("review"),
   openAccess: () => { rememberProtectedRoute("workspace"); go("access"); },
-  openAccount: () => go("account"),
+  openAccount: () => go("workspace?panel=account"),
   openBrief: orderId => go(`brief${orderId ? `?order=${encodeURIComponent(orderId)}` : ""}`),
   openAdmin: () => go("owner"),
   openMarketplace: () => go("marketplace"),
@@ -80,7 +80,10 @@ async function renderRoute() {
         await renderClientWorkspace(root, actions, "workspace");
       } else renderAccountAccess(root, actions);
     }
-    else if (route === "account") await renderAccountDashboard(root, actions);
+    else if (route === "account") {
+      history.replaceState(null, "", `${location.pathname}${location.search}#workspace?panel=account`);
+      await renderClientWorkspace(root, actions, "workspace?panel=account");
+    }
     else if (route.startsWith("brief")) await renderProjectBrief(root, actions, route);
     else if (route === "checkout") renderCheckout(root, actions);
     else if (route === "marketplace") renderMarketplace(root, actions);

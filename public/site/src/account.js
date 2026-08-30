@@ -303,6 +303,53 @@ export async function renderAccountDashboard(root, actions) {
   }
 }
 
+export async function renderWorkspaceAccountPanel(container, actions, initialView = "profile") {
+  container.innerHTML = `<div class="workspace-account-opening"><span></span><span></span><span></span></div>`;
+  try {
+    const [data, notificationData] = await Promise.all([
+      api(BRIEF_API, { cache:"no-store" }),
+      api(NOTIFICATION_API, { cache:"no-store" }).catch(() => null),
+    ]);
+    currentUser = data.user;
+    const orders = data.orders || [];
+    const activeRefunds = orders.filter(order => ["requested", "processing"].includes(order.refund_status)).length;
+    const refundUpdates = orders.filter(order => order.refund_status && order.refund_status !== "none").length;
+    const initials = data.user.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
+    container.innerHTML = `<div class="workspace-account-head"><div><span class="account-profile-avatar">${escapeHTML(initials || "CX")}</span><p><small>ACCOUNT</small><strong>${escapeHTML(data.user.name)}</strong><em>${escapeHTML(data.user.email)}</em></p></div><button class="workspace-button" type="button" data-account-logout>Sign out</button></div>
+      <nav class="workspace-account-tabs" aria-label="Account sections"><button type="button" data-account-view="profile">Profile</button><button type="button" data-account-view="notifications">Notifications</button><button type="button" data-account-view="billing">Orders & billing</button></nav>
+      <div class="account-settings-content workspace-account-content">
+        <section class="account-settings-panel" data-account-panel="profile">
+          <div class="account-panel-heading"><p>PERSONAL</p><h1>Your profile</h1><span>Your Content X identity, workspace access and account status in one place.</span></div>
+          <article class="account-profile-card"><div class="account-profile-avatar">${escapeHTML(initials || "CX")}</div><div><small>DISPLAY NAME</small><strong>${escapeHTML(data.user.name)}</strong><span>${escapeHTML(data.user.email)}</span></div><a href="#workspace">View projects →</a></article>
+          <div class="account-profile-metrics"><article><span>Storage plan</span><strong>50 GB free</strong><small>Private creator workspace</small></article><article><span>Privacy</span><strong>Protected</strong><small>Owner-authorized access only</small></article><article><span>Refunds</span><strong>${activeRefunds}</strong><small>Active requests</small></article></div>
+        </section>
+        <section class="account-settings-panel" data-account-panel="notifications" hidden>${notificationSettingsPanel(notificationData)}</section>
+        <section class="account-settings-panel" data-account-panel="billing" hidden>
+          <div class="account-panel-heading"><p>ACCOUNT</p><h1>Orders & billing</h1><span>Packages, receipts and refund updates stay private to your account.</span></div>
+          <section class="account-order-section"><div class="account-section-title"><div><h2>Paid Content X orders</h2><p>Editing packages and project briefs appear here after checkout.</p></div><span>${orders.length} order${orders.length === 1 ? "" : "s"}</span></div><div class="account-orders">${orders.length ? orders.map(orderCard).join("") : `<div class="account-empty"><span>◇</span><h3>No paid orders yet</h3><p>Your free workspace is already available.</p><a class="workspace-button primary" href="#workspace">View projects</a></div>`}</div></section>
+          <section class="account-order-section account-payment-history"><div class="account-section-title"><div><h2>Payment history & refunds</h2><p>Receipts and status changes appear automatically.</p></div><span>${refundUpdates} refund update${refundUpdates === 1 ? "" : "s"}</span></div><div class="account-payment-list">${orders.length ? orders.map(paymentHistoryCard).join("") : `<div class="account-empty"><span>₹</span><h3>No payment history yet</h3><p>Your receipts will appear here after checkout.</p></div>`}</div></section>
+        </section>
+      </div>`;
+    const openView = view => {
+      const selected = ["profile", "notifications", "billing"].includes(view) ? view : "profile";
+      container.querySelectorAll("[data-account-view]").forEach(button => button.classList.toggle("active", button.dataset.accountView === selected));
+      container.querySelectorAll("[data-account-panel]").forEach(panel => { const active = panel.dataset.accountPanel === selected; panel.hidden = !active; panel.classList.toggle("active", active); });
+      history.replaceState(null, "", `${location.pathname}${location.search}#workspace?panel=account&view=${selected}`);
+      container.closest(".workspace-main")?.scrollTo({ top:0, behavior:"smooth" });
+    };
+    container.querySelectorAll("[data-account-view]").forEach(button => button.addEventListener("click", () => openView(button.dataset.accountView)));
+    container.querySelector("[data-account-logout]").addEventListener("click", async () => {
+      await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"logout" }) });
+      currentUser = null; sessionChecked = true; localStorage.removeItem("cx_access"); actions.openMarketing();
+    });
+    bindNotificationSettings(container);
+    openView(initialView);
+  } catch (error) {
+    container.innerHTML = `<div class="workspace-account-error"><span>!</span><h1>We couldn’t open your account.</h1><p>${escapeHTML(error.message)}</p><button class="workspace-button" type="button">Sign in again</button></div>`;
+    container.querySelector("button").addEventListener("click", () => { rememberProtectedRoute("workspace?panel=account"); location.hash = "access"; });
+  }
+}
+
 async function renderLegacyAccountDashboard(root, actions) {
   root.className = "account-app";
   root.innerHTML = `<main class="account-loading"><span></span><h1>Opening your account…</h1></main>`;

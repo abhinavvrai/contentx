@@ -82,9 +82,9 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=frame-flow-1/);
-  assert.match(html, /contentx-release" content="frame-flow-1/);
-  assert.match(html, /main\.js\?v=frame-flow-1/);
+  assert.match(page, /\/site\/index\.html\?v=frame-unified-1/);
+  assert.match(html, /contentx-release" content="frame-unified-1/);
+  assert.match(html, /main\.js\?v=frame-unified-1/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
   assert.match(main, /features\.js\?v=auth-health-1/);
   assert.match(main, /uploads\.js\?v=no-video-placeholders-1/);
@@ -131,6 +131,20 @@ test("keeps the workspace shell visible while projects refresh", async () => {
   assert.doesNotMatch(workspace, /Opening your workspace…/);
   assert.match(styles, /workspace-shell\.is-refreshing::after/);
   assert.match(styles, /workspace-opening-shell/);
+});
+
+test("keeps account settings inside the workspace shell", async () => {
+  const [main, workspace, account] = await Promise.all([
+    load("public/site/src/main.js"),
+    load("public/site/src/workspace.js"),
+    load("public/site/src/account.js"),
+  ]);
+  assert.match(main, /openAccount: \(\) => go\("workspace\?panel=account"\)/);
+  assert.match(main, /renderClientWorkspace\(root, actions, "workspace\?panel=account"\)/);
+  assert.match(workspace, /data-workspace-account/);
+  assert.match(workspace, /renderWorkspaceAccountPanel/);
+  assert.match(account, /export async function renderWorkspaceAccountPanel/);
+  assert.match(account, /workspace-account-tabs/);
 });
 
 test("passes marketing data into pricing so the homepage loader cannot crash", async () => {

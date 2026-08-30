@@ -1,5 +1,6 @@
 import { enhanceFileLibrary, fileToolbar, workspacePulse, hasTimestamp } from "./studio-workspace.js?v=frame-account-1";
 import { openReviewRoom } from "./review-room.js?v=frame-account-1";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-unified-1";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -34,18 +35,21 @@ export async function renderClientWorkspace(root, actions, route) {
   if (existingShell) existingShell.classList.add("is-refreshing");
   else root.innerHTML = workspaceOpeningShell();
   try {
+    const params = new URLSearchParams(route.split("?")[1] || "");
+    const accountPanel = params.get("panel") === "account";
+    const accountView = params.get("view") || "profile";
     const account = await api(`${UPLOAD_API}?action=account-projects`, { cache:"no-store" });
     const projects = account.projects || [];
-    const params = new URLSearchParams(route.split("?")[1] || "");
     const requested = params.get("project");
     const selected = projects.find(project => project.project_id === requested) || projects[0] || null;
-    const [projectData, shareData, commentData] = selected ? await Promise.all([
+    const [projectData, shareData, commentData] = selected && !accountPanel ? await Promise.all([
       api(`${UPLOAD_API}?action=project&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }),
       api(`${UPLOAD_API}?action=shares&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }),
       api(`${UPLOAD_API}?action=comments&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }),
     ]) : [{ project:null, files:[], permissions:{ canUpload:false } }, { shares:[] }, { comments:[] }];
     if (renderVersion !== workspaceRenderVersion) return;
-    renderWorkspaceShell(root, actions, account.user, projects, selected, projectData, shareData.shares || [], account.storage || {}, commentData.comments || []);
+    renderWorkspaceShell(root, actions, account.user, projects, selected, projectData, shareData.shares || [], account.storage || {}, commentData.comments || [], accountPanel);
+    if (accountPanel) await renderWorkspaceAccountPanel(root.querySelector("[data-workspace-account]"), actions, accountView);
     root.removeAttribute("aria-busy");
   } catch (error) {
     if (renderVersion !== workspaceRenderVersion) return;
@@ -62,7 +66,7 @@ function workspaceOpeningShell() {
   </div>`;
 }
 
-function renderWorkspaceShell(root, actions, user, projects, selected, projectData, shares, storage, comments) {
+function renderWorkspaceShell(root, actions, user, projects, selected, projectData, shares, storage, comments, accountPanel = false) {
   const project = projectData.project;
   const files = projectData.files || [];
   const used = Number(storage.usedBytes || 0);
@@ -72,23 +76,23 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     <aside class="workspace-rail" aria-label="Workspace tools">
       <a class="workspace-rail-brand" href="#home" aria-label="Content X home">CX</a>
       <nav>
-        <a class="active" href="#workspace" aria-label="Projects" title="Projects">▱</a>
+        <a class="${accountPanel ? "" : "active"}" href="#workspace" aria-label="Projects" title="Projects">▱</a>
         <button type="button" data-focus-files aria-label="Search project files" title="Search">⌕</button>
-        <a href="#account" aria-label="Account and notifications" title="Account">◎</a>
+        <a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account" aria-label="Account and notifications" title="Account">◎</a>
       </nav>
-      <a class="workspace-rail-user" href="#account" aria-label="Open account" title="Account">${escapeHTML(user.name.slice(0,1).toUpperCase())}</a>
+      <a class="workspace-rail-user" href="#workspace?panel=account" aria-label="Open account" title="Account">${escapeHTML(user.name.slice(0,1).toUpperCase())}</a>
     </aside>
     <aside class="workspace-sidebar">
       <a class="workspace-brand" href="#home"><span>CX</span><b>Content X</b></a>
-      <nav><a class="active" href="#workspace"><span>▱</span>Projects</a><a href="#account"><span>◎</span>Account</a><button type="button" data-create-free-project><span>＋</span>New project</button></nav>
+      <nav><a class="${accountPanel ? "" : "active"}" href="#workspace"><span>▱</span>Projects</a><a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account"><span>◎</span>Account</a><button type="button" data-create-free-project><span>＋</span>New project</button></nav>
       <label class="workspace-project-search"><span>⌕</span><input type="search" placeholder="Search projects" aria-label="Search projects" data-project-nav-search></label>
       <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id ? "active" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}" data-project-nav-item><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}</small></a>`).join("") || `<p>Create a free project to begin.</p>`}</div>
       <div class="workspace-storage"><div><b>Free storage</b><small>${formatBytes(used)} of ${formatBytes(quota)}</small></div><i><em style="width:${percent}%"></em></i></div>
-      <div class="workspace-user"><span>${escapeHTML(user.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(user.name)}</b><small>${escapeHTML(user.email)}</small></div><a href="#account" aria-label="Account settings">•••</a></div>
+      <div class="workspace-user"><span>${escapeHTML(user.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(user.name)}</b><small>${escapeHTML(user.email)}</small></div><a href="#workspace?panel=account" aria-label="Account settings">•••</a></div>
     </aside>
     <main class="workspace-main">
-      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>Projects</span>${project ? `<b>/ ${escapeHTML(project.name)}</b>` : ""}</div><div>${project ? `<button class="workspace-button" type="button" data-share-project>Share</button><button class="workspace-button primary" type="button" data-upload-files>Upload files</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
-      ${project ? projectSurface(project, files, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy) : emptyWorkspace()}
+      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>Workspace</span>${accountPanel ? `<b>/ Account</b>` : project ? `<b>/ ${escapeHTML(project.name)}</b>` : ""}</div><div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button" type="button" data-share-project>Share</button><button class="workspace-button primary" type="button" data-upload-files>Upload files</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
+      ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy) : emptyWorkspace()}
     </main>
   </div><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
 
@@ -101,7 +105,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     root.querySelectorAll("[data-project-nav-item]").forEach(item => { item.hidden = Boolean(query) && !item.textContent.toLowerCase().includes(query); });
   });
   root.querySelector("[data-focus-files]")?.addEventListener("click", () => (root.querySelector("[data-file-search]") || projectSearch)?.focus());
-  if (!project) return;
+  if (accountPanel || !project) return;
   enhanceFileLibrary(root, files, comments);
   const picker = root.querySelector("[data-workspace-picker]");
   root.querySelector("[data-upload-files]")?.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });
