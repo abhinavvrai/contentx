@@ -82,9 +82,9 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=frame-native-1/);
-  assert.match(html, /contentx-release" content="frame-native-1/);
-  assert.match(html, /main\.js\?v=frame-native-1/);
+  assert.match(page, /\/site\/index\.html\?v=frame-native-2/);
+  assert.match(html, /contentx-release" content="frame-native-2/);
+  assert.match(html, /main\.js\?v=frame-native-2/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
   assert.match(main, /features\.js\?v=auth-health-1/);
   assert.match(main, /uploads\.js\?v=no-video-placeholders-1/);

@@ -1,4 +1,4 @@
-import { enhanceFileLibrary, fileToolbar, workspacePulse, hasTimestamp } from "./studio-workspace.js?v=frame-account-1";
+import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-2";
 import { openReviewRoom } from "./review-room.js?v=frame-account-1";
 import { renderWorkspaceAccountPanel } from "./account.js?v=frame-unified-1";
 
@@ -69,6 +69,7 @@ function workspaceOpeningShell() {
 function renderWorkspaceShell(root, actions, user, projects, selected, projectData, shares, storage, comments, accountPanel = false) {
   const project = projectData.project;
   const files = projectData.files || [];
+  const folders = projectData.folders || [];
   const used = Number(storage.usedBytes || 0);
   const quota = Number(storage.quotaBytes || 50 * 1024 ** 3);
   const percent = Math.min(100, Math.round(used / quota * 100));
@@ -87,12 +88,13 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       <nav><a class="${accountPanel ? "" : "active"}" href="#workspace"><span>▱</span>Projects</a><a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account"><span>◎</span>Account</a><button type="button" data-create-free-project><span>＋</span>New project</button></nav>
       <label class="workspace-project-search"><span>⌕</span><input type="search" placeholder="Search projects" aria-label="Search projects" data-project-nav-search></label>
       <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id ? "active" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}" data-project-nav-item><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}</small></a>`).join("") || `<p>Create a free project to begin.</p>`}</div>
+      ${project && !accountPanel ? `<div class="workspace-tree"><div><small>PROJECT FILES</small><button type="button" data-create-folder title="New folder">＋</button></div><button class="active" type="button" data-folder-id=""><span>⌂</span><b>Project root</b><em>${files.filter(file => !file.folder_id).length}</em></button>${folderTreeNodes(folders)}</div>` : ""}
       <div class="workspace-storage"><div><b>Free storage</b><small>${formatBytes(used)} of ${formatBytes(quota)}</small></div><i><em style="width:${percent}%"></em></i></div>
       <div class="workspace-user"><span>${escapeHTML(user.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(user.name)}</b><small>${escapeHTML(user.email)}</small></div><a href="#workspace?panel=account" aria-label="Account settings">•••</a></div>
     </aside>
     <main class="workspace-main">
       <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>Workspace</span>${accountPanel ? `<b>/ Account</b>` : project ? `<b>/ ${escapeHTML(project.name)}</b>` : ""}</div><div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button" type="button" data-share-project>Share</button><button class="workspace-button primary" type="button" data-upload-files>Upload files</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
-      ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy) : emptyWorkspace()}
+      ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, folders, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy, true) : emptyWorkspace()}
     </main>
   </div><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
 
@@ -107,8 +109,9 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   root.querySelector("[data-focus-files]")?.addEventListener("click", () => (root.querySelector("[data-file-search]") || projectSearch)?.focus());
   if (accountPanel || !project) return;
   enhanceFileLibrary(root, files, comments);
+  bindFolderBrowser(root, project.id, folders, actions);
   const picker = root.querySelector("[data-workspace-picker]");
-  root.querySelector("[data-upload-files]")?.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });
+  root.querySelectorAll("[data-upload-files]").forEach(button => button.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); }));
   root.querySelector("[data-project-drop]")?.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });
   picker.addEventListener("change", async () => {
     await uploadSelectedFiles(root, project.id, "", [...picker.files], picker.dataset.replaceFile || "", project.maxFileSize, project.maxVideoSeconds || project.max_video_seconds || 0);
@@ -152,15 +155,71 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   bindComments(root, project.id, "", actions, true);
 }
 
-function projectSurface(project, files, canUpload, comments = [], canManageComments = false, revisionPolicy = null) {
+function folderTreeNodes(folders, parentId = null, depth = 0) {
+  return folders.filter(folder => (folder.parent_id || null) === parentId).map(folder => `<div class="workspace-tree-node" style="--depth:${depth}"><button type="button" draggable="true" data-folder-id="${escapeHTML(folder.id)}" data-folder-drag="${escapeHTML(folder.id)}"><span>▸</span><b>${escapeHTML(folder.name)}</b><em>${Number(folder.asset_count || 0)}</em></button>${folderTreeNodes(folders, folder.id, depth + 1)}</div>`).join("");
+}
+
+function projectSurface(project, files, folders, canUpload, comments = [], canManageComments = false, revisionPolicy = null, canManageFolders = false) {
+  const rootFolders = folders.filter(folder => !folder.parent_id);
   return `<section class="workspace-project-head"><div><p>PROJECT</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
-    ${workspacePulse(files, comments)}
-    <section class="workspace-dropbar ${canUpload ? "" : "disabled"}" data-project-drop><span>↑</span><div><b>${canUpload ? "Drop files anywhere here" : "This link is view-only"}</b><small>${canUpload ? "Upload new assets, or drop directly on a file to create its next version." : "Ask the owner to enable uploads on this share link."}</small></div></section>
-    ${canUpload ? `<p class="workspace-upload-rules">Allowed uploads: video, audio, image, PDF, text, CSV and subtitle files. Executables, archives, scripts, HTML and SVG are blocked.</p>` : ""}
-    <section class="workspace-revision-flow"><article><span>01</span><b>Upload cut</b><small>Raw files and edits land in one project.</small></article><article><span>02</span><b>Drop replacement</b><small>Dropping on a card creates the next version.</small></article><article><span>03</span><b>Share review link</b><small>Send one link with multiple videos, expiry and upload controls.</small></article><article><span>04</span><b>Approve final</b><small>Comments, downloads and decisions stay attached.</small></article></section>
-    <section class="workspace-files"><header><div><h2>Files</h2><span>Latest versions</span></div><p>Open a file to preview, compare versions and leave timestamped feedback.</p></header>${fileToolbar()}<div class="workspace-file-grid">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy)).join("") : `<div class="workspace-empty-files"><span>↑</span><h3>No files yet</h3><p>${canUpload ? "Upload raw footage, references, audio or working files." : "The project owner has not shared any files yet."}</p></div>`}</div></section>
+    <section class="workspace-browser"><div class="workspace-browser-head"><nav aria-label="Folder breadcrumb"><button class="active" type="button" data-folder-id="">${escapeHTML(project.name)}</button><span data-folder-crumbs></span></nav><div>${canManageFolders ? `<button type="button" data-create-folder>＋ Folder</button>` : ""}${canUpload ? `<button class="workspace-button primary" type="button" data-upload-files>↑ Upload</button>` : ""}</div></div><div class="workspace-folder-grid"><button class="workspace-folder-card root-target" type="button" data-folder-id=""><span>⌂</span><div><b>Project root</b><small>${files.filter(file => !file.folder_id).length} assets</small></div><em>Drop here</em></button>${rootFolders.map(folder => folderCard(folder)).join("")}</div></section>
+    <section class="workspace-dropbar ${canUpload ? "" : "disabled"}" data-project-drop title="Executables, archives, scripts, HTML and SVG are blocked"><span>↑</span><div><b>${canUpload ? "Drop to upload" : "View only"}</b><small>${canUpload ? "Or drag assets into a folder." : "Uploads are disabled for this link."}</small></div></section>
+    <section class="workspace-files"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header>${fileToolbar()}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy)).join("") : `<div class="workspace-empty-files"><span>↑</span><h3>No files yet</h3><p>${canUpload ? "Drop footage or references here." : "No files shared yet."}</p></div>`}</div></section>
     ${commentsPanel(comments, canManageComments)}
     <section class="workspace-queue" data-workspace-queue></section>`;
+}
+
+function folderCard(folder) {
+  return `<button class="workspace-folder-card" type="button" draggable="true" data-folder-id="${escapeHTML(folder.id)}" data-folder-drag="${escapeHTML(folder.id)}"><span>▰</span><div><b>${escapeHTML(folder.name)}</b><small>${Number(folder.asset_count || 0)} assets</small></div><em>•••</em></button>`;
+}
+
+function bindFolderBrowser(root, projectId, folders, actions) {
+  const grid = root.querySelector(".workspace-file-grid");
+  const folderGrid = root.querySelector(".workspace-folder-grid");
+  if (!grid || !folderGrid) return;
+  const byId = new Map(folders.map(folder => [folder.id, folder]));
+  let activeFolder = sessionStorage.getItem(`cx_active_folder_${projectId}`) || "";
+  if (activeFolder && !byId.has(activeFolder)) activeFolder = "";
+  const signalLibrary = () => (root.querySelector("[data-file-search]") || grid).dispatchEvent(new Event("input", { bubbles:true }));
+  const paintFolders = () => {
+    const children = folders.filter(folder => (folder.parent_id || "") === activeFolder);
+    const rootCount = [...grid.querySelectorAll("[data-file-card]")].filter(card => (card.dataset.folderId || "") === activeFolder).length;
+    folderGrid.innerHTML = `<button class="workspace-folder-card root-target" type="button" data-folder-id=""><span>⌂</span><div><b>Project root</b><small>Drop to move out</small></div><em>↖</em></button>${children.map(folderCard).join("")}`;
+    root.querySelectorAll(".workspace-tree [data-folder-id]").forEach(button => button.classList.toggle("active", button.dataset.folderId === activeFolder));
+    const chain = []; let cursor = byId.get(activeFolder);
+    while (cursor) { chain.unshift(cursor); cursor = byId.get(cursor.parent_id); }
+    root.querySelector("[data-folder-crumbs]").innerHTML = chain.map(folder => `<i>/</i><button type="button" data-folder-id="${escapeHTML(folder.id)}">${escapeHTML(folder.name)}</button>`).join("");
+    const label = root.querySelector("[data-visible-folder-label]"); if (label) label.textContent = activeFolder ? byId.get(activeFolder)?.name || "Folder" : "Project root";
+    grid.dataset.activeFolder = activeFolder;
+    grid.dataset.folderAssetCount = String(rootCount);
+    sessionStorage.setItem(`cx_active_folder_${projectId}`, activeFolder);
+    bindFolderControls(); signalLibrary();
+  };
+  const setActive = folderId => { activeFolder = folderId || ""; paintFolders(); };
+  const move = async (payload, targetId) => {
+    const isAsset = payload.type === "asset";
+    await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify(isAsset ? { action:"move-assets", projectId, folderId:targetId || null, assetIds:[payload.id] } : { action:"move-folder", projectId, folderId:payload.id, parentId:targetId || null }) });
+    actions.refreshRoute();
+  };
+  const payloadFrom = event => {
+    const asset = event.dataTransfer.getData("application/x-contentx-asset");
+    const folder = event.dataTransfer.getData("application/x-contentx-folder");
+    return asset ? { type:"asset", id:asset } : folder ? { type:"folder", id:folder } : null;
+  };
+  function bindFolderControls() {
+    root.querySelectorAll("[data-folder-id]").forEach(button => {
+      if (button.dataset.folderBound) return; button.dataset.folderBound = "true";
+      button.addEventListener("click", event => { if (!event.defaultPrevented) setActive(button.dataset.folderId); });
+      button.addEventListener("dragover", event => { if (![...event.dataTransfer.types].some(type => type.includes("contentx"))) return; event.preventDefault(); button.classList.add("is-drop-target"); });
+      button.addEventListener("dragleave", () => button.classList.remove("is-drop-target"));
+      button.addEventListener("drop", async event => { const payload = payloadFrom(event); if (!payload) return; event.preventDefault(); event.stopPropagation(); button.classList.remove("is-drop-target"); try { await move(payload, button.dataset.folderId); } catch (error) { alert(error.message); } });
+    });
+    root.querySelectorAll("[data-folder-drag]").forEach(button => button.addEventListener("dragstart", event => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-contentx-folder", button.dataset.folderDrag); }));
+  }
+  root.querySelectorAll("[data-file-card]").forEach(card => card.addEventListener("dragstart", event => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-contentx-asset", card.dataset.assetId); card.classList.add("is-moving"); }));
+  root.querySelectorAll("[data-file-card]").forEach(card => card.addEventListener("dragend", () => card.classList.remove("is-moving")));
+  root.querySelectorAll("[data-create-folder]").forEach(button => button.addEventListener("click", async () => { const name = prompt("Folder name"); if (!name?.trim()) return; try { await api(UPLOAD_API, { method:"POST", headers:bearerHeaders("", true), body:JSON.stringify({ action:"create-folder", projectId, parentId:activeFolder || null, name:name.trim() }) }); actions.refreshRoute(); } catch (error) { alert(error.message); } }));
+  paintFolders();
 }
 
 function fileCard(file, canUpload, revisionPolicy = null) {
@@ -175,7 +234,7 @@ function fileCard(file, canUpload, revisionPolicy = null) {
   const revisionStatus = revisionPolicy && isVideo
     ? `<div class="workspace-revision-status ${exhausted ? "is-exhausted" : ""}"><span>${Math.min(used, allowed)} of ${allowed} revision round${allowed === 1 ? "" : "s"} used</span>${exhausted ? `<button type="button" data-buy-revision data-asset-id="${escapeHTML(assetId)}" data-file-name="${escapeHTML(file.original_name)}" data-revision-service="${revisionPolicy.service}">Buy another revision · ${revisionPolicy.service === "longform" ? "₹500" : "₹300"}</button>` : `<small>${allowed - used} round${allowed - used === 1 ? "" : "s"} remaining</small>`}</div>`
     : "";
-  return `<article class="workspace-file-card ${canUpload ? "" : "view-only"}" data-file-card data-file-id="${escapeHTML(file.id)}" data-asset-id="${escapeHTML(assetId)}"><button class="workspace-file-preview" type="button" data-file-open><span>${fileGlyph(file.content_type)}</span><em>v${version}</em>${canUpload ? "<i>Drop replacement here</i>" : ""}</button><div class="workspace-file-info"><div><strong title="${escapeHTML(file.original_name)}">${escapeHTML(file.original_name)}</strong><small>${formatBytes(file.size_bytes)} · ${formatDate(file.completed_at)}</small></div>${canUpload ? '<button type="button" data-new-version aria-label="Upload next version">＋</button>' : ""}</div><footer><span>${count} version${count === 1 ? "" : "s"}</span><b>Ready</b></footer>${revisionStatus}</article>`;
+  return `<article class="workspace-file-card ${canUpload ? "" : "view-only"}" draggable="${canUpload}" data-file-card data-file-id="${escapeHTML(file.id)}" data-asset-id="${escapeHTML(assetId)}" data-folder-id="${escapeHTML(file.folder_id || "")}"><button class="workspace-file-preview" type="button" data-file-open><span>${fileGlyph(file.content_type)}</span><em>v${version}</em>${canUpload ? "<i>Drop replacement here</i>" : ""}</button><div class="workspace-file-info"><div><strong title="${escapeHTML(file.original_name)}">${escapeHTML(file.original_name)}</strong><small>${formatBytes(file.size_bytes)} · ${formatDate(file.completed_at)}</small></div>${canUpload ? '<button type="button" data-new-version aria-label="Upload next version">＋</button>' : ""}</div><footer><span>${count} version${count === 1 ? "" : "s"}</span><b>Ready</b></footer>${revisionStatus}</article>`;
 }
 
 function emptyWorkspace() {
@@ -300,7 +359,7 @@ export async function renderSharedWorkspace(root, actions, route) {
     const resolvedProjectId = data.project.id;
     const canUpload = Boolean(data.permissions?.canUpload);
     const commentData = await api(`${UPLOAD_API}?action=comments&projectId=${encodeURIComponent(resolvedProjectId)}`, { headers:bearerHeaders(token), cache:"no-store" }).catch(() => ({ comments:[] }));
-    root.innerHTML = `<header class="shared-header"><a href="#home"><span>CX</span><b>Content X</b></a><div><b>Shared project</b><small>${canUpload ? "Uploads enabled" : "View and download"}</small></div></header><main class="shared-main"><section class="shared-title"><p class="workspace-kicker">PRIVATE CLIENT LINK</p><h1>${escapeHTML(data.project.name)}</h1><p>Review the latest files, download any version${canUpload ? ", or add new files and replacements" : ""}. Leave your name and feedback below — no login needed.</p></section>${projectSurface(data.project, data.files || [], canUpload, commentData.comments || [], false)}</main><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
+    root.innerHTML = `<header class="shared-header"><a href="#home"><span>CX</span><b>Content X</b></a><div><b>Shared project</b><small>${canUpload ? "Uploads enabled" : "View and download"}</small></div></header><main class="shared-main"><section class="shared-title"><p class="workspace-kicker">PRIVATE CLIENT LINK</p><h1>${escapeHTML(data.project.name)}</h1><p>Review the latest files, download any version${canUpload ? ", or add new files and replacements" : ""}. Leave your name and feedback below — no login needed.</p></section>${projectSurface(data.project, data.files || [], data.folders || [], canUpload, commentData.comments || [], false)}</main><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
     enhanceFileLibrary(root, data.files || [], commentData.comments || []);
     const picker = root.querySelector("[data-workspace-picker]");
     if (canUpload) {

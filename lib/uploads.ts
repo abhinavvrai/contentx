@@ -65,6 +65,7 @@ export type UploadFile = {
   asset_id: string | null;
   version_number: number;
   parent_file_id: string | null;
+  folder_id: string | null;
 };
 
 export type ProjectAccess = {
@@ -147,15 +148,28 @@ export async function ensureUploadSchema(): Promise<void> {
         FOREIGN KEY (project_id) REFERENCES upload_projects(id)
       )`),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_project_review_comments_project_created ON project_review_comments(project_id, created_at)"),
+      db.prepare(`CREATE TABLE IF NOT EXISTS project_folders (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL,
+        parent_id TEXT,
+        name TEXT NOT NULL,
+        position INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES upload_projects(id)
+      )`),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_project_folders_project_parent ON project_folders(project_id, parent_id, position)"),
       ]);
       const columns = await db.prepare("PRAGMA table_info(upload_files)").all<{ name: string }>();
       const names = new Set(columns.results.map(column => column.name));
       if (!names.has("asset_id")) await db.prepare("ALTER TABLE upload_files ADD COLUMN asset_id TEXT").run();
       if (!names.has("version_number")) await db.prepare("ALTER TABLE upload_files ADD COLUMN version_number INTEGER NOT NULL DEFAULT 1").run();
       if (!names.has("parent_file_id")) await db.prepare("ALTER TABLE upload_files ADD COLUMN parent_file_id TEXT").run();
+      if (!names.has("folder_id")) await db.prepare("ALTER TABLE upload_files ADD COLUMN folder_id TEXT").run();
       await db.batch([
         db.prepare("UPDATE upload_files SET asset_id = id WHERE asset_id IS NULL"),
         db.prepare("CREATE INDEX IF NOT EXISTS idx_upload_files_asset_version ON upload_files(asset_id, version_number)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_upload_files_project_folder ON upload_files(project_id, folder_id, status)"),
         db.prepare("PRAGMA optimize"),
       ]);
     })().catch((error) => {

@@ -73,9 +73,27 @@ test("groups replacement uploads into versions and supports controlled short sha
   assert.match(workspace, /Create & copy share link/);
   assert.match(workspace, /shareIntent\("whatsapp"/);
   assert.match(workspace, /data-share-status/);
-  assert.match(workspace, /workspace-revision-flow/);
+  assert.match(workspace, /workspace-browser/);
+  assert.match(workspace, /workspace-folder-grid/);
   assert.match(workspace, /resolvedProjectId/);
   assert.match(shortSharePage, /#share\?token=/);
+});
+
+test("persists nested project folders and moves assets safely", async () => {
+  const [route, uploads, workspace, migration] = await Promise.all([
+    readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/uploads.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0005_project_folders.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(route, /action === "create-folder"/);
+  assert.match(route, /action === "move-assets"/);
+  assert.match(route, /action === "move-folder"/);
+  assert.match(route, /WITH RECURSIVE descendants/);
+  assert.match(uploads, /CREATE TABLE IF NOT EXISTS project_folders/);
+  assert.match(migration, /ALTER TABLE `upload_files` ADD `folder_id` text/);
+  assert.match(workspace, /application\/x-contentx-asset/);
+  assert.match(workspace, /data-folder-drag/);
 });
 
 test("adds free account workspaces with 50 GB quota and review comments", async () => {

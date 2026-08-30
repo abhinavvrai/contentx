@@ -59,11 +59,26 @@ export const uploadFiles = sqliteTable(
     assetId: text("asset_id"),
     versionNumber: integer("version_number").notNull().default(1),
     parentFileId: text("parent_file_id"),
+    folderId: text("folder_id"),
   },
   table => [
     index("idx_upload_files_project_status").on(table.projectId, table.status),
     index("idx_upload_files_asset_version").on(table.assetId, table.versionNumber),
   ],
+);
+
+export const projectFolders = sqliteTable(
+  "project_folders",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id").notNull().references(() => uploadProjects.id),
+    parentId: text("parent_id"),
+    name: text("name").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  table => [index("idx_project_folders_project_parent").on(table.projectId, table.parentId, table.position)],
 );
 
 export const projectShareLinks = sqliteTable(

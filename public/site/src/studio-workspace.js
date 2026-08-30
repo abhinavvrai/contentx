@@ -39,7 +39,8 @@ export function enhanceFileLibrary(root, files, comments) {
   const cards = new Map([...grid.querySelectorAll("[data-file-card]")].map(card => [card.dataset.fileId, card]));
   const search = root.querySelector("[data-file-search]"), type = root.querySelector("[data-file-type]"), sort = root.querySelector("[data-file-sort]");
   const update = () => {
-    const selected = filterFiles(files, { query:search.value, type:type.value, sort:sort.value }, comments);
+    const activeFolder = grid.dataset.activeFolder || "";
+    const selected = filterFiles(files, { query:search.value, type:type.value, sort:sort.value }, comments).filter(file => String(file.folder_id || "") === activeFolder);
     cards.forEach(card => { card.hidden = true; });
     selected.forEach(file => { const card = cards.get(file.id); if (card) { card.hidden = false; grid.append(card); } });
     root.querySelector("[data-file-results]").textContent = `${selected.length} of ${files.length} files`;

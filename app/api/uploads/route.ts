@@ -64,6 +64,7 @@ export async function POST(request: Request) {
     if (action === "project-download-link") return createProjectDownloadLink(request, input);
     if (action === "create-share-link") return createProjectShareLink(request, input);
     if (action === "create-account-project") return createAccountProject(request, input);
+    if (action === "create-folder") return createProjectFolder(request, input);
     if (action === "create-comment") return createProjectComment(request, input);
     if (action === "start-upload") return startUpload(request, input);
     if (action === "complete-upload") return completeUpload(request, input);
@@ -88,6 +89,8 @@ export async function PATCH(request: Request) {
     const action = cleanText(input.action, 40);
     if (action === "share-link") return updateProjectShareLink(request, input);
     if (action === "comment-status") return updateProjectCommentStatus(request, input);
+    if (action === "move-assets") return moveProjectAssets(request, input);
+    if (action === "move-folder") return moveProjectFolder(request, input);
     if (action === "admin-file-restore") return restoreAdminFile(request, input);
     if (action !== "admin-project-status") throw new ClientError("Unknown file action.", 404);
     await requireOwner(request);
@@ -141,7 +144,7 @@ async function getClientProject(request: Request, projectId: string): Promise<Re
   const { db } = getUploadBindings();
   const files = await db.prepare(
     `SELECT f.id, f.original_name, f.content_type, f.size_bytes, f.status, f.uploader_name,
-      f.created_at, f.completed_at, COALESCE(f.asset_id, f.id) AS asset_id,
+      f.created_at, f.completed_at, f.folder_id, COALESCE(f.asset_id, f.id) AS asset_id,
       COALESCE(f.version_number, 1) AS version_number,
       (SELECT COUNT(*) FROM upload_files v
         WHERE v.project_id = f.project_id AND v.status = 'ready'
@@ -154,6 +157,13 @@ async function getClientProject(request: Request, projectId: string): Promise<Re
            AND COALESCE(newer.version_number, 1) > COALESCE(f.version_number, 1))
      ORDER BY f.completed_at DESC LIMIT 200`
   ).bind(project.id).all();
+  const folders = await db.prepare(`SELECT id, project_id, parent_id, name, position, created_at, updated_at,
+    (SELECT COUNT(*) FROM upload_files f WHERE f.project_id = project_folders.project_id
+      AND f.folder_id = project_folders.id AND f.status = 'ready'
+      AND NOT EXISTS (SELECT 1 FROM upload_files newer WHERE newer.project_id = f.project_id
+        AND newer.status = 'ready' AND COALESCE(newer.asset_id,newer.id) = COALESCE(f.asset_id,f.id)
+        AND COALESCE(newer.version_number,1) > COALESCE(f.version_number,1))) AS asset_count
+    FROM project_folders WHERE project_id = ? ORDER BY parent_id, position, name`).bind(project.id).all();
   let revisionPolicy: { service: "video" | "longform"; included: number; purchasedByAsset: Record<string, number> } | null = null;
   if (access.accessType === "account") {
     const accountDb = getAccountDatabase();
@@ -177,7 +187,66 @@ async function getClientProject(request: Request, projectId: string): Promise<Re
       };
     }
   }
-  return json({ project: publicProject(project), files: files.results, revisionPolicy, permissions: { canUpload: access.canUpload, accessType: access.accessType } });
+  return json({ project: publicProject(project), files: files.results, folders: folders.results, revisionPolicy, permissions: { canUpload: access.canUpload, accessType: access.accessType } });
+}
+
+async function createProjectFolder(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80);
+  const name = cleanText(input.name, 80);
+  const parentId = cleanText(input.parentId, 80) || null;
+  if (!projectId || !name) throw new ClientError("Name the folder before creating it.");
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  if (parentId) {
+    const parent = await db.prepare("SELECT id FROM project_folders WHERE id = ? AND project_id = ? LIMIT 1").bind(parentId, projectId).first();
+    if (!parent) throw new ClientError("Choose a folder from this project.", 404);
+  }
+  const duplicate = await db.prepare("SELECT id FROM project_folders WHERE project_id = ? AND COALESCE(parent_id,'') = COALESCE(?, '') AND lower(name) = lower(?) LIMIT 1").bind(projectId, parentId, name).first();
+  if (duplicate) throw new ClientError("A folder with this name already exists here.");
+  const position = await db.prepare("SELECT COALESCE(MAX(position),-1)+1 AS next FROM project_folders WHERE project_id = ? AND COALESCE(parent_id,'') = COALESCE(?, '')").bind(projectId, parentId).first<{ next:number }>();
+  const id = randomId("fld"), now = Date.now();
+  await db.prepare("INSERT INTO project_folders (id,project_id,parent_id,name,position,created_at,updated_at) VALUES (?,?,?,?,?,?,?)").bind(id, projectId, parentId, name, Number(position?.next || 0), now, now).run();
+  return json({ folder:{ id, project_id:projectId, parent_id:parentId, name, position:Number(position?.next || 0), asset_count:0 } }, 201);
+}
+
+async function moveProjectAssets(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80);
+  const folderId = cleanText(input.folderId, 80) || null;
+  const assetIds = Array.isArray(input.assetIds) ? input.assetIds.map(value => cleanText(value,80)).filter(Boolean).slice(0,100) : [];
+  if (!projectId || !assetIds.length) throw new ClientError("Choose at least one project asset.");
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  if (folderId) {
+    const folder = await db.prepare("SELECT id FROM project_folders WHERE id = ? AND project_id = ? LIMIT 1").bind(folderId, projectId).first();
+    if (!folder) throw new ClientError("Choose a folder from this project.", 404);
+  }
+  await db.batch(assetIds.map(assetId => db.prepare("UPDATE upload_files SET folder_id = ? WHERE project_id = ? AND COALESCE(asset_id,id) = ?").bind(folderId, projectId, assetId)));
+  return json({ ok:true, moved:assetIds.length, folderId });
+}
+
+async function moveProjectFolder(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80);
+  const folderId = cleanText(input.folderId, 80);
+  const parentId = cleanText(input.parentId, 80) || null;
+  if (!projectId || !folderId || folderId === parentId) throw new ClientError("Choose a valid folder destination.");
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  const folder = await db.prepare("SELECT id FROM project_folders WHERE id = ? AND project_id = ? LIMIT 1").bind(folderId, projectId).first();
+  if (!folder) throw new ClientError("Folder not found.", 404);
+  if (parentId) {
+    const parent = await db.prepare("SELECT id FROM project_folders WHERE id = ? AND project_id = ? LIMIT 1").bind(parentId, projectId).first();
+    if (!parent) throw new ClientError("Choose a folder from this project.", 404);
+    const cycle = await db.prepare(`WITH RECURSIVE descendants(id) AS (
+      SELECT id FROM project_folders WHERE parent_id = ? AND project_id = ?
+      UNION ALL SELECT f.id FROM project_folders f JOIN descendants d ON f.parent_id = d.id WHERE f.project_id = ?
+    ) SELECT id FROM descendants WHERE id = ? LIMIT 1`).bind(folderId, projectId, projectId, parentId).first();
+    if (cycle) throw new ClientError("A folder cannot be moved inside one of its own subfolders.");
+  }
+  await db.prepare("UPDATE project_folders SET parent_id = ?, updated_at = ? WHERE id = ? AND project_id = ?").bind(parentId, Date.now(), folderId, projectId).run();
+  return json({ ok:true, folderId, parentId });
 }
 
 async function getAccountProjects(request: Request): Promise<Response> {

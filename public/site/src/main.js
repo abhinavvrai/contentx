@@ -7,7 +7,7 @@ import { initProductPolish, polishRoute } from "./polish.js?v=noir-studio-1";
 import { enhanceCreatorTools } from "./creator-tools.js?v=revision-bands-1";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=no-video-placeholders-1";
 import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-unified-1";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=frame-unified-1";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=frame-native-2";
 import { enhanceStudioDashboard } from "./studio-workspace.js?v=frame-native-1";
 
 // Load decorative motion independently so a missing effect cannot block the app.
