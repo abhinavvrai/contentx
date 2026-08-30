@@ -258,7 +258,8 @@ export async function authorizeProject(request: Request, projectId: string, purp
     ).bind(projectId, user.id).first<UploadProject>();
     canUpload = Boolean(project);
   }
-  if (!project || project.status !== "active") throw new ClientError("This upload link is invalid or no longer active.", 403);
+  if (!project || (project.status !== "active" && accessType !== "account")) throw new ClientError("This upload link is invalid or no longer active.", 403);
+  if (project.status !== "active") canUpload = false;
   if (purpose === "upload" && !canUpload) throw new ClientError("This share link is view-only. Ask the project owner to enable uploads.", 403);
   return { project, canUpload, accessType };
 }

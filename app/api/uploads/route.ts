@@ -91,6 +91,8 @@ export async function PATCH(request: Request) {
     if (action === "comment-status") return updateProjectCommentStatus(request, input);
     if (action === "move-assets") return moveProjectAssets(request, input);
     if (action === "move-folder") return moveProjectFolder(request, input);
+    if (action === "rename-folder") return renameProjectFolder(request, input);
+    if (action === "project-settings") return updateProjectSettings(request, input);
     if (action === "admin-file-restore") return restoreAdminFile(request, input);
     if (action !== "admin-project-status") throw new ClientError("Unknown file action.", 404);
     await requireOwner(request);
@@ -111,6 +113,7 @@ export async function DELETE(request: Request) {
     const url = new URL(request.url);
     const action = url.searchParams.get("action");
     if (action === "account-project") return deleteAccountProject(request, url.searchParams.get("projectId") || "");
+    if (action === "project-folder") return deleteProjectFolder(request, url.searchParams);
     await requireOwner(request);
     if (action !== "admin-file" && action !== "admin-file-purge") throw new ClientError("Unknown file action.", 404);
     const fileId = url.searchParams.get("fileId") || "";
@@ -283,6 +286,65 @@ async function moveProjectFolder(request: Request, input: JsonInput): Promise<Re
   }
   await db.prepare("UPDATE project_folders SET parent_id = ?, updated_at = ? WHERE id = ? AND project_id = ?").bind(parentId, Date.now(), folderId, projectId).run();
   return json({ ok:true, folderId, parentId });
+}
+
+async function renameProjectFolder(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80);
+  const folderId = cleanText(input.folderId, 80);
+  const name = cleanText(input.name, 80);
+  if (!projectId || !folderId || !name) throw new ClientError("Enter a folder name.");
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  const folder = await db.prepare("SELECT id, parent_id FROM project_folders WHERE id = ? AND project_id = ? LIMIT 1")
+    .bind(folderId, projectId).first<{ id:string; parent_id:string|null }>();
+  if (!folder) throw new ClientError("Folder not found.", 404);
+  const duplicate = await db.prepare("SELECT id FROM project_folders WHERE project_id = ? AND id != ? AND COALESCE(parent_id,'') = COALESCE(?, '') AND lower(name) = lower(?) LIMIT 1")
+    .bind(projectId, folderId, folder.parent_id, name).first();
+  if (duplicate) throw new ClientError("A folder with this name already exists here.");
+  await db.prepare("UPDATE project_folders SET name = ?, updated_at = ? WHERE id = ? AND project_id = ?")
+    .bind(name, Date.now(), folderId, projectId).run();
+  return json({ ok:true, folder:{ id:folderId, name } });
+}
+
+async function deleteProjectFolder(request: Request, params: URLSearchParams): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(params.get("projectId"), 80);
+  const folderId = cleanText(params.get("folderId"), 80);
+  if (!projectId || !folderId) throw new ClientError("Choose a folder to remove.");
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  const folder = await db.prepare("SELECT id, parent_id, name FROM project_folders WHERE id = ? AND project_id = ? LIMIT 1")
+    .bind(folderId, projectId).first<{ id:string; parent_id:string|null; name:string }>();
+  if (!folder) throw new ClientError("Folder not found.", 404);
+  const now = Date.now();
+  await db.batch([
+    db.prepare("UPDATE upload_files SET folder_id = ? WHERE project_id = ? AND folder_id = ?").bind(folder.parent_id, projectId, folderId),
+    db.prepare("UPDATE project_folders SET parent_id = ?, updated_at = ? WHERE project_id = ? AND parent_id = ?").bind(folder.parent_id, now, projectId, folderId),
+    db.prepare("DELETE FROM project_folders WHERE id = ? AND project_id = ?").bind(folderId, projectId),
+  ]);
+  return json({ ok:true, removedFolder:{ id:folder.id, name:folder.name }, movedTo:folder.parent_id });
+}
+
+async function updateProjectSettings(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80);
+  const name = cleanText(input.name, 120);
+  const clientName = cleanText(input.clientName, 120) || null;
+  const clientEmail = input.clientEmail ? cleanEmail(input.clientEmail) : "";
+  const status = cleanText(input.status, 20) || "active";
+  if (!projectId || !name) throw new ClientError("Enter a project name.");
+  if (input.clientEmail && !clientEmail) throw new ClientError("Enter a valid client email address.");
+  if (!["active", "archived"].includes(status)) throw new ClientError("Choose a valid project status.");
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  const now = Date.now();
+  const result = await db.prepare("UPDATE upload_projects SET name = ?, client_name = ?, client_email = ?, status = ?, updated_at = ? WHERE id = ?")
+    .bind(name, clientName, clientEmail || null, status, now, projectId).run();
+  if (!result.meta.changes) throw new ClientError("Project not found.", 404);
+  const project = await db.prepare("SELECT id, name, client_name, client_email, status, max_file_size, created_at, updated_at FROM upload_projects WHERE id = ? LIMIT 1")
+    .bind(projectId).first<UploadProject>();
+  return json({ ok:true, project:publicProject(project!) });
 }
 
 async function getAccountProjects(request: Request): Promise<Response> {

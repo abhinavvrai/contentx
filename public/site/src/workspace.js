@@ -1,6 +1,6 @@
-import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-5";
+import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-6";
 import { openReviewRoom } from "./review-room.js?v=frame-account-1";
-import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-5";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-6";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -87,14 +87,14 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       <a class="workspace-brand" href="#home"><span>CX</span><b>Content X</b></a>
       <nav><a class="${accountPanel ? "" : "active"}" href="#workspace"><span>▱</span>Projects</a><a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account"><span>◎</span>Account</a><button type="button" data-create-free-project><span>＋</span>New project</button></nav>
       <label class="workspace-project-search"><span>⌕</span><input type="search" placeholder="Search projects" aria-label="Search projects" data-project-nav-search></label>
-      <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id ? "active" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}" data-project-nav-item><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}</small></a>`).join("") || `<p>Create a free project to begin.</p>`}</div>
+      <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id ? "active" : ""} ${item.status === "archived" ? "archived" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}" data-project-nav-item><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${item.status === "archived" ? "Archived" : `${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}`}</small></a>`).join("") || `<p>Create a free project to begin.</p>`}</div>
       ${project && !accountPanel ? `<div class="workspace-tree"><div><small>PROJECT FILES</small><button type="button" data-create-folder title="New folder">＋</button></div><button class="active" type="button" data-folder-id=""><span>⌂</span><b>Project root</b><em>${files.filter(file => !file.folder_id).length}</em></button>${folderTreeNodes(folders)}</div>` : ""}
       <div class="workspace-storage"><div><b>Free storage</b><small>${formatBytes(used)} of ${formatBytes(quota)}</small></div><i><em style="width:${percent}%"></em></i></div>
       <div class="workspace-user"><span>${escapeHTML(user.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(user.name)}</b><small>${escapeHTML(user.email)}</small></div><a href="#workspace?panel=account" aria-label="Account settings">•••</a></div>
     </aside>
     <main class="workspace-main">
-      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>Workspace</span>${accountPanel ? `<b>/ Account</b>` : project ? `<b>/ ${escapeHTML(project.name)}</b>` : ""}</div><div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button danger" type="button" data-delete-project>Delete</button><button class="workspace-button" type="button" data-share-project>Share</button><button class="workspace-button primary" type="button" data-upload-files>Upload files</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
-      ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, folders, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy, true) : emptyWorkspace()}
+      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>Workspace</span>${accountPanel ? `<b>/ Account</b>` : project ? `<b>/ ${escapeHTML(project.name)}</b>` : ""}</div><div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button" type="button" data-project-settings>Settings</button><button class="workspace-button" type="button" data-share-project ${project.status === "archived" ? "disabled" : ""}>Share</button><button class="workspace-button primary" type="button" data-upload-files ${project.status === "archived" ? "disabled" : ""}>Upload files</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
+      ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, folders, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy, project.status === "active") : emptyWorkspace()}
     </main>
   </div><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
 
@@ -152,6 +152,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     });
   }));
   root.querySelector("[data-share-project]")?.addEventListener("click", () => openSharePanel(root, project, shares));
+  root.querySelector("[data-project-settings]")?.addEventListener("click", () => openProjectSettingsModal(root, project, actions));
   root.querySelector("[data-delete-project]")?.addEventListener("click", () => openDeleteProjectModal(root, project, actions));
   bindComments(root, project.id, "", actions, true);
 }
@@ -162,8 +163,8 @@ function folderTreeNodes(folders, parentId = null, depth = 0) {
 
 function projectSurface(project, files, folders, canUpload, comments = [], canManageComments = false, revisionPolicy = null, canManageFolders = false) {
   const rootFolders = folders.filter(folder => !folder.parent_id);
-  return `<section class="workspace-project-head"><div><p>PROJECT</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
-    <section class="workspace-browser"><div class="workspace-browser-head"><nav aria-label="Folder breadcrumb"><button class="active" type="button" data-folder-id="">${escapeHTML(project.name)}</button><span data-folder-crumbs></span></nav><div>${canManageFolders ? `<button type="button" data-create-folder>＋ Folder</button>` : ""}${canUpload ? `<button class="workspace-button primary" type="button" data-upload-files>↑ Upload</button>` : ""}</div></div><div class="workspace-folder-grid"><button class="workspace-folder-card root-target" type="button" data-folder-id=""><span>⌂</span><div><b>Project root</b><small>${files.filter(file => !file.folder_id).length} assets</small></div><em>Drop here</em></button>${rootFolders.map(folder => folderCard(folder)).join("")}</div></section>
+  return `<section class="workspace-project-head"><div><p>PROJECT ${project.status === "archived" ? `<b class="workspace-status-badge">ARCHIVED</b>` : ""}</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
+    <section class="workspace-browser"><div class="workspace-browser-head"><nav aria-label="Folder breadcrumb"><button class="active" type="button" data-folder-id="">${escapeHTML(project.name)}</button><span data-folder-crumbs></span></nav><div>${canManageFolders ? `<button type="button" data-folder-settings-current hidden>Folder options</button><button type="button" data-create-folder>＋ Folder</button>` : ""}${canUpload ? `<button class="workspace-button primary" type="button" data-upload-files>↑ Upload</button>` : ""}</div></div><div class="workspace-folder-grid"><button class="workspace-folder-card root-target" type="button" data-folder-id=""><span>⌂</span><div><b>Project root</b><small>${files.filter(file => !file.folder_id).length} assets</small></div><em>Drop here</em></button>${rootFolders.map(folder => folderCard(folder)).join("")}</div></section>
     <section class="workspace-dropbar ${canUpload ? "" : "disabled"}" data-project-drop title="Executables, archives, scripts, HTML and SVG are blocked"><span>↑</span><div><b>${canUpload ? "Drop to upload" : "View only"}</b><small>${canUpload ? "Or drag assets into a folder." : "Uploads are disabled for this link."}</small></div></section>
     <section class="workspace-files"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header>${fileToolbar()}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy)).join("") : `<div class="workspace-empty-files"><span>↑</span><h3>No files yet</h3><p>${canUpload ? "Drop footage or references here." : "No files shared yet."}</p></div>`}</div></section>
     ${commentsPanel(comments, canManageComments)}
@@ -191,6 +192,7 @@ function bindFolderBrowser(root, projectId, folders, actions) {
     while (cursor) { chain.unshift(cursor); cursor = byId.get(cursor.parent_id); }
     root.querySelector("[data-folder-crumbs]").innerHTML = chain.map(folder => `<i>/</i><button type="button" data-folder-id="${escapeHTML(folder.id)}">${escapeHTML(folder.name)}</button>`).join("");
     const label = root.querySelector("[data-visible-folder-label]"); if (label) label.textContent = activeFolder ? byId.get(activeFolder)?.name || "Folder" : "Project root";
+    const manage = root.querySelector("[data-folder-settings-current]"); if (manage) { manage.hidden = !activeFolder; manage.dataset.folderSettingsCurrent = activeFolder; }
     grid.dataset.activeFolder = activeFolder;
     grid.dataset.folderAssetCount = String(rootCount);
     sessionStorage.setItem(`cx_active_folder_${projectId}`, activeFolder);
@@ -220,6 +222,7 @@ function bindFolderBrowser(root, projectId, folders, actions) {
   root.querySelectorAll("[data-file-card]").forEach(card => card.addEventListener("dragstart", event => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-contentx-asset", card.dataset.assetId); card.classList.add("is-moving"); }));
   root.querySelectorAll("[data-file-card]").forEach(card => card.addEventListener("dragend", () => card.classList.remove("is-moving")));
   root.querySelectorAll("[data-create-folder]").forEach(button => button.addEventListener("click", async () => { const name = prompt("Folder name"); if (!name?.trim()) return; try { await api(UPLOAD_API, { method:"POST", headers:bearerHeaders("", true), body:JSON.stringify({ action:"create-folder", projectId, parentId:activeFolder || null, name:name.trim() }) }); actions.refreshRoute(); } catch (error) { alert(error.message); } }));
+  root.querySelector("[data-folder-settings-current]")?.addEventListener("click", buttonEvent => { const folder = byId.get(buttonEvent.currentTarget.dataset.folderSettingsCurrent); if (folder) openFolderSettingsModal(root, projectId, folder, actions); });
   paintFolders();
 }
 
@@ -294,6 +297,50 @@ function openCreateProjectModal(root, actions) {
     } catch (failure) {
       error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Create project";
     }
+  });
+}
+
+function openProjectSettingsModal(root, project, actions) {
+  const layer = root.querySelector("[data-workspace-layer]");
+  layer.innerHTML = `<div class="workspace-modal-backdrop"><form class="workspace-share-modal workspace-settings-modal"><button type="button" data-close-settings aria-label="Close">×</button><p class="workspace-kicker">PROJECT SETTINGS</p><h2>Keep project details current</h2><p>Correct names, update the client contact, or archive finished work without deleting its files.</p><label>Project name<input name="name" required maxlength="120" value="${escapeHTML(project.name)}"></label><div class="workspace-settings-grid"><label>Client name <span>optional</span><input name="clientName" maxlength="120" value="${escapeHTML(project.clientName || "")}"></label><label>Client email <span>optional</span><input name="clientEmail" type="email" maxlength="254" value="${escapeHTML(project.clientEmail || "")}"></label></div><label>Project status<select name="status"><option value="active" ${project.status === "active" ? "selected" : ""}>Active — uploads and share links work</option><option value="archived" ${project.status === "archived" ? "selected" : ""}>Archived — preserved, but uploads stop</option></select></label><p role="alert" data-settings-error hidden></p><button class="workspace-button primary" type="submit">Save project settings</button><div class="workspace-settings-danger"><div><b>Need to remove it forever?</b><small>Permanent deletion remains protected by typed confirmation.</small></div><button class="workspace-button danger" type="button" data-delete-from-settings>Delete project</button></div></form></div>`;
+  const form = layer.querySelector("form");
+  const close = () => { layer.innerHTML = ""; };
+  layer.querySelector("[data-close-settings]").addEventListener("click", close);
+  layer.querySelector(".workspace-modal-backdrop").addEventListener("click", event => { if (event.target === event.currentTarget) close(); });
+  layer.querySelector("[data-delete-from-settings]").addEventListener("click", () => openDeleteProjectModal(root, project, actions));
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = form.querySelector("button[type=submit]");
+    const error = form.querySelector("[data-settings-error]");
+    button.disabled = true; button.textContent = "Saving…"; error.hidden = true;
+    try {
+      await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify({ action:"project-settings", projectId:project.id, ...Object.fromEntries(new FormData(form)) }) });
+      close(); actions.refreshRoute();
+    } catch (failure) {
+      error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Save project settings";
+    }
+  });
+}
+
+function openFolderSettingsModal(root, projectId, folder, actions) {
+  const layer = root.querySelector("[data-workspace-layer]");
+  layer.innerHTML = `<div class="workspace-modal-backdrop"><form class="workspace-share-modal workspace-folder-modal"><button type="button" data-close-folder-settings aria-label="Close">×</button><p class="workspace-kicker">FOLDER OPTIONS</p><h2>${escapeHTML(folder.name)}</h2><label>Folder name<input name="name" required maxlength="80" value="${escapeHTML(folder.name)}"></label><p role="alert" data-folder-error hidden></p><button class="workspace-button primary" type="submit">Save folder name</button><aside><span>↖</span><div><b>Safe folder removal</b><small>Files and subfolders move up one level. No media is deleted.</small></div></aside><button class="workspace-button danger" type="button" data-remove-folder>Remove folder only</button></form></div>`;
+  const form = layer.querySelector("form");
+  const error = form.querySelector("[data-folder-error]");
+  const close = () => { layer.innerHTML = ""; };
+  layer.querySelector("[data-close-folder-settings]").addEventListener("click", close);
+  layer.querySelector(".workspace-modal-backdrop").addEventListener("click", event => { if (event.target === event.currentTarget) close(); });
+  form.addEventListener("submit", async event => {
+    event.preventDefault(); const button = form.querySelector("button[type=submit]");
+    button.disabled = true; button.textContent = "Saving…"; error.hidden = true;
+    try { await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify({ action:"rename-folder", projectId, folderId:folder.id, name:new FormData(form).get("name") }) }); close(); actions.refreshRoute(); }
+    catch (failure) { error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Save folder name"; }
+  });
+  layer.querySelector("[data-remove-folder]").addEventListener("click", async event => {
+    if (!confirm(`Remove the folder “${folder.name}”? Its contents will move up one level.`)) return;
+    const button = event.currentTarget; button.disabled = true; button.textContent = "Removing folder…"; error.hidden = true;
+    try { await api(`${UPLOAD_API}?action=project-folder&projectId=${encodeURIComponent(projectId)}&folderId=${encodeURIComponent(folder.id)}`, { method:"DELETE" }); sessionStorage.removeItem(`cx_active_folder_${projectId}`); close(); actions.refreshRoute(); }
+    catch (failure) { error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Remove folder only"; }
   });
 }
 

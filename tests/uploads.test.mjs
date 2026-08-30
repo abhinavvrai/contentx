@@ -96,6 +96,24 @@ test("persists nested project folders and moves assets safely", async () => {
   assert.match(workspace, /data-folder-drag/);
 });
 
+test("adds compact project settings and safe folder maintenance", async () => {
+  const [route, storage, workspace] = await Promise.all([
+    readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/uploads.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(route, /action === "project-settings"/);
+  assert.match(route, /action === "rename-folder"/);
+  assert.match(route, /action === "project-folder"/);
+  assert.match(route, /UPDATE upload_files SET folder_id = \?/);
+  assert.match(route, /UPDATE project_folders SET parent_id = \?, updated_at = \?/);
+  assert.match(storage, /project\.status !== "active" && accessType !== "account"/);
+  assert.match(workspace, /data-project-settings/);
+  assert.match(workspace, /Archived — preserved, but uploads stop/);
+  assert.match(workspace, /Safe folder removal/);
+  assert.match(workspace, /No media is deleted/);
+});
+
 test("lets account owners permanently delete a project with explicit confirmation", async () => {
   const [route, workspace, styles] = await Promise.all([
     readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
