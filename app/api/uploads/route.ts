@@ -108,9 +108,10 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   return handle(async () => {
     await ensureUploadSchema();
-    await requireOwner(request);
     const url = new URL(request.url);
     const action = url.searchParams.get("action");
+    if (action === "account-project") return deleteAccountProject(request, url.searchParams.get("projectId") || "");
+    await requireOwner(request);
     if (action !== "admin-file" && action !== "admin-file-purge") throw new ClientError("Unknown file action.", 404);
     const fileId = url.searchParams.get("fileId") || "";
     const { db, bucket } = getUploadBindings();
@@ -135,6 +136,41 @@ export async function DELETE(request: Request) {
     await db.prepare("DELETE FROM upload_files WHERE id = ?").bind(file.id).run();
     return json({ ok: true });
   });
+}
+
+async function deleteAccountProject(request: Request, rawProjectId: string): Promise<Response> {
+  requireSameOrigin(request);
+  await Promise.all([ensureAccountSchema(), ensurePaymentSchema()]);
+  const user = await requireSessionUser(request);
+  const projectId = cleanText(rawProjectId, 80);
+  if (!projectId) throw new ClientError("Choose a project to delete.");
+  const { db, bucket } = getUploadBindings();
+  const project = await db.prepare(`SELECT p.id, p.name FROM upload_projects p
+    JOIN user_upload_projects u ON u.project_id = p.id
+    WHERE p.id = ? AND u.user_id = ? LIMIT 1`).bind(projectId, user.id).first<{ id:string; name:string }>();
+  if (!project) throw new ClientError("Project not found.", 404);
+  const files = await db.prepare("SELECT id, object_key, status, multipart_upload_id FROM upload_files WHERE project_id = ?")
+    .bind(projectId).all<Pick<UploadFile,"id"|"object_key"|"status"|"multipart_upload_id">>();
+  for (const file of files.results) {
+    if (file.status === "uploading" && file.multipart_upload_id) {
+      await bucket.resumeMultipartUpload(file.object_key, file.multipart_upload_id).abort().catch(() => undefined);
+    }
+  }
+  const objectKeys = [...new Set(files.results.map(file => file.object_key).filter(Boolean))];
+  for (let offset = 0; offset < objectKeys.length; offset += 1000) {
+    await bucket.delete(objectKeys.slice(offset, offset + 1000));
+  }
+  await db.batch([
+    db.prepare("UPDATE payment_orders SET project_id = NULL WHERE project_id = ?").bind(projectId),
+    db.prepare("UPDATE order_selections SET project_id = NULL, asset_id = NULL WHERE project_id = ?").bind(projectId),
+    db.prepare("DELETE FROM project_review_comments WHERE project_id = ?").bind(projectId),
+    db.prepare("DELETE FROM project_share_links WHERE project_id = ?").bind(projectId),
+    db.prepare("DELETE FROM project_folders WHERE project_id = ?").bind(projectId),
+    db.prepare("DELETE FROM upload_files WHERE project_id = ?").bind(projectId),
+    db.prepare("DELETE FROM user_upload_projects WHERE project_id = ? AND user_id = ?").bind(projectId, user.id),
+    db.prepare("DELETE FROM upload_projects WHERE id = ?").bind(projectId),
+  ]);
+  return json({ ok:true, deletedProject:{ id:project.id, name:project.name }, deletedFiles:files.results.length });
 }
 
 async function getClientProject(request: Request, projectId: string): Promise<Response> {

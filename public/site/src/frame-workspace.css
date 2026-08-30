@@ -117,6 +117,18 @@ html[data-theme="dark"] #app:is(.workspace-app,.dashboard-app,.account-app) {
 #app .workspace-project-head p { display:none; }
 #app .workspace-project-head h1 { margin:0; font-size:24px; letter-spacing:-.035em; }
 #app .workspace-project-head>div:first-child>span { margin-top:5px; font-size:10px; }
+#app .workspace-button.danger { border-color:#743c3f; background:#2b181b; color:#ff9b9f; }
+#app .workspace-button.danger:hover { border-color:#b95358; background:#3a1d21; color:#fff; }
+#app .workspace-delete-modal { width:min(540px,100%); }
+#app .workspace-delete-modal>p:not(.workspace-kicker) { font-size:11px; line-height:1.65; }
+#app .workspace-delete-modal>p strong { color:#fff; }
+#app .workspace-delete-modal>aside { display:flex; align-items:flex-start; gap:11px; margin:20px 0; padding:13px; border:1px solid #61363a; border-radius:9px; background:#28171a; }
+#app .workspace-delete-modal>aside>span { width:29px; height:29px; flex:0 0 29px; display:grid; place-items:center; border-radius:50%; background:#7c3036; color:#fff; font-weight:900; }
+#app .workspace-delete-modal>aside b,#app .workspace-delete-modal>aside small { display:block; }
+#app .workspace-delete-modal>aside b { color:#ffc6c8; font-size:10px; }
+#app .workspace-delete-modal>aside small { margin-top:4px; color:#a98e91; font-size:9px; line-height:1.5; }
+#app .workspace-delete-modal .workspace-button.danger { width:100%; min-height:44px; margin-top:6px; }
+#app .workspace-delete-modal .workspace-button.danger:disabled { border-color:#413235; background:#241d1f; color:#765f62; }
 #app .workspace-view-toggle { padding:2px; border:1px solid var(--fx-line); border-radius:7px; background:#15161d; }
 #app .workspace-view-toggle button { min-height:28px; font-size:10px; }
 

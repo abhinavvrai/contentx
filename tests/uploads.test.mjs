@@ -96,6 +96,24 @@ test("persists nested project folders and moves assets safely", async () => {
   assert.match(workspace, /data-folder-drag/);
 });
 
+test("lets account owners permanently delete a project with explicit confirmation", async () => {
+  const [route, workspace, styles] = await Promise.all([
+    readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/frame-workspace.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(route, /action === "account-project"/);
+  assert.match(route, /JOIN user_upload_projects u ON u\.project_id = p\.id/);
+  assert.match(route, /u\.user_id = \?/);
+  assert.match(route, /bucket\.delete\(objectKeys\.slice/);
+  assert.match(route, /DELETE FROM project_review_comments WHERE project_id = \?/);
+  assert.match(route, /DELETE FROM upload_projects WHERE id = \?/);
+  assert.match(workspace, /data-delete-project/);
+  assert.match(workspace, /Type <strong>\$\{escapeHTML\(project\.name\)\}<\/strong> to confirm/);
+  assert.match(workspace, /Delete project permanently/);
+  assert.match(styles, /workspace-delete-modal/);
+});
+
 test("adds free account workspaces with 50 GB quota and review comments", async () => {
   const [route, storage, schema, workspace, account] = await Promise.all([
     readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),

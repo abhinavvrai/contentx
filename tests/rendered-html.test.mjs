@@ -14,7 +14,7 @@ test("server-renders the Content X application shell", async () => {
 
   const html = await response.text();
   assert.match(html, /className="site-frame"/i);
-  assert.match(html, /src="\/site\/index\.html\?v=frame-native-4"/i);
+  assert.match(html, /src="\/site\/index\.html\?v=frame-native-5"/i);
   assert.match(html, /title="Content X"/i);
   assert.doesNotMatch(html, /site is taking shape|Building your site/i);
 });

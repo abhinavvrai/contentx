@@ -1,6 +1,6 @@
-import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-4";
+import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-5";
 import { openReviewRoom } from "./review-room.js?v=frame-account-1";
-import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-4";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-5";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -93,7 +93,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       <div class="workspace-user"><span>${escapeHTML(user.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(user.name)}</b><small>${escapeHTML(user.email)}</small></div><a href="#workspace?panel=account" aria-label="Account settings">•••</a></div>
     </aside>
     <main class="workspace-main">
-      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>Workspace</span>${accountPanel ? `<b>/ Account</b>` : project ? `<b>/ ${escapeHTML(project.name)}</b>` : ""}</div><div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button" type="button" data-share-project>Share</button><button class="workspace-button primary" type="button" data-upload-files>Upload files</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
+      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>Workspace</span>${accountPanel ? `<b>/ Account</b>` : project ? `<b>/ ${escapeHTML(project.name)}</b>` : ""}</div><div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button danger" type="button" data-delete-project>Delete</button><button class="workspace-button" type="button" data-share-project>Share</button><button class="workspace-button primary" type="button" data-upload-files>Upload files</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
       ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, folders, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy, true) : emptyWorkspace()}
     </main>
   </div><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
@@ -152,6 +152,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     });
   }));
   root.querySelector("[data-share-project]")?.addEventListener("click", () => openSharePanel(root, project, shares));
+  root.querySelector("[data-delete-project]")?.addEventListener("click", () => openDeleteProjectModal(root, project, actions));
   bindComments(root, project.id, "", actions, true);
 }
 
@@ -294,6 +295,34 @@ function openCreateProjectModal(root, actions) {
       error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Create project";
     }
   });
+}
+
+function openDeleteProjectModal(root, project, actions) {
+  const layer = root.querySelector("[data-workspace-layer]");
+  layer.innerHTML = `<div class="workspace-modal-backdrop"><form class="workspace-share-modal workspace-delete-modal"><button type="button" data-close-delete aria-label="Close">×</button><p class="workspace-kicker">DANGER ZONE</p><h2>Delete this project?</h2><p>This permanently removes <strong>${escapeHTML(project.name)}</strong>, its folders, comments, share links, every file version, and stored media. Payment history remains available.</p><aside><span>!</span><div><b>This cannot be undone.</b><small>If this is your only project, a fresh empty project will be created automatically.</small></div></aside><label>Type <strong>${escapeHTML(project.name)}</strong> to confirm<input name="confirmation" autocomplete="off" required></label><p role="alert" data-delete-error hidden></p><button class="workspace-button danger" type="submit" disabled>Delete project permanently</button></form></div>`;
+  const form = layer.querySelector("form");
+  const close = () => { layer.innerHTML = ""; };
+  const input = form.elements.confirmation;
+  const submit = form.querySelector("button[type=submit]");
+  layer.querySelector("[data-close-delete]").addEventListener("click", close);
+  layer.querySelector(".workspace-modal-backdrop").addEventListener("click", event => { if (event.target === event.currentTarget) close(); });
+  input.addEventListener("input", () => { submit.disabled = input.value.trim() !== project.name; });
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const error = form.querySelector("[data-delete-error]");
+    if (input.value.trim() !== project.name) return;
+    submit.disabled = true; submit.textContent = "Deleting project…"; error.hidden = true;
+    try {
+      await api(`${UPLOAD_API}?action=account-project&projectId=${encodeURIComponent(project.id)}`, { method:"DELETE" });
+      sessionStorage.removeItem(`cx_active_folder_${project.id}`);
+      close();
+      if (location.hash === "#workspace") actions.refreshRoute();
+      else location.hash = "workspace";
+    } catch (failure) {
+      error.textContent = failure.message; error.hidden = false; submit.disabled = false; submit.textContent = "Delete project permanently";
+    }
+  });
+  input.focus();
 }
 
 function commentsPanel(comments, canManageComments) {
