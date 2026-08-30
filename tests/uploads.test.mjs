@@ -114,6 +114,24 @@ test("adds compact project settings and safe folder maintenance", async () => {
   assert.match(workspace, /No media is deleted/);
 });
 
+test("keeps the signed-in project dashboard consistent with the preview workspace", async () => {
+  const [workspace, studio, styles] = await Promise.all([
+    readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/studio-workspace.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/frame-workspace.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(workspace, /function workspaceOverview/);
+  assert.match(workspace, /const selected = requested \?/);
+  assert.match(workspace, /data-overview-filter="active"/);
+  assert.match(workspace, /workspace-share-nav/);
+  assert.match(workspace, /data-folder-menu/);
+  assert.match(studio, /data-appearance-button/);
+  assert.match(studio, /data-fields-button/);
+  assert.match(studio, /cx_workspace_appearance/);
+  assert.match(styles, /workspace-overview-grid/);
+  assert.match(styles, /sx-control-popover/);
+});
+
 test("lets account owners permanently delete a project with explicit confirmation", async () => {
   const [route, workspace, styles] = await Promise.all([
     readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),

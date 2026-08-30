@@ -31,7 +31,7 @@ export function workspacePulse(files, comments) {
   return `<section class="sx-pulse" aria-label="Project overview"><div class="sx-pulse-intro"><span class="sx-overline">PRODUCTION ROOM</span><h2>One place.<br><em>Every next cut.</em></h2><p>Files, versions and feedback. In focus.</p></div><div class="sx-pulse-metrics"><article><span>Latest assets</span><strong>${files.length.toString().padStart(2,"0")}</strong><small>In this project</small></article><article><span>Open feedback</span><strong>${summary.open.toString().padStart(2,"0")}</strong><small>${summary.complete} completed</small></article><article><span>Version stacks</span><strong>${files.filter(file => Number(file.version_count) > 1).length.toString().padStart(2,"0")}</strong><small>Every cut stays together</small></article></div></section>`;
 }
 export function fileToolbar() {
-  return `<div class="sx-library-tools"><label class="sx-search"><span aria-hidden="true">⌕</span><input type="search" data-file-search placeholder="Find a file…" aria-label="Search project files"></label><label>Show<select data-file-type><option value="all">All files</option><option value="video">Video</option><option value="image">Images</option><option value="audio">Audio</option><option value="feedback">Open feedback</option><option value="versions">Version stacks</option></select></label><label>Sort<select data-file-sort><option value="newest">Newest first</option><option value="name">Name A–Z</option><option value="size">Largest first</option></select></label><span data-file-results role="status"></span></div><p class="sx-no-results" data-file-empty hidden>No matching files. Try a different search or filter.</p>`;
+  return `<div class="sx-library-tools"><div class="sx-tool-menu"><button type="button" data-appearance-button>▦ <b>Appearance</b></button><div class="sx-control-popover" data-appearance-panel hidden><h3>Appearance</h3><label><span>Layout</span><span class="sx-segment"><button class="active" type="button" data-pref-view="grid">Grid</button><button type="button" data-pref-view="list">List</button></span></label><label><span>Card size</span><span class="sx-segment"><button type="button" data-pref-size="small">S</button><button class="active" type="button" data-pref-size="medium">M</button><button type="button" data-pref-size="large">L</button></span></label><label><span>Thumbnail scale</span><select data-pref-scale><option value="fit">Fit</option><option value="fill">Fill</option></select></label><label><span>Show card info</span><input type="checkbox" data-pref-info checked></label></div></div><div class="sx-tool-menu"><button type="button" data-fields-button>✣ <b>Fields</b> <small data-field-count>4 visible</small></button><div class="sx-control-popover sx-fields-popover" data-fields-panel hidden><h3>Visible card fields</h3><label><input type="checkbox" data-card-field-toggle="size" checked><span>File size</span></label><label><input type="checkbox" data-card-field-toggle="date" checked><span>Updated date</span></label><label><input type="checkbox" data-card-field-toggle="versions" checked><span>Versions</span></label><label><input type="checkbox" data-card-field-toggle="status" checked><span>Status</span></label></div></div><label class="sx-sort">≡ <b>Sorted by</b><select data-file-sort><option value="newest">Newest</option><option value="name">Name</option><option value="size">Size</option></select></label><label class="sx-filter"><span>Show</span><select data-file-type><option value="all">All files</option><option value="video">Video</option><option value="image">Images</option><option value="audio">Audio</option><option value="feedback">Open feedback</option><option value="versions">Version stacks</option></select></label><label class="sx-search"><span aria-hidden="true">⌕</span><input type="search" data-file-search placeholder="Search assets" aria-label="Search project files"></label><span data-file-results role="status"></span></div><p class="sx-no-results" data-file-empty hidden>No matching files. Try a different search or filter.</p>`;
 }
 export function enhanceFileLibrary(root, files, comments) {
   const grid = root.querySelector(".workspace-file-grid");
@@ -51,6 +51,36 @@ export function enhanceFileLibrary(root, files, comments) {
     grid.classList.toggle("sx-list", button.dataset.fileView === "list");
     root.querySelectorAll("[data-file-view]").forEach(item => { item.classList.toggle("active", item === button); item.setAttribute("aria-pressed", String(item === button)); });
   }));
+  const preferenceKey = "cx_workspace_appearance";
+  const defaults = { view:"grid", size:"medium", scale:"fit", info:true, fields:{ size:true, date:true, versions:true, status:true } };
+  let preferences = defaults;
+  try { preferences = { ...defaults, ...JSON.parse(localStorage.getItem(preferenceKey) || "{}"), fields:{ ...defaults.fields, ...(JSON.parse(localStorage.getItem(preferenceKey) || "{}").fields || {}) } }; } catch {}
+  const applyPreferences = () => {
+    grid.classList.toggle("sx-list", preferences.view === "list");
+    grid.classList.remove("cards-small", "cards-medium", "cards-large", "thumb-fill");
+    grid.classList.add(`cards-${preferences.size}`);
+    grid.classList.toggle("thumb-fill", preferences.scale === "fill");
+    grid.classList.toggle("hide-card-info", !preferences.info);
+    Object.entries(preferences.fields).forEach(([field,visible]) => grid.classList.toggle(`hide-field-${field}`, !visible));
+    root.querySelectorAll("[data-pref-view]").forEach(button => button.classList.toggle("active", button.dataset.prefView === preferences.view));
+    root.querySelectorAll("[data-pref-size]").forEach(button => button.classList.toggle("active", button.dataset.prefSize === preferences.size));
+    const scale = root.querySelector("[data-pref-scale]"); if (scale) scale.value = preferences.scale;
+    const info = root.querySelector("[data-pref-info]"); if (info) info.checked = preferences.info;
+    root.querySelectorAll("[data-card-field-toggle]").forEach(input => { input.checked = preferences.fields[input.dataset.cardFieldToggle] !== false; });
+    const count = Object.values(preferences.fields).filter(Boolean).length;
+    const countLabel = root.querySelector("[data-field-count]"); if (countLabel) countLabel.textContent = `${count} visible`;
+    localStorage.setItem(preferenceKey, JSON.stringify(preferences));
+  };
+  const closePopovers = except => root.querySelectorAll(".sx-control-popover").forEach(panel => { if (panel !== except) panel.hidden = true; });
+  [["[data-appearance-button]","[data-appearance-panel]"],["[data-fields-button]","[data-fields-panel]"]].forEach(([buttonSelector,panelSelector]) => root.querySelector(buttonSelector)?.addEventListener("click", event => { event.stopPropagation(); const panel = root.querySelector(panelSelector); const opening = panel.hidden; closePopovers(panel); panel.hidden = !opening; }));
+  root.querySelectorAll(".sx-control-popover").forEach(panel => panel.addEventListener("click", event => event.stopPropagation()));
+  root.querySelector(".workspace-main")?.addEventListener("click", () => closePopovers());
+  root.querySelectorAll("[data-pref-view]").forEach(button => button.addEventListener("click", () => { preferences.view = button.dataset.prefView; applyPreferences(); }));
+  root.querySelectorAll("[data-pref-size]").forEach(button => button.addEventListener("click", () => { preferences.size = button.dataset.prefSize; applyPreferences(); }));
+  root.querySelector("[data-pref-scale]")?.addEventListener("change", event => { preferences.scale = event.currentTarget.value; applyPreferences(); });
+  root.querySelector("[data-pref-info]")?.addEventListener("change", event => { preferences.info = event.currentTarget.checked; applyPreferences(); });
+  root.querySelectorAll("[data-card-field-toggle]").forEach(input => input.addEventListener("change", () => { preferences.fields[input.dataset.cardFieldToggle] = input.checked; applyPreferences(); }));
+  applyPreferences();
   update();
 }
 

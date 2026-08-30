@@ -1,6 +1,6 @@
-import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-6";
+import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-7";
 import { openReviewRoom } from "./review-room.js?v=frame-account-1";
-import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-6";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-7";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -41,7 +41,7 @@ export async function renderClientWorkspace(root, actions, route) {
     const account = await api(`${UPLOAD_API}?action=account-projects`, { cache:"no-store" });
     const projects = account.projects || [];
     const requested = params.get("project");
-    const selected = projects.find(project => project.project_id === requested) || projects[0] || null;
+    const selected = requested ? projects.find(project => project.project_id === requested) || null : null;
     const [projectData, shareData, commentData] = selected && !accountPanel ? await Promise.all([
       api(`${UPLOAD_API}?action=project&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }),
       api(`${UPLOAD_API}?action=shares&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }),
@@ -88,13 +88,13 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       <nav><a class="${accountPanel ? "" : "active"}" href="#workspace"><span>▱</span>Projects</a><a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account"><span>◎</span>Account</a><button type="button" data-create-free-project><span>＋</span>New project</button></nav>
       <label class="workspace-project-search"><span>⌕</span><input type="search" placeholder="Search projects" aria-label="Search projects" data-project-nav-search></label>
       <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id ? "active" : ""} ${item.status === "archived" ? "archived" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}" data-project-nav-item><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${item.status === "archived" ? "Archived" : `${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}`}</small></a>`).join("") || `<p>Create a free project to begin.</p>`}</div>
-      ${project && !accountPanel ? `<div class="workspace-tree"><div><small>PROJECT FILES</small><button type="button" data-create-folder title="New folder">＋</button></div><button class="active" type="button" data-folder-id=""><span>⌂</span><b>Project root</b><em>${files.filter(file => !file.folder_id).length}</em></button>${folderTreeNodes(folders)}</div>` : ""}
+      ${project && !accountPanel ? `<button class="workspace-project-focus" type="button" data-project-settings><span>${escapeHTML(project.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(project.name)}</b><small>${escapeHTML(project.clientName || "Private production")}</small></div><em>⌄</em></button><div class="workspace-tree"><div><small>ASSETS</small><button type="button" data-create-folder title="New folder">＋</button></div><button class="active" type="button" data-folder-id=""><span>▱</span><b>All assets</b><em>${files.length}</em></button>${folderTreeNodes(folders)}<button type="button" data-create-folder><span>＋</span><b>New folder</b></button></div><div class="workspace-share-nav"><header><small>SHARE LINKS</small><button type="button" data-share-project title="New share link">＋</button></header><button class="all" type="button" data-share-project><span>☷</span><b>All share links</b><em>${shares.filter(share => share.status === "active").length}</em></button>${shares.slice(0,6).map(share => `<button type="button" data-share-project><span>↗</span><b>${escapeHTML(share.name)}</b><small>${share.status === "active" ? "Active" : "Disabled"}</small></button>`).join("") || `<p>No links yet. Create one when the project is ready.</p>`}</div>` : ""}
       <div class="workspace-storage"><div><b>Free storage</b><small>${formatBytes(used)} of ${formatBytes(quota)}</small></div><i><em style="width:${percent}%"></em></i></div>
       <div class="workspace-user"><span>${escapeHTML(user.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(user.name)}</b><small>${escapeHTML(user.email)}</small></div><a href="#workspace?panel=account" aria-label="Account settings">•••</a></div>
     </aside>
     <main class="workspace-main">
-      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>Workspace</span>${accountPanel ? `<b>/ Account</b>` : project ? `<b>/ ${escapeHTML(project.name)}</b>` : ""}</div><div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button" type="button" data-project-settings>Settings</button><button class="workspace-button" type="button" data-share-project ${project.status === "archived" ? "disabled" : ""}>Share</button><button class="workspace-button primary" type="button" data-upload-files ${project.status === "archived" ? "disabled" : ""}>Upload files</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
-      ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, folders, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy, project.status === "active") : emptyWorkspace()}
+      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>All projects</span>${accountPanel ? `<b>/ Account</b>` : project ? `<i>/</i><b>${escapeHTML(project.name)}</b>` : ""}</div>${project && !accountPanel ? `<label class="workspace-global-search"><span>⌕</span><input type="search" data-global-file-search placeholder="Search" aria-label="Search this project"></label>` : ""}<div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button subtle" type="button" data-project-settings aria-label="Project settings">•••</button><button class="workspace-button" type="button" data-share-project ${project.status === "archived" ? "disabled" : ""}>Share</button><button class="workspace-button primary" type="button" data-upload-files ${project.status === "archived" ? "disabled" : ""}>＋ Add</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
+      ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, folders, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy, project.status === "active") : projects.length ? workspaceOverview(projects, storage) : emptyWorkspace()}
     </main>
   </div><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
 
@@ -107,6 +107,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     root.querySelectorAll("[data-project-nav-item]").forEach(item => { item.hidden = Boolean(query) && !item.textContent.toLowerCase().includes(query); });
   });
   root.querySelector("[data-focus-files]")?.addEventListener("click", () => (root.querySelector("[data-file-search]") || projectSearch)?.focus());
+  bindWorkspaceOverview(root, projects, actions);
   if (accountPanel || !project) return;
   enhanceFileLibrary(root, files, comments);
   bindFolderBrowser(root, project.id, folders, actions);
@@ -151,10 +152,35 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       features:["1 additional revision round", `Attached to ${button.dataset.fileName}`, "Timestamped feedback and version history stay in this workspace"],
     });
   }));
-  root.querySelector("[data-share-project]")?.addEventListener("click", () => openSharePanel(root, project, shares));
-  root.querySelector("[data-project-settings]")?.addEventListener("click", () => openProjectSettingsModal(root, project, actions));
+  root.querySelectorAll("[data-share-project]").forEach(button => button.addEventListener("click", () => openSharePanel(root, project, shares)));
+  root.querySelectorAll("[data-project-settings]").forEach(button => button.addEventListener("click", () => openProjectSettingsModal(root, project, actions)));
+  const globalSearch = root.querySelector("[data-global-file-search]");
+  globalSearch?.addEventListener("input", () => { const fileSearch = root.querySelector("[data-file-search]"); if (fileSearch) { fileSearch.value = globalSearch.value; fileSearch.dispatchEvent(new Event("input", { bubbles:true })); } });
   root.querySelector("[data-delete-project]")?.addEventListener("click", () => openDeleteProjectModal(root, project, actions));
   bindComments(root, project.id, "", actions, true);
+}
+
+function workspaceOverview(projects, storage) {
+  const active = projects.filter(project => project.status !== "archived").length;
+  const used = Number(storage.usedBytes || 0), quota = Number(storage.quotaBytes || 50 * 1024 ** 3);
+  return `<section class="workspace-overview"><header><div><small>CONTENT X WORKSPACE</small><h1>Projects</h1><p>${active} active · ${formatBytes(used)} of ${formatBytes(quota)} used</p></div><button class="workspace-button primary" type="button" data-create-free-project>＋ New project</button></header><div class="workspace-overview-tools"><label><span>⌕</span><input type="search" data-overview-search placeholder="Search projects" aria-label="Search projects"></label><div><button class="active" type="button" data-overview-filter="active">Active</button><button type="button" data-overview-filter="all">All</button><button class="active" type="button" data-overview-view="grid" aria-label="Grid view">▦</button><button type="button" data-overview-view="list" aria-label="List view">☷</button></div></div><div class="workspace-overview-grid" data-overview-grid>${projects.map((project,index) => `<article class="workspace-overview-card ${project.status === "archived" ? "archived" : ""}" data-overview-card data-project-status="${escapeHTML(project.status || "active")}" style="--project-index:${index}"><a href="#workspace?project=${encodeURIComponent(project.project_id)}"><div class="workspace-overview-art"><i></i><i></i><i></i><span>${escapeHTML((project.name || "CX").slice(0,2).toUpperCase())}</span></div><div><h2>${escapeHTML(project.name)}</h2><p>${escapeHTML(project.client_name || "Private production")}</p><small>${Number(project.file_count || 0)} file${Number(project.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(project.total_bytes || 0)}</small></div></a><footer><span>${project.status === "archived" ? "Archived" : "Active"}</span><button type="button" data-overview-project-settings="${escapeHTML(project.project_id)}" aria-label="Project settings">•••</button></footer></article>`).join("")}<button class="workspace-overview-new" type="button" data-create-free-project><span>＋</span><b>New project</b><small>Start a private production space</small></button></div><p class="workspace-overview-empty" data-overview-empty hidden>No projects match this view.</p></section>`;
+}
+
+function bindWorkspaceOverview(root, projects, actions) {
+  const grid = root.querySelector("[data-overview-grid]");
+  if (!grid) return;
+  const search = root.querySelector("[data-overview-search]");
+  let filter = "active";
+  const update = () => {
+    let visible = 0; const query = search.value.trim().toLowerCase();
+    root.querySelectorAll("[data-overview-card]").forEach(card => { card.hidden = (filter === "active" && card.dataset.projectStatus === "archived") || (query && !card.textContent.toLowerCase().includes(query)); if (!card.hidden) visible++; });
+    root.querySelector("[data-overview-empty]").hidden = visible > 0;
+  };
+  search.addEventListener("input", update);
+  root.querySelectorAll("[data-overview-filter]").forEach(button => button.addEventListener("click", () => { filter = button.dataset.overviewFilter; root.querySelectorAll("[data-overview-filter]").forEach(item => item.classList.toggle("active", item === button)); update(); }));
+  root.querySelectorAll("[data-overview-view]").forEach(button => button.addEventListener("click", () => { grid.classList.toggle("list", button.dataset.overviewView === "list"); root.querySelectorAll("[data-overview-view]").forEach(item => item.classList.toggle("active", item === button)); }));
+  root.querySelectorAll("[data-overview-project-settings]").forEach(button => button.addEventListener("click", () => { const raw = projects.find(project => project.project_id === button.dataset.overviewProjectSettings); if (raw) openProjectSettingsModal(root, { id:raw.project_id, name:raw.name, clientName:raw.client_name, clientEmail:raw.client_email, status:raw.status }, actions); }));
+  update();
 }
 
 function folderTreeNodes(folders, parentId = null, depth = 0) {
@@ -172,7 +198,7 @@ function projectSurface(project, files, folders, canUpload, comments = [], canMa
 }
 
 function folderCard(folder) {
-  return `<button class="workspace-folder-card" type="button" draggable="true" data-folder-id="${escapeHTML(folder.id)}" data-folder-drag="${escapeHTML(folder.id)}"><span>▰</span><div><b>${escapeHTML(folder.name)}</b><small>${Number(folder.asset_count || 0)} assets</small></div><em>•••</em></button>`;
+  return `<article class="workspace-folder-card" draggable="true" data-folder-drag="${escapeHTML(folder.id)}"><button class="workspace-folder-open" type="button" data-folder-id="${escapeHTML(folder.id)}"><span class="workspace-folder-preview"><i></i><i></i><i></i></span><div><b>${escapeHTML(folder.name)}</b><small>${Number(folder.asset_count || 0)} item${Number(folder.asset_count || 0) === 1 ? "" : "s"}</small></div></button><button class="workspace-folder-more" type="button" data-folder-menu="${escapeHTML(folder.id)}" aria-label="Folder options">•••</button><div class="workspace-folder-menu" data-folder-menu-panel="${escapeHTML(folder.id)}" hidden><button type="button" data-folder-open-action="${escapeHTML(folder.id)}">Open folder</button><button type="button" data-folder-rename="${escapeHTML(folder.id)}">Rename</button><button type="button" data-folder-remove="${escapeHTML(folder.id)}">Remove folder</button></div></article>`;
 }
 
 function bindFolderBrowser(root, projectId, folders, actions) {
@@ -186,7 +212,7 @@ function bindFolderBrowser(root, projectId, folders, actions) {
   const paintFolders = () => {
     const children = folders.filter(folder => (folder.parent_id || "") === activeFolder);
     const rootCount = [...grid.querySelectorAll("[data-file-card]")].filter(card => (card.dataset.folderId || "") === activeFolder).length;
-    folderGrid.innerHTML = `<button class="workspace-folder-card root-target" type="button" data-folder-id=""><span>⌂</span><div><b>Project root</b><small>Drop to move out</small></div><em>↖</em></button>${children.map(folderCard).join("")}`;
+    folderGrid.innerHTML = `${activeFolder ? `<button class="workspace-folder-card root-target" type="button" data-folder-id=""><span>⌂</span><div><b>Project root</b><small>Move to top level</small></div><em>↖</em></button>` : ""}${children.map(folderCard).join("")}`;
     root.querySelectorAll(".workspace-tree [data-folder-id]").forEach(button => button.classList.toggle("active", button.dataset.folderId === activeFolder));
     const chain = []; let cursor = byId.get(activeFolder);
     while (cursor) { chain.unshift(cursor); cursor = byId.get(cursor.parent_id); }
@@ -218,6 +244,10 @@ function bindFolderBrowser(root, projectId, folders, actions) {
       button.addEventListener("drop", async event => { const payload = payloadFrom(event); if (!payload) return; event.preventDefault(); event.stopPropagation(); button.classList.remove("is-drop-target"); try { await move(payload, button.dataset.folderId); } catch (error) { alert(error.message); } });
     });
     root.querySelectorAll("[data-folder-drag]").forEach(button => button.addEventListener("dragstart", event => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-contentx-folder", button.dataset.folderDrag); }));
+    root.querySelectorAll("[data-folder-menu]").forEach(button => button.addEventListener("click", event => { event.stopPropagation(); const panel = root.querySelector(`[data-folder-menu-panel="${CSS.escape(button.dataset.folderMenu)}"]`); root.querySelectorAll("[data-folder-menu-panel]").forEach(item => { if (item !== panel) item.hidden = true; }); panel.hidden = !panel.hidden; }));
+    root.querySelectorAll("[data-folder-open-action]").forEach(button => button.addEventListener("click", () => setActive(button.dataset.folderOpenAction)));
+    root.querySelectorAll("[data-folder-rename],[data-folder-remove]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.folderRename || button.dataset.folderRemove; const folder = byId.get(id); if (folder) openFolderSettingsModal(root, projectId, folder, actions); }));
+    folderGrid.addEventListener("click", () => root.querySelectorAll("[data-folder-menu-panel]").forEach(panel => { panel.hidden = true; }), { once:true });
   }
   root.querySelectorAll("[data-file-card]").forEach(card => card.addEventListener("dragstart", event => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-contentx-asset", card.dataset.assetId); card.classList.add("is-moving"); }));
   root.querySelectorAll("[data-file-card]").forEach(card => card.addEventListener("dragend", () => card.classList.remove("is-moving")));
@@ -238,7 +268,7 @@ function fileCard(file, canUpload, revisionPolicy = null) {
   const revisionStatus = revisionPolicy && isVideo
     ? `<div class="workspace-revision-status ${exhausted ? "is-exhausted" : ""}"><span>${Math.min(used, allowed)} of ${allowed} revision round${allowed === 1 ? "" : "s"} used</span>${exhausted ? `<button type="button" data-buy-revision data-asset-id="${escapeHTML(assetId)}" data-file-name="${escapeHTML(file.original_name)}" data-revision-service="${revisionPolicy.service}">Buy another revision · ${revisionPolicy.service === "longform" ? "₹500" : "₹300"}</button>` : `<small>${allowed - used} round${allowed - used === 1 ? "" : "s"} remaining</small>`}</div>`
     : "";
-  return `<article class="workspace-file-card ${canUpload ? "" : "view-only"}" draggable="${canUpload}" data-file-card data-file-id="${escapeHTML(file.id)}" data-asset-id="${escapeHTML(assetId)}" data-folder-id="${escapeHTML(file.folder_id || "")}"><button class="workspace-file-preview" type="button" data-file-open><span>${fileGlyph(file.content_type)}</span><em>v${version}</em>${canUpload ? "<i>Drop replacement here</i>" : ""}</button><div class="workspace-file-info"><div><strong title="${escapeHTML(file.original_name)}">${escapeHTML(file.original_name)}</strong><small>${formatBytes(file.size_bytes)} · ${formatDate(file.completed_at)}</small></div>${canUpload ? '<button type="button" data-new-version aria-label="Upload next version">＋</button>' : ""}</div><footer><span>${count} version${count === 1 ? "" : "s"}</span><b>Ready</b></footer>${revisionStatus}</article>`;
+  return `<article class="workspace-file-card ${canUpload ? "" : "view-only"}" draggable="${canUpload}" data-file-card data-file-id="${escapeHTML(file.id)}" data-asset-id="${escapeHTML(assetId)}" data-folder-id="${escapeHTML(file.folder_id || "")}"><button class="workspace-file-preview" type="button" data-file-open><span>${fileGlyph(file.content_type)}</span><em>v${version}</em>${canUpload ? "<i>Drop replacement here</i>" : ""}</button><div class="workspace-file-info"><div><strong title="${escapeHTML(file.original_name)}">${escapeHTML(file.original_name)}</strong><small><span data-card-field="size">${formatBytes(file.size_bytes)}</span><span data-card-field="date"> · ${formatDate(file.completed_at)}</span></small></div>${canUpload ? '<button type="button" data-new-version aria-label="Upload next version">＋</button>' : ""}</div><footer><span data-card-field="versions">${count} version${count === 1 ? "" : "s"}</span><b data-card-field="status">Ready</b></footer>${revisionStatus}</article>`;
 }
 
 function emptyWorkspace() {
