@@ -82,12 +82,13 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=frame-native-2/);
-  assert.match(html, /contentx-release" content="frame-native-2/);
-  assert.match(html, /main\.js\?v=frame-native-2/);
+  assert.match(page, /\/site\/index\.html\?v=frame-native-3/);
+  assert.match(html, /contentx-release" content="frame-native-3/);
+  assert.match(html, /main\.js\?v=frame-native-3/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
   assert.match(main, /features\.js\?v=auth-health-1/);
-  assert.match(main, /uploads\.js\?v=no-video-placeholders-1/);
+  assert.match(main, /uploads\.js\?v=frame-native-3/);
+  assert.match(main, /account\.js\?v=frame-native-3/);
 });
 
 test("autoplays public preview videos without center overlay controls", async () => {
@@ -261,6 +262,10 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   assert.match(account, /Forgot password/);
   assert.match(account, /request_password_reset/);
   assert.match(account, /reset_password/);
+  assert.match(account, /const form = event\.currentTarget/);
+  assert.match(account, /new FormData\(form\)/);
+  assert.doesNotMatch(account, /event\.currentTarget\.innerHTML/);
+  assert.doesNotMatch(account, /await api\([\s\S]{0,500}event\.currentTarget\.textContent/);
   assert.match(account, /otp-box-grid/);
   assert.match(account, /bindOtpBoxes/);
   assert.match(account, /location\.hash = returningTo/);

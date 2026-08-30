@@ -1,6 +1,6 @@
-import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-2";
+import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-3";
 import { openReviewRoom } from "./review-room.js?v=frame-account-1";
-import { renderWorkspaceAccountPanel } from "./account.js?v=frame-unified-1";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-3";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -261,7 +261,7 @@ async function openSharePanel(root, project, shares) {
       const result = await api(UPLOAD_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"create-share-link", projectId:project.id, name:values.name, expiryDays:values.expiryDays, allowUploads:Boolean(values.allowUploads) }) });
       await copyShareUrl(result.shareUrl);
       layer.querySelector(".workspace-share-modal").innerHTML = `<span class="workspace-share-success">✓</span><p class="workspace-kicker">LINK READY</p><h2>${escapeHTML(result.share.name)}</h2><p>${result.share.allowUploads ? "This link accepts downloads, new files and replacement versions." : "This link is view and download only."}</p><label>Shareable project link<input data-created-share value="${escapeHTML(result.shareUrl)}" readonly></label><div class="workspace-share-actions"><button class="workspace-button primary" type="button" data-copy-share>Copied to clipboard ✓</button><a class="workspace-button" href="${shareIntent("whatsapp", result.shareUrl, result.share.name)}" target="_blank" rel="noreferrer">WhatsApp</a><a class="workspace-button" href="${shareIntent("email", result.shareUrl, result.share.name)}">Email</a><a class="workspace-button" href="${shareIntent("facebook", result.shareUrl, result.share.name)}" target="_blank" rel="noreferrer">Facebook</a></div><button class="workspace-button" type="button" data-done-share>Done</button>`;
-      layer.querySelector("[data-copy-share]").addEventListener("click", async event => { await copyShareUrl(result.shareUrl); event.currentTarget.textContent = "Copied again ✓"; });
+      layer.querySelector("[data-copy-share]").addEventListener("click", async event => { const copyButton = event.currentTarget; await copyShareUrl(result.shareUrl); if (copyButton.isConnected) copyButton.textContent = "Copied again ✓"; });
       layer.querySelector("[data-done-share]").addEventListener("click", close);
     } catch (failure) {
       error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Create share link";

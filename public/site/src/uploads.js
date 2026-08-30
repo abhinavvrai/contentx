@@ -229,8 +229,9 @@ function openCreateProject(content) {
 function showCreatedProject(layer, project, uploadUrl, content) {
   layer.innerHTML = `<section class="upload-project-created"><span>✓</span><p class="eyebrow"><i></i>Upload link ready</p><h2>${escapeHTML(project.name)}</h2><p>Send this private link to your client. Anyone with the link can upload to this project.</p><label>Private client link<input value="${escapeHTML(uploadUrl)}" readonly></label><button class="pill pill-hot" type="button" data-copy-created-link>Copy client link</button><button type="button" data-close-created-link>Done</button></section>`;
   layer.querySelector("[data-copy-created-link]").addEventListener("click", async event => {
+    const button = event.currentTarget;
     await navigator.clipboard.writeText(uploadUrl);
-    event.currentTarget.textContent = "Copied ✓";
+    if (button.isConnected) button.textContent = "Copied ✓";
   });
   layer.querySelector("[data-close-created-link]").addEventListener("click", async () => { layer.remove(); await renderOwnerFileHub(content); });
 }

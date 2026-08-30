@@ -93,13 +93,14 @@ function renderPasswordResetRequest(panel, returningTo) {
   panel.querySelector(".account-inline-back").addEventListener("click", () => panel.closest(".account-card").querySelector('[data-account-tab="login"]').click());
   panel.querySelector("[data-reset-request]").addEventListener("submit", async event => {
     event.preventDefault();
-    const button = event.currentTarget.querySelector("button[type=submit]");
-    const error = event.currentTarget.querySelector("[role=alert]");
+    const form = event.currentTarget;
+    const button = form.querySelector("button[type=submit]");
+    const error = form.querySelector("[role=alert]");
     button.disabled = true; button.textContent = "Sending secure link…"; error.hidden = true;
     try {
-      await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"request_password_reset", email:new FormData(event.currentTarget).get("email") }) });
-      event.currentTarget.innerHTML = `<div class="account-success"><span>✓</span><h3>Check your email.</h3><p>If this address has an account, a password reset link was sent. The link expires in 60 minutes.</p><button class="pill pill-dark" type="button" data-back-login>Return to sign in</button></div>`;
-      event.currentTarget.querySelector("[data-back-login]").addEventListener("click", () => panel.closest(".account-card").querySelector('[data-account-tab="login"]').click());
+      await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"request_password_reset", email:new FormData(form).get("email") }) });
+      form.innerHTML = `<div class="account-success"><span>✓</span><h3>Check your email.</h3><p>If this address has an account, a password reset link was sent. The link expires in 60 minutes.</p><button class="pill pill-dark" type="button" data-back-login>Return to sign in</button></div>`;
+      form.querySelector("[data-back-login]").addEventListener("click", () => panel.closest(".account-card").querySelector('[data-account-tab="login"]').click());
     } catch (failure) {
       error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Send reset link →";
     }
@@ -414,15 +415,16 @@ function bindNotificationSettings(root) {
   };
   panel.querySelectorAll("[data-account-notification]").forEach(input => input.addEventListener("change", save));
   panel.querySelector("[data-test-account-notification]")?.addEventListener("click", async event => {
-    event.currentTarget.textContent = "Sending…";
+    const button = event.currentTarget;
+    button.textContent = "Sending…";
     try {
       await api(NOTIFICATION_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"test_notification" }) });
-      event.currentTarget.textContent = "Test sent ✓";
+      button.textContent = "Test sent ✓";
     } catch (error) {
-      event.currentTarget.textContent = "Try again";
+      button.textContent = "Try again";
       status.textContent = error.message || "Could not send test notification.";
     }
-    setTimeout(() => { event.currentTarget.textContent = "Send test"; }, 2200);
+    setTimeout(() => { if (button.isConnected) button.textContent = "Send test"; }, 2200);
   });
   panel.querySelectorAll("[data-mark-notification-read]").forEach(button => button.addEventListener("click", async () => {
     button.textContent = "Marking…";
