@@ -210,7 +210,23 @@ export function expiredGoogleNonceCookie(request: Request): string {
 export async function ensureAccountSchema(): Promise<void> {
   const db = getAccountDatabase();
   if (!authSchemaPromise) {
-    authSchemaPromise = db.batch([
+    authSchemaPromise = (async () => {
+      try {
+        await db.batch([
+          db.prepare("SELECT updated_at, phone_number, company_name, role_title, avatar_key, avatar_content_type FROM account_users LIMIT 0"),
+          db.prepare("SELECT last_seen_at, user_agent FROM account_sessions LIMIT 0"),
+          db.prepare("SELECT blocked_until FROM auth_login_attempts LIMIT 0"),
+          db.prepare("SELECT verified_at, created_at FROM auth_identities LIMIT 0"),
+          db.prepare("SELECT request_ip_hash, user_agent FROM account_password_resets LIMIT 0"),
+          db.prepare("SELECT delivery_format, add_ons_json, project_id, asset_id FROM order_selections LIMIT 0"),
+          db.prepare("SELECT reference_url, status, updated_at FROM project_briefs LIMIT 0"),
+          db.prepare("SELECT project_id, user_id FROM user_upload_projects LIMIT 0"),
+        ]);
+        return;
+      } catch {
+        // A fresh or older database still receives the complete idempotent bootstrap below.
+      }
+      await db.batch([
       db.prepare(`CREATE TABLE IF NOT EXISTS account_users (
         id TEXT PRIMARY KEY NOT NULL,
         name TEXT NOT NULL,
@@ -298,9 +314,9 @@ export async function ensureAccountSchema(): Promise<void> {
       db.prepare("CREATE INDEX IF NOT EXISTS idx_order_selections_user_created ON order_selections(user_id, created_at)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_project_briefs_user_updated ON project_briefs(user_id, updated_at)"),
       db.prepare("PRAGMA optimize"),
-    ]).then(async () => {
+      ]);
       await ensureAuthSchemaColumns(db);
-    }).catch(error => {
+    })().catch(error => {
       authSchemaPromise = null;
       throw error;
     });
@@ -438,7 +454,7 @@ export async function requestPasswordReset(request: Request, input: Record<strin
     .bind(tokenHash, user.id, user.email, now + PASSWORD_RESET_TTL_MS, now, await requestIpHash(request), cleanText(request.headers.get("user-agent"), 240) || null).run();
   const resetUrl = new URL("/site/index.html", request.url);
   resetUrl.hash = `access?reset=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
-  await sendTransactionalEmail({
+  const delivery = await sendTransactionalEmail({
     to: user.email,
     subject: "Reset your Content X password",
     html: contentXEmailShell(
@@ -448,6 +464,9 @@ export async function requestPasswordReset(request: Request, input: Record<strin
     ),
     idempotencyKey: `reset_${tokenHash.slice(0, 32)}`,
   });
+  if (delivery.status !== "sent") {
+    console.error("Content X password reset email was not accepted by the provider", { status: delivery.status, error: delivery.error });
+  }
 }
 
 export async function resetAccountPassword(request: Request, input: Record<string, unknown>): Promise<{ user: AccountUser; token: string }> {

@@ -87,6 +87,17 @@ export async function ensureUploadSchema(): Promise<void> {
   const { db } = getUploadBindings();
   if (!schemaPromise) {
     schemaPromise = (async () => {
+      try {
+        await db.batch([
+          db.prepare("SELECT asset_id, version_number, parent_file_id, folder_id FROM upload_files LIMIT 0"),
+          db.prepare("SELECT parent_id, position FROM project_folders LIMIT 0"),
+          db.prepare("SELECT token_hash, allow_uploads, expires_at FROM project_share_links LIMIT 0"),
+          db.prepare("SELECT asset_id, status, deleted_at FROM project_review_comments LIMIT 0"),
+        ]);
+        return;
+      } catch {
+        // Fall through to the idempotent bootstrap for a fresh or older database.
+      }
       await db.batch([
       db.prepare(`CREATE TABLE IF NOT EXISTS upload_projects (
         id TEXT PRIMARY KEY NOT NULL,

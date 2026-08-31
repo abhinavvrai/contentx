@@ -5,7 +5,6 @@ import {
   expiredGoogleNonceCookie,
   expiredSessionCookie,
   getAccountCapabilities,
-  getVerifiedAccountCapabilities,
   getSessionUser,
   issueGoogleNonce,
   loginAccount,
@@ -27,7 +26,7 @@ export async function GET(request: Request) {
     if (new URL(request.url).searchParams.get("avatar") === "1") return accountAvatarResponse(request);
     const [user, providers, databaseAvailable] = await Promise.all([
       getSessionUser(request),
-      getVerifiedAccountCapabilities(),
+      Promise.resolve(getAccountCapabilities()),
       accountDatabaseAvailable(),
     ]);
     return response({ user, providers, database: { available: databaseAvailable } });

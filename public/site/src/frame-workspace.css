@@ -496,6 +496,18 @@ html[data-theme="dark"] #app.review-app .comment:focus-within .comment-tools :is
   #app .workspace-account-tabs button { flex:0 0 auto; }
   #app .workspace-account-content.account-settings-content { width:calc(100% - 28px); }
 }
+
+/* frame-native-11: immediate navigation feedback without blocking interaction. */
+html.route-busy { cursor:progress; }
+html.route-busy::after {
+  content:""; position:fixed; z-index:100000; top:0; left:0; width:38%; height:2px;
+  background:linear-gradient(90deg,#ff5421,#ff9b3d); box-shadow:0 0 14px #ff6a2b99;
+  transform-origin:left; animation:cx-route-progress .8s ease-in-out infinite alternate;
+}
+.account-success-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:16px; }
+.account-success-actions .pill { margin:0; }
+@keyframes cx-route-progress { from { transform:scaleX(.35); opacity:.7; } to { transform:translateX(160%) scaleX(.8); opacity:1; } }
+@media(prefers-reduced-motion:reduce) { html.route-busy::after { width:100%; animation:none; } }
 @media(prefers-reduced-motion:reduce) {
   #app :is(.workspace-rail a,.workspace-rail button,.workspace-button,.workspace-file-card,.project-card,.sx-project-art i) { transition:none!important; transform:none!important; }
 }

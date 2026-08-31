@@ -79,7 +79,14 @@ export async function ensurePaymentSchema(): Promise<void> {
   const db = (env as unknown as { DB?: D1Database }).DB;
   if (!db) throw new Error("Payment database is unavailable.");
   if (!paymentSchemaPromise) {
-    paymentSchemaPromise = db.prepare(`CREATE TABLE IF NOT EXISTS payment_orders (
+    paymentSchemaPromise = (async () => {
+      try {
+        await db.prepare("SELECT refund_status, refund_reason, refund_amount_paise, refund_requested_at, refund_updated_at, refund_note FROM payment_orders LIMIT 0").first();
+        return;
+      } catch {
+        // Fall through to the idempotent bootstrap for a fresh or older database.
+      }
+      await db.prepare(`CREATE TABLE IF NOT EXISTS payment_orders (
       razorpay_order_id TEXT PRIMARY KEY NOT NULL,
       receipt TEXT NOT NULL UNIQUE,
       plan_id TEXT NOT NULL,
@@ -101,9 +108,9 @@ export async function ensurePaymentSchema(): Promise<void> {
       refund_note TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
-    )`).run().then(async () => {
+      )`).run();
       await ensurePaymentSchemaColumns(db);
-    }).then(() => undefined).catch((error: unknown) => {
+    })().catch((error: unknown) => {
       paymentSchemaPromise = null;
       throw error;
     });

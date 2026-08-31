@@ -1,13 +1,13 @@
 import { studio } from "./data.js?v=revision-bands-1";
-import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=frame-native-1";
+import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=frame-native-11";
 import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=auth-health-1";
 import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=revision-bands-1";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js?v=frame-native-1";
 import { initProductPolish, polishRoute } from "./polish.js?v=noir-studio-1";
 import { enhanceCreatorTools } from "./creator-tools.js?v=frame-native-3";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=frame-native-3";
-import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-native-10";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=frame-native-10";
+import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-native-11";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=frame-native-11";
 import { enhanceStudioDashboard } from "./studio-workspace.js?v=frame-native-1";
 
 // Load decorative motion independently so a missing effect cannot block the app.
@@ -20,6 +20,7 @@ const ambientReady = import("./ambient-scenes.js?v=hero-restored-2")
   .then(module => { ambient = module; })
   .catch(error => console.warn("Content X atmosphere is unavailable", error));
 let cinematicRender = 0;
+let routeRenderVersion = 0;
 
 const root = document.getElementById("app");
 const loader = document.querySelector("[data-loader]");
@@ -27,7 +28,11 @@ const canvas = document.getElementById("studio-canvas");
 const overlay = document.querySelector(".scene-overlay");
 const progress = document.querySelector("[data-progress]");
 
-const go = route => { location.hash = route; };
+const go = route => {
+  const current = location.hash.slice(1) || "home";
+  if (current === route) void renderRoute();
+  else location.hash = route;
+};
 const actions = {
   openMarketing: () => go("home"),
   openDashboard: () => go("workspace"),
@@ -46,8 +51,11 @@ const actions = {
 };
 
 async function renderRoute() {
+  const renderVersion = ++routeRenderVersion;
   const motionRender = ++cinematicRender;
   const route = location.hash.slice(1) || "home";
+  const stale = () => renderVersion !== routeRenderVersion;
+  document.documentElement.classList.add("route-busy");
   try {
     // These guards belong to the old DOM, not to the reusable route root.
     ["advancedDashboard", "advancedProject", "advancedReview", "advancedAdmin", "dashboardEnhanced"].forEach(key => delete root.dataset[key]);
@@ -60,6 +68,7 @@ async function renderRoute() {
     const uploadHasToken = uploadRoute && Boolean(new URLSearchParams(route.split("?")[1] || "").get("token"));
     const protectedRoute = ["account", "checkout"].includes(route) || route.startsWith("brief") || (uploadRoute && !uploadHasToken);
     if (protectedRoute || route.startsWith("access")) await refreshAccountSession();
+    if (stale()) return;
     if (protectedRoute && !accountUser()) {
       rememberProtectedRoute(route);
       renderAccountAccess(root, actions);
@@ -69,6 +78,7 @@ async function renderRoute() {
     else if (uploadRoute) await renderClientWorkspace(root, actions, route.replace(/^upload/, "workspace"));
     else if (route.startsWith("workspace")) {
       await refreshAccountSession();
+      if (stale()) return;
       if (accountUser()) await renderClientWorkspace(root, actions, route);
       else { renderDashboard(root, actions, { demo:true }); enhanceDashboard(root, actions, { demo:true }); enhanceDashboardSuite(root, actions); }
     }
@@ -92,6 +102,7 @@ async function renderRoute() {
     else if (route === "provider-workspace") renderProviderWorkspace(root, actions);
     else if (route === "owner") { renderAdmin(root, actions); enhanceMarketplaceAdmin(root); enhanceAdminSuite(root, actions); enhanceUploadAdmin(root); }
     else { renderMarketing(root, studio, actions); enhanceMarketing(root, actions, studio); enhanceMarketplaceMarketing(root, actions); }
+    if (stale()) return;
     polishRoute(root, route);
     enhanceCreatorTools(root, route);
     try { enhanceStudioDashboard(root); }
@@ -107,14 +118,15 @@ async function renderRoute() {
     console.error("Content X route rendering failed", error);
   } finally {
     loader?.classList.add("is-done");
+    if (!stale()) document.documentElement.classList.remove("route-busy");
   }
 }
 
-window.addEventListener("hashchange", () => { renderRoute(); });
+window.addEventListener("hashchange", () => { void renderRoute(); });
 window.addEventListener("scroll", () => {
   const max = document.documentElement.scrollHeight - innerHeight;
   progress.style.width = `${max > 0 ? (scrollY / max) * 100 : 0}%`;
 }, { passive: true });
 initTheme();
 initProductPolish();
-renderRoute();
+void renderRoute();

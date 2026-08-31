@@ -204,9 +204,18 @@ function renderPasswordResetRequest(panel, returningTo) {
     const error = form.querySelector("[role=alert]");
     button.disabled = true; button.textContent = "Sending secure link…"; error.hidden = true;
     try {
-      await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"request_password_reset", email:new FormData(form).get("email") }) });
-      form.innerHTML = `<div class="account-success"><span>✓</span><h3>Check your email.</h3><p>If this address has an account, a password reset link was sent. The link expires in 60 minutes.</p><button class="pill pill-dark" type="button" data-back-login>Return to sign in</button></div>`;
+      const requestedEmail = new FormData(form).get("email");
+      await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"request_password_reset", email:requestedEmail }) });
+      form.innerHTML = `<input type="hidden" name="email" value="${escapeHTML(requestedEmail)}"><div class="account-success"><span>✓</span><h3>Reset email queued.</h3><p>If this address has an account, the email is on its way. Most arrive in 1–2 minutes, but some inbox providers can take up to 10 minutes. Check Spam or Promotions too. The link expires in 60 minutes.</p><p class="account-form-error" role="alert" hidden></p><div class="account-success-actions"><button class="pill pill-dark" type="button" data-back-login>Return to sign in</button><button class="pill pill-dark" type="submit" data-reset-resend disabled>Resend in 60s</button></div></div>`;
       form.querySelector("[data-back-login]").addEventListener("click", () => panel.closest(".account-card").querySelector('[data-account-tab="login"]').click());
+      const resend = form.querySelector("[data-reset-resend]");
+      let remaining = 60;
+      const countdown = setInterval(() => {
+        if (!resend.isConnected) { clearInterval(countdown); return; }
+        remaining -= 1;
+        resend.textContent = remaining > 0 ? `Resend in ${remaining}s` : "Resend reset email";
+        if (remaining <= 0) { resend.disabled = false; clearInterval(countdown); }
+      }, 1000);
     } catch (failure) {
       error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Send reset link →";
     }

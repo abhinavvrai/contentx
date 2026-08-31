@@ -58,7 +58,18 @@ let notificationSchemaPromise: Promise<void> | null = null;
 export async function ensureNotificationSchema(): Promise<void> {
   const db = getAccountDatabase();
   if (!notificationSchemaPromise) {
-    notificationSchemaPromise = db.batch([
+    notificationSchemaPromise = (async () => {
+      try {
+        await db.batch([
+          db.prepare("SELECT comment_email_mode, comment_in_app, digest_threshold, updated_at FROM notification_preferences LIMIT 0"),
+          db.prepare("SELECT action_url, read_at, created_at FROM account_notifications LIMIT 0"),
+          db.prepare("SELECT batch_key, provider_id, error, sent_at FROM email_notification_queue LIMIT 0"),
+        ]);
+        return;
+      } catch {
+        // Fall through to the idempotent bootstrap for a fresh or older database.
+      }
+      await db.batch([
       db.prepare(`CREATE TABLE IF NOT EXISTS notification_preferences (
         user_id TEXT PRIMARY KEY NOT NULL,
         email_address TEXT,
@@ -115,7 +126,8 @@ export async function ensureNotificationSchema(): Promise<void> {
       db.prepare("CREATE INDEX IF NOT EXISTS idx_account_notifications_user_created ON account_notifications(user_id, created_at)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_email_notification_queue_batch_status ON email_notification_queue(batch_key, status, created_at)"),
       db.prepare("PRAGMA optimize"),
-    ]).catch(error => {
+      ]);
+    })().catch(error => {
       notificationSchemaPromise = null;
       throw error;
     });

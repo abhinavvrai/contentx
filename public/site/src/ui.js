@@ -146,9 +146,21 @@ export function renderDashboard(root, actions, options = {}) {
 }
 
 function bindDashboard(root, actions) {
-  root.querySelectorAll('[data-project="apex"]').forEach(el => el.addEventListener("click", actions.openProject));
+  root.querySelectorAll("[data-project]").forEach(el => el.addEventListener("click", actions.openProject));
   root.querySelectorAll('[data-action="new-project"]').forEach(el => el.addEventListener("click", () => openProjectModal(root, actions)));
   root.querySelector(".dash-brand").addEventListener("click", e => { e.preventDefault(); actions.openMarketing(); });
+  root.querySelector('.cx-app-rail button[aria-label="Home"]')?.addEventListener("click", actions.openMarketing);
+  root.querySelector('.cx-app-rail button[aria-label="Projects"]')?.addEventListener("click", actions.openDashboard);
+  root.querySelector('.cx-app-rail button[aria-label="Review"]')?.addEventListener("click", actions.openReview);
+  root.querySelector('.cx-app-rail button[aria-label="Search"]')?.addEventListener("click", () => root.querySelector('.cx-product-topbar input[type="search"]')?.focus());
+  root.querySelector('.cx-app-rail button[aria-label="Account"]')?.addEventListener("click", actions.openAccess);
+  root.querySelector('.cx-product-topbar button[aria-label="Notifications"]')?.addEventListener("click", () => root.querySelector('[data-dash="notifications"]')?.click());
+  root.querySelectorAll('.cx-app-rail button[aria-label="Help"], .cx-product-topbar button[aria-label="Help"]').forEach(button => button.addEventListener("click", () => {
+    actions.openMarketing();
+    setTimeout(() => document.querySelector("#contact-form")?.scrollIntoView({ behavior:"smooth", block:"start" }), 0);
+  }));
+  root.querySelector('[data-dash="home"]')?.addEventListener("click", actions.openDashboard);
+  root.querySelector('[data-dash="projects"]')?.addEventListener("click", actions.openDashboard);
 }
 
 function openProjectModal(root, actions) {

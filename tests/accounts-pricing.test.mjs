@@ -82,13 +82,14 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=frame-native-10/);
-  assert.match(html, /contentx-release" content="frame-native-10/);
-  assert.match(html, /main\.js\?v=frame-native-10/);
+  assert.match(page, /\/site\/index\.html\?v=frame-native-11/);
+  assert.match(html, /contentx-release" content="frame-native-11/);
+  assert.match(html, /main\.js\?v=frame-native-11/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
   assert.match(main, /features\.js\?v=auth-health-1/);
   assert.match(main, /uploads\.js\?v=frame-native-3/);
-  assert.match(main, /account\.js\?v=frame-native-10/);
+  assert.match(main, /account\.js\?v=frame-native-11/);
+  assert.match(main, /ui\.js\?v=frame-native-11/);
 });
 
 test("autoplays public preview videos without center overlay controls", async () => {
@@ -248,7 +249,8 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   assert.match(auth, /OTP_HEALTH_CACHE_MS/);
   assert.match(auth, /RSASSA-PKCS1-v1_5/);
   assert.match(route, /request_otp/);
-  assert.match(route, /getVerifiedAccountCapabilities/);
+  assert.match(route, /getAccountCapabilities/);
+  assert.doesNotMatch(route, /getVerifiedAccountCapabilities/);
   assert.match(route, /database: \{ available: databaseAvailable \}/);
   assert.match(route, /verify_otp/);
   assert.match(route, /request_password_reset/);
@@ -261,6 +263,9 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   assert.match(auth, /Email-code sign-in is temporarily unavailable/);
   assert.match(account, /Forgot password/);
   assert.match(account, /request_password_reset/);
+  assert.match(account, /Reset email queued/);
+  assert.match(account, /Resend in 60s/);
+  assert.match(account, /up to 10 minutes/);
   assert.match(account, /reset_password/);
   assert.match(account, /const form = event\.currentTarget/);
   assert.match(account, /new FormData\(form\)/);
@@ -301,6 +306,8 @@ test("stores password hashes and server-side sessions instead of readable passwo
   assert.match(auth, /HttpOnly; SameSite=Lax/);
   assert.match(auth, /requireSameOrigin/);
   assert.match(auth, /ensureAuthSchemaColumns/);
+  assert.match(auth, /SELECT updated_at, phone_number, company_name, role_title, avatar_key/);
+  assert.match(auth, /password reset email was not accepted by the provider/);
   assert.match(auth, /UPDATE account_users SET updated_at = created_at/);
   assert.match(auth, /token_hash/);
   assert.doesNotMatch(auth, /password TEXT/);

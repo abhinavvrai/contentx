@@ -30,25 +30,30 @@ export async function sendTransactionalEmail(message: EmailMessage): Promise<Ema
   const recipients = Array.isArray(message.to) ? message.to : [message.to];
   const safeRecipients = recipients.map(cleanEmail).filter(Boolean).slice(0, 50);
   if (!apiKey || !safeRecipients.length) return { status: "skipped", error: !apiKey ? "RESEND_API_KEY is not configured." : "No valid email recipient." };
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "User-Agent": "ContentXWebsite/1.0",
-      ...(message.idempotencyKey ? { "Idempotency-Key": message.idempotencyKey } : {}),
-    },
-    body: JSON.stringify({
-      from,
-      to: safeRecipients,
-      subject: cleanText(message.subject, 180),
-      html: message.html,
-      text: message.text || htmlToText(message.html),
-    }),
-  });
-  const payload = await response.json().catch(() => ({})) as { id?: string; message?: string; error?: string };
-  if (!response.ok) return { status: "failed", error: payload.message || payload.error || "Email provider rejected the message." };
-  return { status: "sent", providerId: payload.id };
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "User-Agent": "ContentXWebsite/1.0",
+        ...(message.idempotencyKey ? { "Idempotency-Key": message.idempotencyKey } : {}),
+      },
+      body: JSON.stringify({
+        from,
+        to: safeRecipients,
+        subject: cleanText(message.subject, 180),
+        html: message.html,
+        text: message.text || htmlToText(message.html),
+      }),
+      signal: AbortSignal.timeout(8_000),
+    });
+    const payload = await response.json().catch(() => ({})) as { id?: string; message?: string; error?: string };
+    if (!response.ok) return { status: "failed", error: payload.message || payload.error || "Email provider rejected the message." };
+    return { status: "sent", providerId: payload.id };
+  } catch (error) {
+    return { status: "failed", error: error instanceof Error && error.name === "TimeoutError" ? "Email provider timed out." : "Email provider could not be reached." };
+  }
 }
 
 export function contentXEmailShell(title: string, body: string, action?: { label: string; url: string }): string {
