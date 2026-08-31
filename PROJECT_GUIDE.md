@@ -297,3 +297,7 @@ Update this guide whenever any of these change:
 - Authentication model.
 - A listed limitation becomes fully implemented.
 - A major feature is added, removed, or renamed.
+
+## 13. Current Profile Release
+
+`frame-native-10` adds persistent display name, optional mobile/company/role fields, private R2-backed JPG/PNG/WebP profile photos with signature and size validation, profile completion cues, and name/photo propagation through the workspace. Mobile is contact data only until a verified SMS provider is configured; Google, email-code and password sign-in are preserved.

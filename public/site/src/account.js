@@ -8,6 +8,9 @@ let googleScriptPromise = null;
 
 const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" })[character]);
 const money = (value, currency = "INR") => currency === "USD" ? `$${Math.round(Number(value || 0) / 100).toLocaleString("en-US")}` : `₹${Math.round(Number(value || 0) / 100).toLocaleString("en-IN")}`;
+const initialsFor = user => String(user?.name || "CX").split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "CX";
+const avatarContent = user => user?.avatarUrl ? `<img src="${escapeHTML(user.avatarUrl)}" alt="">` : escapeHTML(initialsFor(user));
+const avatarMarkup = (user, className = "account-profile-avatar") => `<span class="${className}${user?.avatarUrl ? " has-image" : ""}" data-account-avatar>${avatarContent(user)}</span>`;
 
 async function api(url, options = {}) {
   const controller = new AbortController();
@@ -40,6 +43,100 @@ export async function refreshAccountSession(force = false) {
 
 export function accountUser() {
   return currentUser;
+}
+
+function profilePanel(user, activeRefunds = 0, workspaceLabel = "View projects") {
+  const fields = [user.name, user.email, user.phone, user.company, user.roleTitle, user.avatarUrl];
+  const completion = Math.round(fields.filter(Boolean).length / fields.length * 100);
+  return `<div class="account-panel-heading"><p>PERSONAL</p><h1>Your profile</h1><span>Keep the identity your collaborators see accurate and recognisable.</span></div>
+    <article class="account-profile-hero">
+      <div class="account-avatar-editor">${avatarMarkup(user)}<button type="button" data-avatar-upload>Change photo</button>${user.avatarUrl ? `<button class="subtle" type="button" data-avatar-remove>Remove</button>` : ""}<input type="file" accept="image/jpeg,image/png,image/webp" data-avatar-file hidden></div>
+      <div><small>YOUR CONTENT X IDENTITY</small><h2 data-account-name>${escapeHTML(user.name)}</h2><p data-account-email>${escapeHTML(user.email)}</p><span>${escapeHTML(user.roleTitle || "Creative workspace member")}${user.company ? ` · ${escapeHTML(user.company)}` : ""}</span></div>
+      <a href="#workspace">${workspaceLabel} →</a>
+    </article>
+    <div class="account-profile-layout">
+      <form class="account-profile-form" data-profile-form>
+        <div class="account-section-title"><div><h2>Personal details</h2><p>Used across your projects, review links and account activity.</p></div><span>${completion}% complete</span></div>
+        <div class="account-profile-fields">
+          <label>Full name<input name="name" autocomplete="name" required maxlength="100" value="${escapeHTML(user.name)}"></label>
+          <label>Email address<input type="email" value="${escapeHTML(user.email)}" readonly aria-readonly="true"><small>Managed by your sign-in method.</small></label>
+          <label>Mobile number <em>optional</em><input name="phone" autocomplete="tel" inputmode="tel" maxlength="40" value="${escapeHTML(user.phone || "")}" placeholder="+91 98765 43210"><small>Saved privately for project coordination.</small></label>
+          <label>Company or brand <em>optional</em><input name="company" autocomplete="organization" maxlength="120" value="${escapeHTML(user.company || "")}" placeholder="Your studio or company"></label>
+          <label>Role or title <em>optional</em><input name="roleTitle" autocomplete="organization-title" maxlength="100" value="${escapeHTML(user.roleTitle || "")}" placeholder="Editor, founder, producer…"></label>
+        </div>
+        <p class="account-form-error" role="alert" hidden></p><p class="account-profile-success" role="status" hidden></p>
+        <button class="workspace-button primary" type="submit">Save profile</button>
+      </form>
+      <aside class="account-profile-side">
+        <article><span>✓</span><div><strong>Verified email</strong><p>${escapeHTML(user.email)}</p></div></article>
+        <article><span>◎</span><div><strong>Phone sign-in</strong><p>Your mobile can be saved now. Secure phone OTP login will appear only after a verified SMS provider is connected.</p></div></article>
+        <article><span>◇</span><div><strong>Private by default</strong><p>Your photo and contact details are available only inside your signed-in account.</p></div></article>
+      </aside>
+    </div>
+    <div class="account-profile-metrics"><article><span>Storage plan</span><strong>50 GB free</strong><small>Private creator workspace</small></article><article><span>Profile</span><strong>${completion}%</strong><small>${completion === 100 ? "All details complete" : "Add details collaborators recognise"}</small></article><article><span>Refunds</span><strong>${activeRefunds}</strong><small>Active requests</small></article></div>`;
+}
+
+function applyProfileUser(root, user) {
+  currentUser = user;
+  document.querySelectorAll("[data-account-name]").forEach(element => { element.textContent = user.name; });
+  document.querySelectorAll("[data-account-email]").forEach(element => { element.textContent = user.email; });
+  document.querySelectorAll("[data-account-avatar]").forEach(element => {
+    element.classList.toggle("has-image", Boolean(user.avatarUrl));
+    element.innerHTML = avatarContent(user);
+  });
+  const panel = root.querySelector('[data-account-panel="profile"]');
+  if (panel) panel.innerHTML = profilePanel(user, Number(panel.dataset.activeRefunds || 0), panel.dataset.workspaceLabel || "View projects");
+}
+
+function bindProfileSettings(root, user, activeRefunds, workspaceLabel) {
+  const panel = root.querySelector('[data-account-panel="profile"]');
+  if (!panel) return;
+  panel.dataset.activeRefunds = String(activeRefunds || 0);
+  panel.dataset.workspaceLabel = workspaceLabel;
+  const rebind = updated => { applyProfileUser(root, updated); bindProfileSettings(root, updated, activeRefunds, workspaceLabel); };
+  const form = panel.querySelector("[data-profile-form]");
+  form?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const submit = form.querySelector('[type="submit"]');
+    const error = form.querySelector(".account-form-error");
+    const success = form.querySelector(".account-profile-success");
+    error.hidden = true; success.hidden = true; submit.disabled = true; submit.textContent = "Saving…";
+    try {
+      const values = Object.fromEntries(new FormData(form));
+      const result = await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"update_profile", ...values }) });
+      rebind(result.user);
+      const message = root.querySelector(".account-profile-success");
+      if (message) { message.textContent = "Profile saved."; message.hidden = false; }
+    } catch (requestError) {
+      error.textContent = requestError.message; error.hidden = false; submit.disabled = false; submit.textContent = "Save profile";
+    }
+  });
+  const picker = panel.querySelector("[data-avatar-file]");
+  panel.querySelector("[data-avatar-upload]")?.addEventListener("click", () => picker.click());
+  picker?.addEventListener("change", async () => {
+    const file = picker.files?.[0];
+    if (!file) return;
+    const button = panel.querySelector("[data-avatar-upload]");
+    button.disabled = true; button.textContent = "Uploading…";
+    try {
+      const body = new FormData(); body.set("action", "upload_avatar"); body.set("avatar", file);
+      const result = await api(AUTH_API, { method:"POST", body });
+      rebind(result.user);
+    } catch (requestError) {
+      const error = panel.querySelector(".account-form-error");
+      error.textContent = requestError.message; error.hidden = false; button.disabled = false; button.textContent = "Change photo";
+    }
+  });
+  panel.querySelector("[data-avatar-remove]")?.addEventListener("click", async event => {
+    const button = event.currentTarget; button.disabled = true; button.textContent = "Removing…";
+    try {
+      const result = await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"delete_avatar" }) });
+      rebind(result.user);
+    } catch (requestError) {
+      const error = panel.querySelector(".account-form-error");
+      error.textContent = requestError.message; error.hidden = false; button.disabled = false; button.textContent = "Remove";
+    }
+  });
 }
 
 export function rememberProtectedRoute(route) {
@@ -257,16 +354,15 @@ export async function renderAccountDashboard(root, actions) {
     const orders = data.orders || [];
     const activeRefunds = orders.filter(order => ["requested", "processing"].includes(order.refund_status)).length;
     const refundUpdates = orders.filter(order => order.refund_status && order.refund_status !== "none").length;
-    const initials = data.user.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
     root.innerHTML = `<div class="account-settings-shell">
       <aside class="account-global-rail" aria-label="Content X navigation">
         <a class="account-rail-brand" href="#home" aria-label="Content X home">CX</a>
         <nav><a href="#workspace" aria-label="Workspace" title="Workspace">⌂</a><a class="active" href="#account" aria-label="Account settings" title="Account settings">◎</a></nav>
-        <span class="account-rail-avatar">${escapeHTML(initials || "CX")}</span>
+        ${avatarMarkup(data.user, "account-rail-avatar")}
       </aside>
       <aside class="account-settings-sidebar">
         <a class="account-settings-back" href="#workspace">← Back to workspace</a>
-        <div class="account-settings-identity"><span>${escapeHTML(initials || "CX")}</span><div><strong>${escapeHTML(data.user.name)}</strong><small>${escapeHTML(data.user.email)}</small></div></div>
+        <div class="account-settings-identity">${avatarMarkup(data.user)}<div><strong data-account-name>${escapeHTML(data.user.name)}</strong><small data-account-email>${escapeHTML(data.user.email)}</small></div></div>
         <nav aria-label="Account settings sections">
           <small>PERSONAL</small>
           <button class="active" type="button" data-account-view="profile"><span>◎</span>Profile</button>
@@ -280,9 +376,7 @@ export async function renderAccountDashboard(root, actions) {
         <header class="account-settings-topbar"><div><span>Account</span><b data-account-section-title>Profile</b></div><a class="workspace-button" href="#workspace">Open workspace</a></header>
         <div class="account-settings-content">
           <section class="account-settings-panel active" data-account-panel="profile">
-            <div class="account-panel-heading"><p>PERSONAL</p><h1>Your profile</h1><span>Your Content X identity, workspace access and account status in one place.</span></div>
-            <article class="account-profile-card"><div class="account-profile-avatar">${escapeHTML(initials || "CX")}</div><div><small>DISPLAY NAME</small><strong>${escapeHTML(data.user.name)}</strong><span>${escapeHTML(data.user.email)}</span></div><a href="#workspace">View workspace →</a></article>
-            <div class="account-profile-metrics"><article><span>Storage plan</span><strong>50 GB free</strong><small>Private creator workspace</small></article><article><span>Privacy</span><strong>Protected</strong><small>Owner-authorized access only</small></article><article><span>Refunds</span><strong>${activeRefunds}</strong><small>Active requests</small></article></div>
+            ${profilePanel(data.user, activeRefunds, "View workspace")}
             <article class="account-profile-note"><span>✓</span><div><strong>Your workspace is ready.</strong><p>Create projects, upload source files, manage versions and share review links from the main dashboard.</p></div><a class="workspace-button primary" href="#workspace">Go to workspace</a></article>
           </section>
           <section class="account-settings-panel" data-account-panel="notifications" hidden>${notificationSettingsPanel(notificationData)}</section>
@@ -307,6 +401,7 @@ export async function renderAccountDashboard(root, actions) {
       root.querySelector(".account-settings-main")?.scrollTo({ top:0, behavior:"smooth" });
     }));
     bindNotificationSettings(root);
+    bindProfileSettings(root, data.user, activeRefunds, "View workspace");
   } catch (error) {
     root.innerHTML = `<main class="account-error"><span>!</span><h1>We couldn’t open your account.</h1><p>${escapeHTML(error.message)}</p><button class="pill pill-dark" type="button">Sign in again</button></main>`;
     root.querySelector("button").addEventListener("click", () => { rememberProtectedRoute("workspace"); location.hash = "access"; });
@@ -324,14 +419,11 @@ export async function renderWorkspaceAccountPanel(container, actions, initialVie
     const orders = data.orders || [];
     const activeRefunds = orders.filter(order => ["requested", "processing"].includes(order.refund_status)).length;
     const refundUpdates = orders.filter(order => order.refund_status && order.refund_status !== "none").length;
-    const initials = data.user.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
-    container.innerHTML = `<div class="workspace-account-head"><div><span class="account-profile-avatar">${escapeHTML(initials || "CX")}</span><p><small>ACCOUNT</small><strong>${escapeHTML(data.user.name)}</strong><em>${escapeHTML(data.user.email)}</em></p></div><button class="workspace-button" type="button" data-account-logout>Sign out</button></div>
+    container.innerHTML = `<div class="workspace-account-head"><div>${avatarMarkup(data.user)}<p><small>ACCOUNT</small><strong data-account-name>${escapeHTML(data.user.name)}</strong><em data-account-email>${escapeHTML(data.user.email)}</em></p></div><button class="workspace-button" type="button" data-account-logout>Sign out</button></div>
       <nav class="workspace-account-tabs" aria-label="Account sections"><button type="button" data-account-view="profile">Profile</button><button type="button" data-account-view="notifications">Notifications</button><button type="button" data-account-view="billing">Orders & billing</button></nav>
       <div class="account-settings-content workspace-account-content">
         <section class="account-settings-panel" data-account-panel="profile">
-          <div class="account-panel-heading"><p>PERSONAL</p><h1>Your profile</h1><span>Your Content X identity, workspace access and account status in one place.</span></div>
-          <article class="account-profile-card"><div class="account-profile-avatar">${escapeHTML(initials || "CX")}</div><div><small>DISPLAY NAME</small><strong>${escapeHTML(data.user.name)}</strong><span>${escapeHTML(data.user.email)}</span></div><a href="#workspace">View projects →</a></article>
-          <div class="account-profile-metrics"><article><span>Storage plan</span><strong>50 GB free</strong><small>Private creator workspace</small></article><article><span>Privacy</span><strong>Protected</strong><small>Owner-authorized access only</small></article><article><span>Refunds</span><strong>${activeRefunds}</strong><small>Active requests</small></article></div>
+          ${profilePanel(data.user, activeRefunds, "View projects")}
         </section>
         <section class="account-settings-panel" data-account-panel="notifications" hidden>${notificationSettingsPanel(notificationData)}</section>
         <section class="account-settings-panel" data-account-panel="billing" hidden>
@@ -353,6 +445,7 @@ export async function renderWorkspaceAccountPanel(container, actions, initialVie
       currentUser = null; sessionChecked = true; localStorage.removeItem("cx_access"); actions.openMarketing();
     });
     bindNotificationSettings(container);
+    bindProfileSettings(container, data.user, activeRefunds, "View projects");
     openView(initialView);
   } catch (error) {
     container.innerHTML = `<div class="workspace-account-error"><span>!</span><h1>We couldn’t open your account.</h1><p>${escapeHTML(error.message)}</p><button class="workspace-button" type="button">Sign in again</button></div>`;

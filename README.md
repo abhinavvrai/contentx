@@ -10,9 +10,11 @@ Live site:
 
 Current live release label:
 
-- `auth-health-1`
+- `frame-native-10`
 
 Important: do not write private passwords, OTPs, API keys, Razorpay secrets, Google client secrets, access codes or owner credentials in this file. Keep secrets in the proper environment variable system only.
+
+Profile details are stored in D1 and profile-photo bytes are stored in the private `UPLOADS` R2 binding. Mobile numbers are optional contact data; phone-number OTP login must not be shown as available until a verified SMS provider, abuse limits and delivery monitoring are configured. Google, email-code and password access remain the supported sign-in methods.
 
 ## Production Deployment — Read Before Publishing
 

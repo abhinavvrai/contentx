@@ -1,5 +1,6 @@
 import {
   AccountError,
+  accountAvatarResponse,
   accountDatabaseAvailable,
   expiredGoogleNonceCookie,
   expiredSessionCookie,
@@ -16,10 +17,14 @@ import {
   resetAccountPassword,
   sessionCookie,
   verifyEmailOtp,
+  updateAccountProfile,
+  uploadAccountAvatar,
+  deleteAccountAvatar,
 } from "../../../lib/auth";
 
 export async function GET(request: Request) {
   return handle(async () => {
+    if (new URL(request.url).searchParams.get("avatar") === "1") return accountAvatarResponse(request);
     const [user, providers, databaseAvailable] = await Promise.all([
       getSessionUser(request),
       getVerifiedAccountCapabilities(),
@@ -31,6 +36,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   return handle(async () => {
+    const contentType = request.headers.get("content-type") || "";
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData();
+      if (form.get("action") !== "upload_avatar") throw new AccountError("Choose a valid account action.", 404);
+      const user = await uploadAccountAvatar(request, form.get("avatar"));
+      return response({ user });
+    }
     const input = await request.json() as Record<string, unknown>;
     const action = typeof input.action === "string" ? input.action : "";
     if (action === "register") {
@@ -72,6 +84,8 @@ export async function POST(request: Request) {
       await logoutAccount(request);
       return response({ ok: true }, 200, { "Set-Cookie": expiredSessionCookie(request) });
     }
+    if (action === "update_profile") return response({ user: await updateAccountProfile(request, input) });
+    if (action === "delete_avatar") return response({ user: await deleteAccountAvatar(request) });
     throw new AccountError("Choose a valid account action.", 404);
   });
 }

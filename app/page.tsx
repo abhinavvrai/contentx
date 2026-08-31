@@ -3,7 +3,7 @@ export default function Home() {
     <main className="site-frame-shell">
       <iframe
         className="site-frame"
-        src="/site/index.html?v=frame-native-9"
+        src="/site/index.html?v=frame-native-10"
         title="Content X"
       />
     </main>

@@ -106,6 +106,11 @@ export const accountUsers = sqliteTable("account_users", {
   passwordHash: text("password_hash").notNull(),
   passwordSalt: text("password_salt").notNull(),
   passwordIterations: integer("password_iterations").notNull(),
+  phoneNumber: text("phone_number"),
+  companyName: text("company_name"),
+  roleTitle: text("role_title"),
+  avatarKey: text("avatar_key"),
+  avatarContentType: text("avatar_content_type"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });

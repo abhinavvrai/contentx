@@ -15,6 +15,7 @@ const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 
 type AuthBindings = {
   DB?: D1Database;
+  UPLOADS?: R2Bucket;
   GOOGLE_CLIENT_ID?: string;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
@@ -26,7 +27,12 @@ export type AccountUser = {
   id: string;
   name: string;
   email: string;
+  phone: string;
+  company: string;
+  roleTitle: string;
+  avatarUrl: string;
   createdAt: number;
+  updatedAt: number;
 };
 
 export type AccountCapabilities = {
@@ -42,7 +48,13 @@ type StoredUser = {
   password_hash: string;
   password_salt: string;
   password_iterations: number;
+  phone_number: string | null;
+  company_name: string | null;
+  role_title: string | null;
+  avatar_key: string | null;
+  avatar_content_type: string | null;
   created_at: number;
+  updated_at: number;
 };
 
 let authSchemaPromise: Promise<void> | null = null;
@@ -206,6 +218,11 @@ export async function ensureAccountSchema(): Promise<void> {
         password_hash TEXT NOT NULL,
         password_salt TEXT NOT NULL,
         password_iterations INTEGER NOT NULL,
+        phone_number TEXT,
+        company_name TEXT,
+        role_title TEXT,
+        avatar_key TEXT,
+        avatar_content_type TEXT,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL
       )`),
@@ -296,6 +313,11 @@ async function ensureAuthSchemaColumns(db: D1Database): Promise<void> {
     ["password_hash", "TEXT NOT NULL DEFAULT ''"],
     ["password_salt", "TEXT NOT NULL DEFAULT ''"],
     ["password_iterations", `INTEGER NOT NULL DEFAULT ${PASSWORD_ITERATIONS}`],
+    ["phone_number", "TEXT"],
+    ["company_name", "TEXT"],
+    ["role_title", "TEXT"],
+    ["avatar_key", "TEXT"],
+    ["avatar_content_type", "TEXT"],
     ["updated_at", "INTEGER"],
   ]);
   await db.prepare("UPDATE account_users SET updated_at = created_at WHERE updated_at IS NULL").run();
@@ -371,7 +393,7 @@ export async function registerAccount(request: Request, input: Record<string, un
       VALUES (?, ?, ?, ?, ?, ?)`)
       .bind(tokenHash, id, now + SESSION_TTL_MS, now, now, cleanText(request.headers.get("user-agent"), 240) || null),
   ]);
-  const user = { id, name, email, createdAt: now };
+  const user = accountUserFromRow({ id, name, email, phone_number: null, company_name: null, role_title: null, avatar_key: null, avatar_content_type: null, created_at: now, updated_at: now });
   return { user, token };
 }
 
@@ -391,7 +413,7 @@ export async function loginAccount(request: Request, input: Record<string, unkno
     throw new AccountError("Email or password is incorrect.", 401);
   }
   await db.prepare("DELETE FROM auth_login_attempts WHERE attempt_key = ?").bind(attemptKey).run();
-  const user = { id: stored.id, name: stored.name, email: stored.email, createdAt: stored.created_at };
+  const user = accountUserFromRow(stored);
   return { user, token: await createSession(request, user.id) };
 }
 
@@ -452,7 +474,9 @@ export async function resetAccountPassword(request: Request, input: Record<strin
     db.prepare("UPDATE account_password_resets SET used_at = ? WHERE token_hash = ?").bind(now, row.token_hash),
     db.prepare("DELETE FROM account_sessions WHERE user_id = ?").bind(row.user_id),
   ]);
-  const user = { id: row.user_id, name: row.name, email: row.email, createdAt: row.created_at };
+  const refreshed = await db.prepare("SELECT * FROM account_users WHERE id = ? LIMIT 1").bind(row.user_id).first<StoredUser>();
+  if (!refreshed) throw new AccountError("This account is no longer available.", 404);
+  const user = accountUserFromRow(refreshed);
   return { user, token: await createSession(request, user.id) };
 }
 
@@ -469,15 +493,94 @@ export async function getSessionUser(request: Request): Promise<AccountUser | nu
   if (!token) return null;
   const db = getAccountDatabase();
   const now = Date.now();
-  const row = await db.prepare(`SELECT u.id, u.name, u.email, u.created_at, s.last_seen_at
+  const row = await db.prepare(`SELECT u.*, s.last_seen_at
     FROM account_sessions s JOIN account_users u ON u.id = s.user_id
     WHERE s.token_hash = ? AND s.expires_at > ? LIMIT 1`)
-    .bind(await sha256(token), now).first<{ id: string; name: string; email: string; created_at: number; last_seen_at: number }>();
+    .bind(await sha256(token), now).first<StoredUser & { last_seen_at: number }>();
   if (!row) return null;
   if (now - row.last_seen_at > 15 * 60 * 1000) {
     await db.prepare("UPDATE account_sessions SET last_seen_at = ? WHERE token_hash = ?").bind(now, await sha256(token)).run();
   }
-  return { id: row.id, name: row.name, email: row.email, createdAt: row.created_at };
+  return accountUserFromRow(row);
+}
+
+export async function updateAccountProfile(request: Request, input: Record<string, unknown>): Promise<AccountUser> {
+  requireSameOrigin(request);
+  const user = await requireSessionUser(request);
+  const name = cleanText(input.name, 100);
+  const company = cleanText(input.company, 120);
+  const roleTitle = cleanText(input.roleTitle, 100);
+  const phone = normalizePhone(input.phone);
+  if (name.length < 2) throw new AccountError("Enter your full name.");
+  const now = Date.now();
+  const db = getAccountDatabase();
+  await db.prepare(`UPDATE account_users SET name = ?, phone_number = ?, company_name = ?, role_title = ?, updated_at = ? WHERE id = ?`)
+    .bind(name, phone || null, company || null, roleTitle || null, now, user.id).run();
+  const stored = await db.prepare("SELECT * FROM account_users WHERE id = ? LIMIT 1").bind(user.id).first<StoredUser>();
+  if (!stored) throw new AccountError("This account is no longer available.", 404);
+  return accountUserFromRow(stored);
+}
+
+export async function uploadAccountAvatar(request: Request, value: FormDataEntryValue | null): Promise<AccountUser> {
+  requireSameOrigin(request);
+  const user = await requireSessionUser(request);
+  if (!value || typeof value === "string" || typeof value.arrayBuffer !== "function") throw new AccountError("Choose a profile photo to upload.");
+  const file = value as File;
+  const contentType = cleanText(file.type, 80).toLowerCase();
+  const extensions: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+  const extension = extensions[contentType];
+  if (!extension) throw new AccountError("Use a JPG, PNG or WebP profile photo.", 415);
+  if (!file.size || file.size > 5 * 1024 * 1024) throw new AccountError("Profile photos must be smaller than 5 MB.", 413);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!imageSignatureMatches(bytes, contentType)) throw new AccountError("That file does not appear to be a valid image.", 415);
+  const bindings = env as unknown as AuthBindings;
+  if (!bindings.UPLOADS) throw new AccountError("Profile-photo storage is temporarily unavailable.", 503);
+  const db = getAccountDatabase();
+  const stored = await db.prepare("SELECT avatar_key FROM account_users WHERE id = ? LIMIT 1").bind(user.id).first<{ avatar_key: string | null }>();
+  const key = `account-avatars/${user.id}/${crypto.randomUUID()}.${extension}`;
+  await bindings.UPLOADS.put(key, bytes, { httpMetadata: { contentType }, customMetadata: { owner: user.id } });
+  try {
+    await db.prepare("UPDATE account_users SET avatar_key = ?, avatar_content_type = ?, updated_at = ? WHERE id = ?")
+      .bind(key, contentType, Date.now(), user.id).run();
+  } catch (error) {
+    await bindings.UPLOADS.delete(key).catch(() => undefined);
+    throw error;
+  }
+  if (stored?.avatar_key && stored.avatar_key !== key) await bindings.UPLOADS.delete(stored.avatar_key).catch(() => undefined);
+  const refreshed = await db.prepare("SELECT * FROM account_users WHERE id = ? LIMIT 1").bind(user.id).first<StoredUser>();
+  if (!refreshed) throw new AccountError("This account is no longer available.", 404);
+  return accountUserFromRow(refreshed);
+}
+
+export async function deleteAccountAvatar(request: Request): Promise<AccountUser> {
+  requireSameOrigin(request);
+  const user = await requireSessionUser(request);
+  const bindings = env as unknown as AuthBindings;
+  const db = getAccountDatabase();
+  const stored = await db.prepare("SELECT avatar_key FROM account_users WHERE id = ? LIMIT 1").bind(user.id).first<{ avatar_key: string | null }>();
+  await db.prepare("UPDATE account_users SET avatar_key = NULL, avatar_content_type = NULL, updated_at = ? WHERE id = ?")
+    .bind(Date.now(), user.id).run();
+  if (stored?.avatar_key && bindings.UPLOADS) await bindings.UPLOADS.delete(stored.avatar_key).catch(() => undefined);
+  const refreshed = await db.prepare("SELECT * FROM account_users WHERE id = ? LIMIT 1").bind(user.id).first<StoredUser>();
+  if (!refreshed) throw new AccountError("This account is no longer available.", 404);
+  return accountUserFromRow(refreshed);
+}
+
+export async function accountAvatarResponse(request: Request): Promise<Response> {
+  const user = await requireSessionUser(request);
+  const bindings = env as unknown as AuthBindings;
+  if (!bindings.UPLOADS) throw new AccountError("Profile-photo storage is temporarily unavailable.", 503);
+  const row = await getAccountDatabase().prepare("SELECT avatar_key, avatar_content_type FROM account_users WHERE id = ? LIMIT 1")
+    .bind(user.id).first<{ avatar_key: string | null; avatar_content_type: string | null }>();
+  if (!row?.avatar_key) throw new AccountError("No profile photo has been added.", 404);
+  const object = await bindings.UPLOADS.get(row.avatar_key);
+  if (!object) throw new AccountError("This profile photo is unavailable.", 404);
+  return new Response(object.body, { headers: {
+    "Content-Type": row.avatar_content_type || "image/jpeg",
+    "Cache-Control": "private, max-age=300",
+    "ETag": object.httpEtag,
+    "X-Content-Type-Options": "nosniff",
+  } });
 }
 
 export async function requireSessionUser(request: Request): Promise<AccountUser> {
@@ -498,11 +601,11 @@ export function expiredSessionCookie(request: Request): string {
 
 async function findOrCreateIdentityUser(provider: string, providerUserId: string, email: string, name: string): Promise<AccountUser> {
   const db = getAccountDatabase();
-  const existingIdentity = await db.prepare(`SELECT u.id, u.name, u.email, u.created_at
+  const existingIdentity = await db.prepare(`SELECT u.*
     FROM auth_identities i JOIN account_users u ON u.id = i.user_id
     WHERE i.provider = ? AND i.provider_user_id = ? LIMIT 1`)
-    .bind(provider, providerUserId).first<{ id: string; name: string; email: string; created_at: number }>();
-  if (existingIdentity) return { id: existingIdentity.id, name: existingIdentity.name, email: existingIdentity.email, createdAt: existingIdentity.created_at };
+    .bind(provider, providerUserId).first<StoredUser>();
+  if (existingIdentity) return accountUserFromRow(existingIdentity);
 
   const normalizedEmail = cleanEmail(email);
   if (!normalizedEmail) throw new AccountError("The identity provider did not return a valid email.", 403);
@@ -525,7 +628,38 @@ async function findOrCreateIdentityUser(provider: string, providerUserId: string
     ON CONFLICT(provider, provider_user_id) DO UPDATE SET user_id = excluded.user_id,
       email = excluded.email, verified_at = excluded.verified_at`)
     .bind(provider, providerUserId, stored.id, normalizedEmail, now, now).run();
-  return { id: stored.id, name: stored.name, email: stored.email, createdAt: stored.created_at };
+  const complete = await db.prepare("SELECT * FROM account_users WHERE id = ? LIMIT 1").bind(stored.id).first<StoredUser>();
+  if (!complete) throw new AccountError("This account is no longer available.", 404);
+  return accountUserFromRow(complete);
+}
+
+function accountUserFromRow(row: Pick<StoredUser, "id" | "name" | "email" | "phone_number" | "company_name" | "role_title" | "avatar_key" | "avatar_content_type" | "created_at" | "updated_at">): AccountUser {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone_number || "",
+    company: row.company_name || "",
+    roleTitle: row.role_title || "",
+    avatarUrl: row.avatar_key ? `/api/auth?avatar=1&v=${row.updated_at || row.created_at}` : "",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at || row.created_at,
+  };
+}
+
+function normalizePhone(value: unknown): string {
+  const raw = cleanText(value, 40);
+  if (!raw) return "";
+  const normalized = raw.replace(/[\s().-]/g, "").replace(/^00/, "+");
+  if (!/^\+?[1-9]\d{7,14}$/.test(normalized)) throw new AccountError("Enter a valid mobile number with its country code.");
+  return normalized.startsWith("+") ? normalized : `+${normalized}`;
+}
+
+function imageSignatureMatches(bytes: Uint8Array, contentType: string): boolean {
+  if (contentType === "image/jpeg") return bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (contentType === "image/png") return bytes.length > 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+  if (contentType === "image/webp") return bytes.length > 12 && String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" && String.fromCharCode(...bytes.slice(8, 12)) === "WEBP";
+  return false;
 }
 
 function supabaseConfig(): { url: string; anonKey: string } {

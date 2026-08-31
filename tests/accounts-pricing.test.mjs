@@ -82,13 +82,13 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=frame-native-9/);
-  assert.match(html, /contentx-release" content="frame-native-9/);
-  assert.match(html, /main\.js\?v=frame-native-9/);
+  assert.match(page, /\/site\/index\.html\?v=frame-native-10/);
+  assert.match(html, /contentx-release" content="frame-native-10/);
+  assert.match(html, /main\.js\?v=frame-native-10/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
   assert.match(main, /features\.js\?v=auth-health-1/);
   assert.match(main, /uploads\.js\?v=frame-native-3/);
-  assert.match(main, /account\.js\?v=frame-native-9/);
+  assert.match(main, /account\.js\?v=frame-native-10/);
 });
 
 test("autoplays public preview videos without center overlay controls", async () => {
@@ -312,6 +312,38 @@ test("stores password hashes and server-side sessions instead of readable passwo
   assert.match(verifyRoute, /requireSessionUser/);
   assert.match(verifyRoute, /timingSafeEqual/);
   assert.match(razorpay, /currency: order\.currency/);
+});
+
+test("stores private profile details and avatar metadata with authenticated updates", async () => {
+  const [auth, route, account, workspace, schema, migration, hosting] = await Promise.all([
+    load("lib/auth.ts"),
+    load("app/api/auth/route.ts"),
+    load("public/site/src/account.js"),
+    load("public/site/src/workspace.js"),
+    load("db/schema.ts"),
+    load("drizzle/0006_account_profiles.sql"),
+    load(".openai/hosting.json"),
+  ]);
+  assert.match(auth, /updateAccountProfile/);
+  assert.match(auth, /normalizePhone/);
+  assert.match(auth, /account-avatars\/\$\{user\.id\}/);
+  assert.match(auth, /imageSignatureMatches/);
+  assert.match(auth, /Profile photos must be smaller than 5 MB/);
+  assert.match(auth, /Cache-Control": "private/);
+  assert.match(route, /update_profile/);
+  assert.match(route, /upload_avatar/);
+  assert.match(route, /delete_avatar/);
+  assert.match(account, /Personal details/);
+  assert.match(account, /Mobile number/);
+  assert.match(account, /verified SMS provider/);
+  assert.match(account, /data-avatar-upload/);
+  assert.match(workspace, /user\.avatarUrl/);
+  assert.match(schema, /phoneNumber: text\("phone_number"\)/);
+  assert.match(schema, /avatarKey: text\("avatar_key"\)/);
+  assert.match(migration, /ADD `phone_number` text/);
+  assert.match(migration, /ADD `avatar_key` text/);
+  assert.match(hosting, /"r2": "UPLOADS"/);
+  assert.doesNotMatch(account, /phone OTP login is available/i);
 });
 
 test("adds server-backed notification preferences and comment email digesting", async () => {
