@@ -144,6 +144,25 @@ test("keeps the signed-in project dashboard consistent with the preview workspac
   assert.match(styles, /workspace-review-attention/);
 });
 
+test("loads private video-card previews only on hover or keyboard focus", async () => {
+  const [workspace, styles] = await Promise.all([
+    readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/frame-workspace.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(workspace, /data-video-preview/);
+  assert.match(workspace, /function bindVideoHoverPreviews/);
+  assert.match(workspace, /action:\"project-download-link\"/);
+  assert.match(workspace, /video\.muted = true/);
+  assert.match(workspace, /video\.playsInline = true/);
+  assert.match(workspace, /pointerenter/);
+  assert.match(workspace, /pointerleave/);
+  assert.match(workspace, /trigger\.addEventListener\(\"focus\"/);
+  assert.match(workspace, /event\.pointerType === \"touch\"/);
+  assert.match(styles, /workspace-video-preview video/);
+  assert.match(styles, /is-preview-loading/);
+  assert.match(styles, /@media\(hover:none\)/);
+});
+
 test("lets account owners permanently delete a project with explicit confirmation", async () => {
   const [route, workspace, styles] = await Promise.all([
     readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),

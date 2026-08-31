@@ -1,6 +1,6 @@
 import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-9";
 import { openReviewRoom } from "./review-room.js?v=frame-account-1";
-import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-11";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-12";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -125,6 +125,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   bindWorkspaceOverview(root, projects, actions);
   if (accountPanel || !project) return;
   enhanceFileLibrary(root, files, comments);
+  bindVideoHoverPreviews(root, project.id, "");
   bindFolderBrowser(root, project.id, folders, actions);
   const picker = root.querySelector("[data-workspace-picker]");
   root.querySelectorAll("[data-upload-files]").forEach(button => button.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); }));
@@ -353,7 +354,74 @@ function fileCard(file, canUpload, revisionPolicy = null) {
   const revisionStatus = revisionPolicy && isVideo
     ? `<div class="workspace-revision-status ${exhausted ? "is-exhausted" : ""}"><span>${Math.min(used, allowed)} of ${allowed} revision round${allowed === 1 ? "" : "s"} used</span>${exhausted ? `<button type="button" data-buy-revision data-asset-id="${escapeHTML(assetId)}" data-file-name="${escapeHTML(file.original_name)}" data-revision-service="${revisionPolicy.service}">Buy another revision · ${revisionPolicy.service === "longform" ? "₹500" : "₹300"}</button>` : `<small>${allowed - used} round${allowed - used === 1 ? "" : "s"} remaining</small>`}</div>`
     : "";
-  return `<article class="workspace-file-card ${canUpload ? "" : "view-only"}" draggable="${canUpload}" data-file-card data-file-id="${escapeHTML(file.id)}" data-asset-id="${escapeHTML(assetId)}" data-folder-id="${escapeHTML(file.folder_id || "")}"><button class="workspace-file-preview" type="button" data-file-open><span>${fileGlyph(file.content_type)}</span><em>v${version}</em>${canUpload ? "<i>Drop replacement here</i>" : ""}</button><div class="workspace-file-info"><div><strong title="${escapeHTML(file.original_name)}">${escapeHTML(file.original_name)}</strong><small><span data-card-field="size">${formatBytes(file.size_bytes)}</span><span data-card-field="date"> · ${formatDate(file.completed_at)}</span></small></div>${canUpload ? '<button type="button" data-new-version aria-label="Upload next version">＋</button>' : ""}</div><footer><span data-card-field="versions">${count} version${count === 1 ? "" : "s"}</span><b data-card-field="status">Ready</b></footer>${revisionStatus}</article>`;
+  return `<article class="workspace-file-card ${canUpload ? "" : "view-only"} ${isVideo ? "has-video-preview" : ""}" draggable="${canUpload}" data-file-card data-file-id="${escapeHTML(file.id)}" data-asset-id="${escapeHTML(assetId)}" data-folder-id="${escapeHTML(file.folder_id || "")}"><button class="workspace-file-preview" type="button" data-file-open aria-label="Open ${escapeHTML(file.original_name)}"><span class="workspace-file-glyph">${fileGlyph(file.content_type)}</span>${isVideo ? '<span class="workspace-video-preview" data-video-preview aria-hidden="true"></span><small class="workspace-video-hint"><b>▶</b> Hover to preview</small>' : ""}<em>v${version}</em>${canUpload ? "<i>Drop replacement here</i>" : ""}</button><div class="workspace-file-info"><div><strong title="${escapeHTML(file.original_name)}">${escapeHTML(file.original_name)}</strong><small><span data-card-field="size">${formatBytes(file.size_bytes)}</span><span data-card-field="date"> · ${formatDate(file.completed_at)}</span></small></div>${canUpload ? '<button type="button" data-new-version aria-label="Upload next version">＋</button>' : ""}</div><footer><span data-card-field="versions">${count} version${count === 1 ? "" : "s"}</span><b data-card-field="status">Ready</b></footer>${revisionStatus}</article>`;
+}
+
+function bindVideoHoverPreviews(root, projectId, token = "") {
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
+  root.querySelectorAll("[data-video-preview]").forEach(slot => {
+    const card = slot.closest("[data-file-card]");
+    const trigger = card?.querySelector("[data-file-open]");
+    if (!card || !trigger || trigger.dataset.previewBound) return;
+    trigger.dataset.previewBound = "true";
+    let video = null;
+    let linkRequest = null;
+    let active = false;
+
+    const mediaLink = () => {
+      linkRequest ||= api(UPLOAD_API, {
+        method:"POST",
+        headers:bearerHeaders(token, true),
+        body:JSON.stringify({ action:"project-download-link", projectId, fileId:card.dataset.fileId }),
+      });
+      return linkRequest;
+    };
+    const readyToPaint = media => media.readyState >= 2 ? Promise.resolve() : new Promise((resolve, reject) => {
+      media.addEventListener("loadeddata", resolve, { once:true });
+      media.addEventListener("error", () => reject(new Error("Preview unavailable")), { once:true });
+    });
+    const start = async event => {
+      if (event.type === "pointerenter" && event.pointerType === "touch") return;
+      active = true;
+      trigger.classList.remove("is-preview-unavailable");
+      trigger.classList.add("is-preview-loading");
+      try {
+        if (!video) {
+          const { downloadUrl } = await mediaLink();
+          if (!trigger.isConnected) return;
+          video = document.createElement("video");
+          video.muted = true;
+          video.defaultMuted = true;
+          video.loop = true;
+          video.playsInline = true;
+          video.preload = "metadata";
+          video.disablePictureInPicture = true;
+          video.setAttribute("aria-hidden", "true");
+          video.setAttribute("tabindex", "-1");
+          slot.replaceChildren(video);
+          video.src = downloadUrl;
+        }
+        await readyToPaint(video);
+        if (!active || !trigger.isConnected) return;
+        if (video.duration > .4 && video.currentTime === 0) video.currentTime = Math.min(.35, video.duration / 10);
+        trigger.classList.add("is-previewing");
+        if (!reducedMotion) await video.play().catch(() => undefined);
+      } catch {
+        if (active) trigger.classList.add("is-preview-unavailable");
+      } finally {
+        trigger.classList.remove("is-preview-loading");
+      }
+    };
+    const stop = () => {
+      active = false;
+      video?.pause();
+      trigger.classList.remove("is-previewing", "is-preview-loading");
+    };
+    trigger.addEventListener("pointerenter", start, { passive:true });
+    trigger.addEventListener("pointerleave", stop, { passive:true });
+    trigger.addEventListener("focus", start);
+    trigger.addEventListener("blur", stop);
+  });
 }
 
 function emptyWorkspace() {
@@ -566,6 +634,7 @@ export async function renderSharedWorkspace(root, actions, route) {
     const commentData = await api(`${UPLOAD_API}?action=comments&projectId=${encodeURIComponent(resolvedProjectId)}`, { headers:bearerHeaders(token), cache:"no-store" }).catch(() => ({ comments:[] }));
     root.innerHTML = `<header class="shared-header"><a href="#home"><span>CX</span><b>Content X</b></a><div><b>Shared project</b><small>${canUpload ? "Uploads enabled" : "View and download"}</small></div></header><main class="shared-main"><section class="shared-title"><p class="workspace-kicker">PRIVATE CLIENT LINK</p><h1>${escapeHTML(data.project.name)}</h1><p>Review the latest files, download any version${canUpload ? ", or add new files and replacements" : ""}. Leave your name and feedback below — no login needed.</p></section>${projectSurface(data.project, data.files || [], data.folders || [], canUpload, commentData.comments || [], false)}</main><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
     enhanceFileLibrary(root, data.files || [], commentData.comments || []);
+    bindVideoHoverPreviews(root, resolvedProjectId, token);
     const picker = root.querySelector("[data-workspace-picker]");
     if (canUpload) {
       root.querySelector("[data-project-drop]").addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });

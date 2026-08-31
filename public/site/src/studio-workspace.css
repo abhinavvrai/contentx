@@ -60,8 +60,8 @@ html[data-theme="dark"] #app .workspace-button.primary { background:#ffc397; col
 #app .workspace-file-grid { grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:18px; }
 html[data-theme="dark"] #app .workspace-file-card { border-color:#403842; border-radius:14px; background:#1a1a21; }
 #app .workspace-file-preview { min-height:160px; background:radial-gradient(ellipse at 25% 10%,#694b38,transparent 70%),linear-gradient(135deg,#2e2635,#15151c); }
-#app .workspace-file-preview>span { display:grid; place-items:center; width:65px; height:65px; margin:auto; border:1px solid #caa08060; border-radius:18px; background:#18121c80; color:#ffd5b4; transform:rotate(-7deg); box-shadow:7px 7px 0 #9c76552a; font-size:24px; transition:transform .3s; }
-#app .workspace-file-card:focus-within .workspace-file-preview>span,#app .workspace-file-card:hover .workspace-file-preview>span { transform:rotate(0) translateY(-3px); }
+#app .workspace-file-preview>.workspace-file-glyph { display:grid; place-items:center; width:65px; height:65px; margin:auto; border:1px solid #caa08060; border-radius:18px; background:#18121c80; color:#ffd5b4; transform:rotate(-7deg); box-shadow:7px 7px 0 #9c76552a; font-size:24px; transition:transform .3s; }
+#app .workspace-file-card:focus-within .workspace-file-preview>.workspace-file-glyph,#app .workspace-file-card:hover .workspace-file-preview>.workspace-file-glyph { transform:rotate(0) translateY(-3px); }
 #app .workspace-file-info { padding:16px; }
 #app .workspace-file-info strong { font-size:13px; }
 #app .workspace-file-info small { font-size:10px; color:#b9b3bd; line-height:1.6; }
@@ -71,7 +71,7 @@ html[data-theme="dark"] #app .workspace-file-card { border-color:#403842; border
 #app .workspace-file-grid.sx-list { grid-template-columns:1fr; }
 #app .sx-list .workspace-file-card { display:grid; grid-template-columns:100px 1fr minmax(100px,auto); align-items:center; }
 #app .sx-list .workspace-file-preview { min-height:95px; height:95px; border-radius:0; }
-#app .sx-list .workspace-file-preview>span { width:35px; height:35px; font-size:17px; border-radius:9px; }
+#app .sx-list .workspace-file-preview>.workspace-file-glyph { width:35px; height:35px; font-size:17px; border-radius:9px; }
 #app .sx-list .workspace-file-preview i { display:none; }
 #app .sx-list .workspace-file-card footer { padding:16px; display:grid; gap:8px; }
 #app .workspace-comments { padding:24px; }
@@ -273,5 +273,5 @@ html[data-theme="dark"] .sx-review-room { position:fixed; inset:16px; width:calc
   .sx-room-toolbar>label { flex-basis:100%; }
 }
 @media (prefers-reduced-motion:reduce) {
-  #app :is(.project-card,.sx-project-art i,.workspace-file-card,.workspace-file-preview>span) { animation:none; transition:none; transform:none; translate:none; }
+  #app :is(.project-card,.sx-project-art i,.workspace-file-card,.workspace-file-preview>.workspace-file-glyph) { animation:none; transition:none; transform:none; translate:none; }
 }
