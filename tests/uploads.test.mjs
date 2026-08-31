@@ -135,6 +135,13 @@ test("keeps the signed-in project dashboard consistent with the preview workspac
   assert.match(workspace, /Add your first file/);
   assert.match(styles, /html\[data-theme="dark"\] #app\.workspace-app \.workspace-shell/);
   assert.match(styles, /grid-template-columns:56px 248px minmax\(0,1fr\)!important/);
+  assert.match(workspace, /RECENT_PROJECTS_KEY/);
+  assert.match(workspace, /function openWorkspaceCommandMenu/);
+  assert.match(workspace, /Quick commands and search/);
+  assert.match(workspace, /data-review-attention/);
+  assert.match(workspace, /data-comment-filter="open"/);
+  assert.match(styles, /workspace-command-menu/);
+  assert.match(styles, /workspace-review-attention/);
 });
 
 test("lets account owners permanently delete a project with explicit confirmation", async () => {

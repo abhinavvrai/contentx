@@ -1,6 +1,6 @@
-import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-8";
+import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-9";
 import { openReviewRoom } from "./review-room.js?v=frame-account-1";
-import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-8";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-9";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -16,7 +16,20 @@ const formatBytes = bytes => {
 const fileGlyph = type => String(type || "").startsWith("video/") ? "▶" : String(type || "").startsWith("image/") ? "▧" : String(type || "").startsWith("audio/") ? "♫" : "◇";
 const formatDate = value => value ? new Date(Number(value)).toLocaleDateString([], { dateStyle:"medium" }) : "—";
 const SAFE_WORKSPACE_EXTENSIONS = new Set(["mp4","mov","m4v","webm","mkv","avi","mp3","wav","m4a","aac","flac","ogg","jpg","jpeg","png","webp","gif","heic","heif","pdf","txt","md","csv","srt","vtt"]);
+const RECENT_PROJECTS_KEY = "cx_recent_projects_v1";
 let workspaceRenderVersion = 0;
+let workspaceShortcutHandler = null;
+
+function readRecentProjects() {
+  try { return JSON.parse(localStorage.getItem(RECENT_PROJECTS_KEY) || "[]").filter(Boolean).slice(0, 8); }
+  catch { return []; }
+}
+
+function rememberRecentProject(projectId) {
+  if (!projectId) return;
+  try { localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify([projectId, ...readRecentProjects().filter(id => id !== projectId)].slice(0, 8))); }
+  catch { /* Private browsing can disable device-local preferences. */ }
+}
 
 async function api(url, options = {}) {
   const response = await fetch(url, { credentials:"same-origin", ...options });
@@ -73,12 +86,13 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   const used = Number(storage.usedBytes || 0);
   const quota = Number(storage.quotaBytes || 50 * 1024 ** 3);
   const percent = Math.min(100, Math.round(used / quota * 100));
+  if (project) rememberRecentProject(project.id);
   root.innerHTML = `<div class="workspace-shell ${project && !accountPanel ? "project-open" : accountPanel ? "account-open" : "overview-open"}">
     <aside class="workspace-rail" aria-label="Workspace tools">
       <a class="workspace-rail-brand" href="#home" aria-label="Content X home">CX</a>
       <nav>
         <a class="${accountPanel ? "" : "active"}" href="#workspace" aria-label="Projects" title="Projects">▱</a>
-        <button type="button" data-focus-files aria-label="Search project files" title="Search">⌕</button>
+        <button type="button" data-command-menu aria-label="Quick commands and search" title="Quick commands · Ctrl K">⌕</button>
         <a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account" aria-label="Account and notifications" title="Account">◎</a>
       </nav>
       <a class="workspace-rail-user" href="#workspace?panel=account" aria-label="Open account" title="Account">${escapeHTML(user.name.slice(0,1).toUpperCase())}</a>
@@ -93,7 +107,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       <div class="workspace-user"><span>${escapeHTML(user.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(user.name)}</b><small>${escapeHTML(user.email)}</small></div><a href="#workspace?panel=account" aria-label="Account settings">•••</a></div>
     </aside>
     <main class="workspace-main">
-      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>All projects</span>${accountPanel ? `<b>/ Account</b>` : project ? `<i>/</i><b>${escapeHTML(project.name)}</b>` : ""}</div>${project && !accountPanel ? `<label class="workspace-global-search"><span>⌕</span><input type="search" data-global-file-search placeholder="Search" aria-label="Search this project"></label>` : ""}<div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button subtle" type="button" data-project-settings aria-label="Project settings">•••</button><button class="workspace-button" type="button" data-share-project ${project.status === "archived" ? "disabled" : ""}>Share</button><button class="workspace-button primary" type="button" data-upload-files ${project.status === "archived" ? "disabled" : ""}>＋ Add</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
+      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>All projects</span>${accountPanel ? `<b>/ Account</b>` : project ? `<i>/</i><b>${escapeHTML(project.name)}</b>` : ""}</div>${project && !accountPanel ? `<label class="workspace-global-search"><span>⌕</span><input type="search" data-global-file-search placeholder="Search files" aria-label="Search this project"></label>` : `<button class="workspace-command-trigger" type="button" data-command-menu><span>⌕</span> Quick find <kbd>Ctrl K</kbd></button>`}<div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button subtle" type="button" data-project-settings aria-label="Project settings">•••</button><button class="workspace-button" type="button" data-share-project ${project.status === "archived" ? "disabled" : ""}>Share</button><button class="workspace-button primary" type="button" data-upload-files ${project.status === "archived" ? "disabled" : ""}>＋ Add</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
       ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, folders, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy, project.status === "active") : projects.length ? workspaceOverview(projects, storage) : emptyWorkspace()}
     </main>
   </div><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
@@ -106,7 +120,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     const query = projectSearch.value.trim().toLowerCase();
     root.querySelectorAll("[data-project-nav-item]").forEach(item => { item.hidden = Boolean(query) && !item.textContent.toLowerCase().includes(query); });
   });
-  root.querySelector("[data-focus-files]")?.addEventListener("click", () => (root.querySelector("[data-file-search]") || projectSearch)?.focus());
+  bindWorkspaceShortcuts(root, projects, project, actions);
   bindWorkspaceOverview(root, projects, actions);
   if (accountPanel || !project) return;
   enhanceFileLibrary(root, files, comments);
@@ -157,13 +171,20 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   const globalSearch = root.querySelector("[data-global-file-search]");
   globalSearch?.addEventListener("input", () => { const fileSearch = root.querySelector("[data-file-search]"); if (fileSearch) { fileSearch.value = globalSearch.value; fileSearch.dispatchEvent(new Event("input", { bubbles:true })); } });
   root.querySelector("[data-delete-project]")?.addEventListener("click", () => openDeleteProjectModal(root, project, actions));
+  root.querySelector("[data-review-attention]")?.addEventListener("click", () => root.querySelector(".workspace-comments")?.scrollIntoView({ behavior:"smooth", block:"start" }));
   bindComments(root, project.id, "", actions, true);
 }
 
 function workspaceOverview(projects, storage) {
   const active = projects.filter(project => project.status !== "archived").length;
   const used = Number(storage.usedBytes || 0), quota = Number(storage.quotaBytes || 50 * 1024 ** 3);
-  return `<section class="workspace-overview"><header><div><small>CONTENT X WORKSPACE</small><h1>Projects</h1><p>${active} active · ${formatBytes(used)} of ${formatBytes(quota)} used</p></div><button class="workspace-button primary" type="button" data-create-free-project>＋ New project</button></header><div class="workspace-overview-tools"><label><span>⌕</span><input type="search" data-overview-search placeholder="Search projects" aria-label="Search projects"></label><div><button class="active" type="button" data-overview-filter="active">Active</button><button type="button" data-overview-filter="all">All</button><button class="active" type="button" data-overview-view="grid" aria-label="Grid view">▦</button><button type="button" data-overview-view="list" aria-label="List view">☷</button></div></div><div class="workspace-overview-grid" data-overview-grid>${projects.map((project,index) => `<article class="workspace-overview-card ${project.status === "archived" ? "archived" : ""}" data-overview-card data-project-status="${escapeHTML(project.status || "active")}" style="--project-index:${index}"><a href="#workspace?project=${encodeURIComponent(project.project_id)}"><div class="workspace-overview-art"><i></i><i></i><i></i><span>${escapeHTML((project.name || "CX").slice(0,2).toUpperCase())}</span></div><div><h2>${escapeHTML(project.name)}</h2><p>${escapeHTML(project.client_name || "Private production")}</p><small>${Number(project.file_count || 0)} file${Number(project.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(project.total_bytes || 0)}</small></div></a><footer><span>${project.status === "archived" ? "Archived" : "Active"}</span><button type="button" data-overview-project-settings="${escapeHTML(project.project_id)}" aria-label="Project settings">•••</button></footer></article>`).join("")}<button class="workspace-overview-new" type="button" data-create-free-project><span>＋</span><b>New project</b><small>Start a private production space</small></button></div><p class="workspace-overview-empty" data-overview-empty hidden>No projects match this view.</p></section>`;
+  const recent = readRecentProjects();
+  const ordered = [...projects].sort((a, b) => {
+    const aIndex = recent.indexOf(a.project_id), bIndex = recent.indexOf(b.project_id);
+    if (aIndex >= 0 || bIndex >= 0) return (aIndex < 0 ? 99 : aIndex) - (bIndex < 0 ? 99 : bIndex);
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+  return `<section class="workspace-overview"><header><div><small>CONTENT X WORKSPACE</small><h1>Projects</h1><p>${active} active · ${formatBytes(used)} of ${formatBytes(quota)} used</p></div><button class="workspace-button primary" type="button" data-create-free-project>＋ New project</button></header><div class="workspace-overview-tools"><label><span>⌕</span><input type="search" data-overview-search placeholder="Search projects" aria-label="Search projects"></label><div><button class="active" type="button" data-overview-filter="active">Active</button><button type="button" data-overview-filter="all">All</button><button class="active" type="button" data-overview-view="grid" aria-label="Grid view">▦</button><button type="button" data-overview-view="list" aria-label="List view">☷</button></div></div><div class="workspace-overview-grid" data-overview-grid>${ordered.map((project,index) => `<article class="workspace-overview-card ${project.status === "archived" ? "archived" : ""}" data-overview-card data-project-status="${escapeHTML(project.status || "active")}" data-project-name="${escapeHTML(project.name || "")}" style="--project-index:${index}"><a href="#workspace?project=${encodeURIComponent(project.project_id)}"><div class="workspace-overview-art"><i></i><i></i><i></i><span>${escapeHTML((project.name || "CX").slice(0,2).toUpperCase())}</span></div><div><h2>${escapeHTML(project.name)}</h2><p>${escapeHTML(project.client_name || "Private production")}</p><small>${Number(project.file_count || 0)} file${Number(project.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(project.total_bytes || 0)}</small></div></a><footer><span>${project.status === "archived" ? "Archived" : recent.includes(project.project_id) ? "Recent" : "Active"}</span><button type="button" data-overview-project-settings="${escapeHTML(project.project_id)}" aria-label="Project settings">•••</button></footer></article>`).join("")}<button class="workspace-overview-new" type="button" data-create-free-project><span>＋</span><b>New project</b><small>Start a private production space</small></button></div><p class="workspace-overview-empty" data-overview-empty hidden>No projects match this view.</p></section>`;
 }
 
 function bindWorkspaceOverview(root, projects, actions) {
@@ -183,13 +204,77 @@ function bindWorkspaceOverview(root, projects, actions) {
   update();
 }
 
+function bindWorkspaceShortcuts(root, projects, project, actions) {
+  const navigate = route => {
+    const next = `#${route}`;
+    if (location.hash === next) actions.refreshRoute();
+    else location.hash = route;
+  };
+  const commands = [
+    { label:"View all projects", meta:"Navigation", icon:"▱", run:() => navigate("workspace") },
+    { label:"Create a new project", meta:"Action", icon:"＋", run:() => root.querySelector("[data-create-free-project]")?.click() },
+    { label:"Account and notifications", meta:"Navigation", icon:"◎", run:() => navigate("workspace?panel=account") },
+    ...projects.slice(0, 12).map(item => ({ label:`Open ${item.name}`, meta:item.status === "archived" ? "Archived project" : "Project", icon:"◇", run:() => navigate(`workspace?project=${encodeURIComponent(item.project_id)}`) })),
+    ...(project ? [
+      { label:"Search files in this project", meta:"Project action", icon:"⌕", run:() => (root.querySelector("[data-global-file-search]") || root.querySelector("[data-file-search]"))?.focus() },
+      { label:"Upload files", meta:"Project action", icon:"↑", run:() => (root.querySelector("[data-upload-files]") || root.querySelector("[data-project-drop]"))?.click() },
+      { label:"Create a folder", meta:"Project action", icon:"▱", run:() => root.querySelector("[data-create-folder]")?.click() },
+      { label:"Create a share link", meta:"Project action", icon:"↗", run:() => root.querySelector("[data-share-project]")?.click() },
+      { label:"Open project settings", meta:"Project action", icon:"•••", run:() => root.querySelector("[data-project-settings]")?.click() },
+    ] : []),
+  ];
+  const open = () => openWorkspaceCommandMenu(root, commands);
+  root.querySelectorAll("[data-command-menu]").forEach(button => button.addEventListener("click", open));
+  if (workspaceShortcutHandler) document.removeEventListener("keydown", workspaceShortcutHandler);
+  workspaceShortcutHandler = event => {
+    if (!root.isConnected || !root.classList.contains("workspace-app")) return;
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "");
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); open(); return; }
+    if (event.key === "/" && !typing) {
+      const search = root.querySelector("[data-global-file-search], [data-overview-search], [data-project-nav-search]");
+      if (search) { event.preventDefault(); search.focus(); }
+    }
+  };
+  document.addEventListener("keydown", workspaceShortcutHandler);
+}
+
+function openWorkspaceCommandMenu(root, commands) {
+  const layer = root.querySelector("[data-workspace-layer]");
+  if (!layer) return;
+  layer.innerHTML = `<div class="workspace-modal-backdrop workspace-command-backdrop"><section class="workspace-command-menu" role="dialog" aria-modal="true" aria-label="Quick commands"><header><span>⌕</span><input type="search" data-command-search placeholder="Search projects or actions" aria-label="Search commands"><kbd>Esc</kbd></header><div data-command-list>${commands.map((command,index) => `<button type="button" data-command-index="${index}"><i>${escapeHTML(command.icon)}</i><span><b>${escapeHTML(command.label)}</b><small>${escapeHTML(command.meta)}</small></span><em>↵</em></button>`).join("")}</div><p data-command-empty hidden>No matching command.</p><footer><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span><span><kbd>Esc</kbd> close</span></footer></section></div>`;
+  const backdrop = layer.querySelector(".workspace-command-backdrop");
+  const input = layer.querySelector("[data-command-search]");
+  const empty = layer.querySelector("[data-command-empty]");
+  let active = 0;
+  const visibleButtons = () => [...layer.querySelectorAll("[data-command-index]")].filter(button => !button.hidden);
+  const paint = () => visibleButtons().forEach((button,index) => button.classList.toggle("active", index === active));
+  const close = () => { layer.innerHTML = ""; };
+  const run = button => { const command = commands[Number(button.dataset.commandIndex)]; close(); command?.run(); };
+  layer.querySelectorAll("[data-command-index]").forEach(button => button.addEventListener("click", () => run(button)));
+  input.addEventListener("input", () => {
+    const query = input.value.trim().toLowerCase(); let visible = 0;
+    layer.querySelectorAll("[data-command-index]").forEach(button => { button.hidden = Boolean(query) && !button.textContent.toLowerCase().includes(query); if (!button.hidden) visible++; });
+    active = 0; empty.hidden = visible > 0; paint();
+  });
+  input.addEventListener("keydown", event => {
+    const buttons = visibleButtons();
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); active = Math.max(0, Math.min(buttons.length - 1, active + (event.key === "ArrowDown" ? 1 : -1))); paint(); buttons[active]?.scrollIntoView({ block:"nearest" }); }
+    if (event.key === "Enter" && buttons[active]) { event.preventDefault(); run(buttons[active]); }
+    if (event.key === "Escape") { event.preventDefault(); close(); }
+  });
+  backdrop.addEventListener("click", event => { if (event.target === backdrop) close(); });
+  paint(); input.focus();
+}
+
 function folderTreeNodes(folders, parentId = null, depth = 0) {
   return folders.filter(folder => (folder.parent_id || null) === parentId).map(folder => `<div class="workspace-tree-node" style="--depth:${depth}"><button type="button" draggable="true" data-folder-id="${escapeHTML(folder.id)}" data-folder-drag="${escapeHTML(folder.id)}"><span>▸</span><b>${escapeHTML(folder.name)}</b><em>${Number(folder.asset_count || 0)}</em></button>${folderTreeNodes(folders, folder.id, depth + 1)}</div>`).join("");
 }
 
 function projectSurface(project, files, folders, canUpload, comments = [], canManageComments = false, revisionPolicy = null, canManageFolders = false) {
   const rootFolders = folders.filter(folder => !folder.parent_id);
+  const openComments = comments.filter(comment => !commentIsComplete(comment)).length;
   return `<section class="workspace-project-head"><div><p>PROJECT ${project.status === "archived" ? `<b class="workspace-status-badge">ARCHIVED</b>` : ""}</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
+    ${openComments ? `<button class="workspace-review-attention" type="button" data-review-attention><span>${openComments}</span><div><b>Feedback needs attention</b><small>${openComments} open comment${openComments === 1 ? "" : "s"} waiting for a decision</small></div><em>Review now →</em></button>` : ""}
     <section class="workspace-browser"><div class="workspace-browser-head"><nav aria-label="Folder breadcrumb"><button class="active" type="button" data-folder-id="">${escapeHTML(project.name)}</button><span data-folder-crumbs></span></nav><div>${canManageFolders ? `<button type="button" data-folder-settings-current hidden>Folder options</button><button type="button" data-create-folder>＋ New folder</button>` : ""}</div></div><div class="workspace-folder-grid">${rootFolders.map(folder => folderCard(folder)).join("")}</div></section>
     <section class="workspace-files" title="Executables, archives, scripts, HTML and SVG are blocked"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header>${files.length ? fileToolbar() : ""}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy)).join("") : `<button class="workspace-empty-files" type="button" ${canUpload ? "data-project-drop" : "disabled"}><span>↑</span><h3>${canUpload ? "Add your first file" : "No files shared yet"}</h3><p>${canUpload ? "Upload footage, references, or drag files here." : "Uploads are disabled for this project."}</p>${canUpload ? `<b>Choose files</b>` : ""}</button>`}</div></section>
     ${files.length ? commentsPanel(comments, canManageComments) : ""}
@@ -401,19 +486,33 @@ function openDeleteProjectModal(root, project, actions) {
   input.focus();
 }
 
+function commentIsComplete(comment) {
+  return comment.status === "completed" || comment.status === "resolved";
+}
+
 function commentsPanel(comments, canManageComments) {
-  return `<section class="workspace-comments"><header><div><h2>Review comments</h2><p>Clients can leave feedback from the share link without creating an account.</p></div><span>${comments.length} comment${comments.length === 1 ? "" : "s"}</span></header><div class="workspace-comment-list">${comments.length ? comments.map(comment => commentRow(comment, canManageComments)).join("") : `<article class="workspace-comment-empty"><span>◌</span><b>No feedback yet</b><small>Share this project with your client to collect comments here.</small></article>`}</div><form class="workspace-comment-form"><div><input name="authorName" required maxlength="100" placeholder="Your name"><input name="authorEmail" type="email" maxlength="254" placeholder="Email optional"></div><textarea name="body" required maxlength="2000" rows="3" placeholder="Write feedback for this project…"></textarea><button class="workspace-button primary" type="submit">Send comment</button><p role="alert" hidden></p></form></section>`;
+  const ordered = [...comments].sort((a, b) => Number(commentIsComplete(a)) - Number(commentIsComplete(b)) || Number(b.created_at || 0) - Number(a.created_at || 0));
+  const open = ordered.filter(comment => !commentIsComplete(comment)).length;
+  return `<section class="workspace-comments"><header><div><h2>Review comments</h2><p>Open feedback stays first so the next decision is always clear.</p></div><div class="workspace-comment-summary"><span>${open} open · ${comments.length} total</span>${comments.length ? `<div><button class="active" type="button" data-comment-filter="open">Open</button><button type="button" data-comment-filter="all">All</button></div>` : ""}</div></header><div class="workspace-comment-list">${ordered.length ? ordered.map(comment => commentRow(comment, canManageComments)).join("") : `<article class="workspace-comment-empty"><span>◌</span><b>No feedback yet</b><small>Share this project with your client to collect comments here.</small></article>`}</div><p class="workspace-comment-filter-empty" hidden>Everything is resolved. Switch to All to view completed feedback.</p><form class="workspace-comment-form"><div><input name="authorName" required maxlength="100" placeholder="Your name"><input name="authorEmail" type="email" maxlength="254" placeholder="Email optional"></div><textarea name="body" required maxlength="2000" rows="3" placeholder="Write feedback for this project…"></textarea><button class="workspace-button primary" type="submit">Send comment</button><p role="alert" hidden></p></form></section>`;
 }
 
 function commentRow(comment, canManageComments) {
-  const completed = comment.status === "completed" || comment.status === "resolved";
+  const completed = commentIsComplete(comment);
   const timestamp = hasTimestamp(comment.timestamp_seconds) ? `<em>${formatDuration(Number(comment.timestamp_seconds))}</em>` : "";
-  return `<article class="workspace-comment ${completed ? "completed" : ""}"><span>${escapeHTML((comment.author_name || "?").slice(0,1).toUpperCase())}</span><div><strong>${escapeHTML(comment.author_name || "Reviewer")} <small>${formatDate(comment.created_at)}</small></strong>${timestamp}<p>${escapeHTML(comment.body)}</p></div>${canManageComments ? `<button type="button" data-comment-complete="${escapeHTML(comment.id)}">${completed ? "Completed ✓" : "Mark complete"}</button>` : ""}</article>`;
+  return `<article class="workspace-comment ${completed ? "completed" : ""}" data-comment-status="${completed ? "completed" : "open"}"><span>${escapeHTML((comment.author_name || "?").slice(0,1).toUpperCase())}</span><div><strong>${escapeHTML(comment.author_name || "Reviewer")} <small>${formatDate(comment.created_at)}</small></strong>${timestamp}<p>${escapeHTML(comment.body)}</p></div>${canManageComments ? `<button type="button" data-comment-complete="${escapeHTML(comment.id)}">${completed ? "Completed ✓" : "Mark complete"}</button>` : ""}</article>`;
 }
 
 function bindComments(root, projectId, token, actions, canManageComments = false) {
   const form = root.querySelector(".workspace-comment-form");
   if (!form) return;
+  const filterEmpty = root.querySelector(".workspace-comment-filter-empty");
+  root.querySelectorAll("[data-comment-filter]").forEach(button => button.addEventListener("click", () => {
+    const filter = button.dataset.commentFilter; let visible = 0;
+    root.querySelectorAll("[data-comment-filter]").forEach(item => item.classList.toggle("active", item === button));
+    root.querySelectorAll("[data-comment-status]").forEach(comment => { comment.hidden = filter === "open" && comment.dataset.commentStatus !== "open"; if (!comment.hidden) visible++; });
+    if (filterEmpty) filterEmpty.hidden = visible > 0 || filter !== "open";
+  }));
+  root.querySelector('[data-comment-filter="open"]')?.click();
   form.addEventListener("submit", async event => {
     event.preventDefault();
     const button = form.querySelector("button[type=submit]");
