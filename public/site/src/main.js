@@ -6,8 +6,8 @@ import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceR
 import { initProductPolish, polishRoute } from "./polish.js?v=noir-studio-1";
 import { enhanceCreatorTools } from "./creator-tools.js?v=frame-native-3";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=frame-native-3";
-import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-native-7";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=frame-native-7";
+import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-native-8";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=frame-native-8";
 import { enhanceStudioDashboard } from "./studio-workspace.js?v=frame-native-1";
 
 // Load decorative motion independently so a missing effect cannot block the app.

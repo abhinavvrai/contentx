@@ -1,6 +1,6 @@
-import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-7";
+import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-8";
 import { openReviewRoom } from "./review-room.js?v=frame-account-1";
-import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-7";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-8";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -73,7 +73,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   const used = Number(storage.usedBytes || 0);
   const quota = Number(storage.quotaBytes || 50 * 1024 ** 3);
   const percent = Math.min(100, Math.round(used / quota * 100));
-  root.innerHTML = `<div class="workspace-shell">
+  root.innerHTML = `<div class="workspace-shell ${project && !accountPanel ? "project-open" : accountPanel ? "account-open" : "overview-open"}">
     <aside class="workspace-rail" aria-label="Workspace tools">
       <a class="workspace-rail-brand" href="#home" aria-label="Content X home">CX</a>
       <nav>
@@ -119,7 +119,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     picker.value = "";
     actions.refreshRoute();
   });
-  bindDropTarget(root.querySelector("[data-project-drop]"), async dropped => {
+  bindDropTarget(root.querySelector(".workspace-files"), async dropped => {
     await uploadSelectedFiles(root, project.id, "", dropped, "", project.maxFileSize, project.maxVideoSeconds || project.max_video_seconds || 0);
     actions.refreshRoute();
   });
@@ -190,10 +190,9 @@ function folderTreeNodes(folders, parentId = null, depth = 0) {
 function projectSurface(project, files, folders, canUpload, comments = [], canManageComments = false, revisionPolicy = null, canManageFolders = false) {
   const rootFolders = folders.filter(folder => !folder.parent_id);
   return `<section class="workspace-project-head"><div><p>PROJECT ${project.status === "archived" ? `<b class="workspace-status-badge">ARCHIVED</b>` : ""}</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
-    <section class="workspace-browser"><div class="workspace-browser-head"><nav aria-label="Folder breadcrumb"><button class="active" type="button" data-folder-id="">${escapeHTML(project.name)}</button><span data-folder-crumbs></span></nav><div>${canManageFolders ? `<button type="button" data-folder-settings-current hidden>Folder options</button><button type="button" data-create-folder>＋ Folder</button>` : ""}${canUpload ? `<button class="workspace-button primary" type="button" data-upload-files>↑ Upload</button>` : ""}</div></div><div class="workspace-folder-grid"><button class="workspace-folder-card root-target" type="button" data-folder-id=""><span>⌂</span><div><b>Project root</b><small>${files.filter(file => !file.folder_id).length} assets</small></div><em>Drop here</em></button>${rootFolders.map(folder => folderCard(folder)).join("")}</div></section>
-    <section class="workspace-dropbar ${canUpload ? "" : "disabled"}" data-project-drop title="Executables, archives, scripts, HTML and SVG are blocked"><span>↑</span><div><b>${canUpload ? "Drop to upload" : "View only"}</b><small>${canUpload ? "Or drag assets into a folder." : "Uploads are disabled for this link."}</small></div></section>
-    <section class="workspace-files"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header>${fileToolbar()}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy)).join("") : `<div class="workspace-empty-files"><span>↑</span><h3>No files yet</h3><p>${canUpload ? "Drop footage or references here." : "No files shared yet."}</p></div>`}</div></section>
-    ${commentsPanel(comments, canManageComments)}
+    <section class="workspace-browser"><div class="workspace-browser-head"><nav aria-label="Folder breadcrumb"><button class="active" type="button" data-folder-id="">${escapeHTML(project.name)}</button><span data-folder-crumbs></span></nav><div>${canManageFolders ? `<button type="button" data-folder-settings-current hidden>Folder options</button><button type="button" data-create-folder>＋ New folder</button>` : ""}</div></div><div class="workspace-folder-grid">${rootFolders.map(folder => folderCard(folder)).join("")}</div></section>
+    <section class="workspace-files" title="Executables, archives, scripts, HTML and SVG are blocked"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header>${files.length ? fileToolbar() : ""}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy)).join("") : `<button class="workspace-empty-files" type="button" ${canUpload ? "data-project-drop" : "disabled"}><span>↑</span><h3>${canUpload ? "Add your first file" : "No files shared yet"}</h3><p>${canUpload ? "Upload footage, references, or drag files here." : "Uploads are disabled for this project."}</p>${canUpload ? `<b>Choose files</b>` : ""}</button>`}</div></section>
+    ${files.length ? commentsPanel(comments, canManageComments) : ""}
     <section class="workspace-queue" data-workspace-queue></section>`;
 }
 
@@ -574,5 +573,5 @@ function bindDropTarget(element, handler, activeClass = "is-dragging") {
   if (!element || element.classList.contains("disabled")) return;
   ["dragenter","dragover"].forEach(type => element.addEventListener(type, event => { event.preventDefault(); element.classList.add(activeClass); }));
   ["dragleave","drop"].forEach(type => element.addEventListener(type, event => { event.preventDefault(); element.classList.remove(activeClass); }));
-  element.addEventListener("drop", event => handler([...event.dataTransfer.files]));
+  element.addEventListener("drop", event => { event.stopPropagation(); handler([...event.dataTransfer.files]); });
 }

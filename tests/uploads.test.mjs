@@ -130,6 +130,11 @@ test("keeps the signed-in project dashboard consistent with the preview workspac
   assert.match(studio, /cx_workspace_appearance/);
   assert.match(styles, /workspace-overview-grid/);
   assert.match(styles, /sx-control-popover/);
+  assert.match(workspace, /workspace-shell \$\{project && !accountPanel \? "project-open"/);
+  assert.match(workspace, /files\.length \? fileToolbar\(\) : ""/);
+  assert.match(workspace, /Add your first file/);
+  assert.match(styles, /html\[data-theme="dark"\] #app\.workspace-app \.workspace-shell/);
+  assert.match(styles, /grid-template-columns:56px 248px minmax\(0,1fr\)!important/);
 });
 
 test("lets account owners permanently delete a project with explicit confirmation", async () => {

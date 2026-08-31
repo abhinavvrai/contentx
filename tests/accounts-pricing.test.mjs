@@ -82,13 +82,13 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=frame-native-7/);
-  assert.match(html, /contentx-release" content="frame-native-7/);
-  assert.match(html, /main\.js\?v=frame-native-7/);
+  assert.match(page, /\/site\/index\.html\?v=frame-native-8/);
+  assert.match(html, /contentx-release" content="frame-native-8/);
+  assert.match(html, /main\.js\?v=frame-native-8/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
   assert.match(main, /features\.js\?v=auth-health-1/);
   assert.match(main, /uploads\.js\?v=frame-native-3/);
-  assert.match(main, /account\.js\?v=frame-native-7/);
+  assert.match(main, /account\.js\?v=frame-native-8/);
 });
 
 test("autoplays public preview videos without center overlay controls", async () => {

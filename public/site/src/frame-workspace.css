@@ -681,6 +681,70 @@ html[data-theme="dark"] #app.review-app .comment:focus-within .comment-tools :is
 }
 @media(max-width:480px) { #app .workspace-folder-grid { grid-template-columns:1fr; } }
 
+/* frame-native-8: lock the three-column product shell and remove duplicate project chrome. */
+html[data-theme="dark"] #app.workspace-app .workspace-shell {
+  grid-template-columns:56px 248px minmax(0,1fr)!important;
+}
+html[data-theme="dark"] #app.workspace-app .workspace-rail {
+  grid-column:1!important;
+  width:56px!important;
+  min-width:56px!important;
+  padding:12px 7px;
+}
+html[data-theme="dark"] #app.workspace-app .workspace-sidebar {
+  grid-column:2!important;
+  width:248px!important;
+  min-width:0!important;
+  padding:13px 10px 12px!important;
+  overflow:hidden;
+}
+html[data-theme="dark"] #app.workspace-app .workspace-main {
+  grid-column:3!important;
+  width:auto!important;
+  min-width:0!important;
+  background:#0d0e13;
+}
+#app .workspace-shell.project-open .workspace-brand,
+#app .workspace-shell.project-open .workspace-sidebar>nav,
+#app .workspace-shell.project-open .workspace-project-search,
+#app .workspace-shell.project-open .workspace-project-nav { display:none; }
+#app .workspace-shell.project-open .workspace-project-focus { margin:0 0 10px; }
+#app .workspace-shell.project-open .workspace-tree { max-height:none; flex:0 1 auto; margin:0; padding:4px 0 12px; }
+#app .workspace-shell.project-open .workspace-share-nav { flex:1 1 auto; min-height:90px; margin-top:8px; padding-top:4px; border-top:1px solid #252731; }
+#app .workspace-shell.project-open .workspace-storage { flex:0 0 auto; margin-top:10px; }
+#app .workspace-shell.project-open .workspace-user { flex:0 0 auto; }
+#app .workspace-shell.project-open .workspace-topbar { height:54px; min-height:54px; padding:0 16px; }
+#app .workspace-shell.project-open .workspace-browser-head { padding-inline:16px; }
+#app .workspace-shell.project-open .workspace-folder-grid { padding:14px 16px 4px; }
+#app .workspace-shell.project-open .workspace-folder-grid:empty { display:none; }
+#app .workspace-shell.project-open .workspace-files { padding:18px 16px 30px; }
+#app .workspace-shell.project-open .workspace-files>header { min-height:30px; }
+#app .workspace-shell.project-open .workspace-empty-files { min-height:360px; border-radius:10px; background:#101117; cursor:pointer; }
+#app .workspace-shell.project-open button.workspace-empty-files { width:100%; color:#777a86; font:inherit; }
+#app .workspace-shell.project-open .workspace-empty-files:hover { border-color:#6d4a3b; background:#141419; }
+#app .workspace-shell.project-open .workspace-empty-files h3 { font-size:15px; }
+#app .workspace-shell.project-open .workspace-empty-files p { font-size:9px; }
+#app .workspace-shell.project-open .workspace-empty-files b { margin-top:14px; padding:9px 13px; border-radius:7px; background:linear-gradient(135deg,var(--fx-orange),var(--fx-amber)); color:#fff; font-size:9px; }
+#app .workspace-shell.project-open .workspace-comments { margin:10px 16px 42px; }
+#app .workspace-shell.project-open .sx-library-tools { margin:10px -16px 14px!important; padding-inline:16px!important; }
+#app .workspace-shell.project-open .workspace-global-search { max-width:250px; }
+
+@media(max-width:1050px) {
+  html[data-theme="dark"] #app.workspace-app .workspace-shell { grid-template-columns:56px minmax(0,1fr)!important; }
+  html[data-theme="dark"] #app.workspace-app .workspace-sidebar { width:min(278px,86vw)!important; position:fixed; z-index:45; left:56px; transform:translateX(-105%); box-shadow:28px 0 65px #0008; }
+  html[data-theme="dark"] #app.workspace-app .workspace-sidebar.open { transform:translateX(0); }
+  html[data-theme="dark"] #app.workspace-app .workspace-main { grid-column:2!important; }
+  #app .workspace-topbar>[data-workspace-menu] { display:block; }
+}
+@media(max-width:620px) {
+  html[data-theme="dark"] #app.workspace-app .workspace-shell { display:grid!important; grid-template-columns:minmax(0,1fr)!important; }
+  html[data-theme="dark"] #app.workspace-app .workspace-rail { display:none!important; }
+  html[data-theme="dark"] #app.workspace-app .workspace-sidebar { left:0; }
+  html[data-theme="dark"] #app.workspace-app .workspace-main { grid-column:1!important; }
+  #app .workspace-shell.project-open .workspace-topbar { padding-inline:11px; }
+  #app .workspace-shell.project-open .workspace-topbar>div:last-child .workspace-button:not(.primary) { display:none; }
+}
+
 /* Frame-native release: original Content X production shell and review experience. */
 #app .cx-icon { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 html[data-theme="dark"] #app .dashboard-shell { grid-template-columns:58px 218px minmax(0,1fr); min-height:100dvh; }
