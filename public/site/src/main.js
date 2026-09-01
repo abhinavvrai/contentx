@@ -1,13 +1,13 @@
 import { studio } from "./data.js?v=revision-bands-1";
-import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=frame-native-12";
+import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=frame-native-13";
 import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=auth-health-1";
 import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=revision-bands-1";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js?v=frame-native-1";
 import { initProductPolish, polishRoute } from "./polish.js?v=noir-studio-1";
 import { enhanceCreatorTools } from "./creator-tools.js?v=frame-native-3";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=frame-native-3";
-import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-native-12";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=frame-native-12";
+import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-native-13";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=frame-native-13";
 import { enhanceStudioDashboard } from "./studio-workspace.js?v=frame-native-1";
 
 // Load decorative motion independently so a missing effect cannot block the app.

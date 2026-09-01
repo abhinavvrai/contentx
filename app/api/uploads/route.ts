@@ -66,6 +66,8 @@ export async function POST(request: Request) {
     if (action === "create-account-project") return createAccountProject(request, input);
     if (action === "create-folder") return createProjectFolder(request, input);
     if (action === "create-comment") return createProjectComment(request, input);
+    if (action === "create-comment-voice") return createCommentVoiceNote(request, input);
+    if (action === "comment-voice-link") return createCommentVoiceLink(request, input);
     if (action === "start-upload") return startUpload(request, input);
     if (action === "complete-upload") return completeUpload(request, input);
     if (action === "abort-upload") return abortUpload(request, input);
@@ -154,12 +156,13 @@ async function deleteAccountProject(request: Request, rawProjectId: string): Pro
   if (!project) throw new ClientError("Project not found.", 404);
   const files = await db.prepare("SELECT id, object_key, status, multipart_upload_id FROM upload_files WHERE project_id = ?")
     .bind(projectId).all<Pick<UploadFile,"id"|"object_key"|"status"|"multipart_upload_id">>();
+  const voices = await db.prepare("SELECT object_key FROM project_comment_voice_notes WHERE project_id = ?").bind(projectId).all<{ object_key:string }>();
   for (const file of files.results) {
     if (file.status === "uploading" && file.multipart_upload_id) {
       await bucket.resumeMultipartUpload(file.object_key, file.multipart_upload_id).abort().catch(() => undefined);
     }
   }
-  const objectKeys = [...new Set(files.results.map(file => file.object_key).filter(Boolean))];
+  const objectKeys = [...new Set([...files.results.map(file => file.object_key), ...voices.results.map(voice => voice.object_key)].filter(Boolean))];
   for (let offset = 0; offset < objectKeys.length; offset += 1000) {
     await bucket.delete(objectKeys.slice(offset, offset + 1000));
   }
@@ -167,6 +170,7 @@ async function deleteAccountProject(request: Request, rawProjectId: string): Pro
     db.prepare("UPDATE payment_orders SET project_id = NULL WHERE project_id = ?").bind(projectId),
     db.prepare("UPDATE order_selections SET project_id = NULL, asset_id = NULL WHERE project_id = ?").bind(projectId),
     db.prepare("DELETE FROM project_review_comments WHERE project_id = ?").bind(projectId),
+    db.prepare("DELETE FROM project_comment_voice_notes WHERE project_id = ?").bind(projectId),
     db.prepare("DELETE FROM project_share_links WHERE project_id = ?").bind(projectId),
     db.prepare("DELETE FROM project_folders WHERE project_id = ?").bind(projectId),
     db.prepare("DELETE FROM upload_files WHERE project_id = ?").bind(projectId),
@@ -494,7 +498,7 @@ async function getProjectComments(request: Request, params: URLSearchParams): Pr
   if (!projectId) throw new ClientError("Choose a project.");
   await requireProject(request, projectId, "view");
   const { db } = getUploadBindings();
-  const comments = await db.prepare(`SELECT id, project_id, file_id, asset_id, author_name, author_email,
+  const comments = await db.prepare(`SELECT id, project_id, file_id, asset_id, voice_note_id, author_name, author_email,
     body, timestamp_seconds, status, created_at, updated_at
     FROM project_review_comments
     WHERE project_id = ? AND deleted_at IS NULL
@@ -513,13 +517,18 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
   const authorEmail = input.authorEmail ? cleanEmail(input.authorEmail) : "";
   const fileId = cleanText(input.fileId, 80) || null;
   const assetId = cleanText(input.assetId, 80) || null;
+  const voiceNoteId = cleanText(input.voiceNoteId, 80) || null;
   const timestamp = input.timestampSeconds === "" || input.timestampSeconds == null ? null : Number(input.timestampSeconds);
-  if (!body) throw new ClientError("Write a comment before sending.");
+  if (!body && !voiceNoteId) throw new ClientError("Write a comment or record a voice note before sending.");
   if (authorName.length < 2) throw new ClientError("Enter your name before commenting.");
   if (input.authorEmail && !authorEmail) throw new ClientError("Enter a valid email address.");
   if (timestamp !== null && (!Number.isInteger(timestamp) || timestamp < 0 || timestamp > 24 * 60 * 60)) throw new ClientError("Choose a valid timestamp.");
   const { db } = getUploadBindings();
   const id = randomId("com");
+  if (voiceNoteId) {
+    const voice = await db.prepare("SELECT id FROM project_comment_voice_notes WHERE id = ? AND project_id = ? LIMIT 1").bind(voiceNoteId, projectId).first();
+    if (!voice) throw new ClientError("Choose a voice note from this project.", 400);
+  }
   // A timestamp must refer to a ready file in this authorized project, never
   // to a caller-supplied file/asset from another client's workspace.
   if (fileId) {
@@ -530,10 +539,11 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
     throw new ClientError("Choose a file before adding a timestamp or asset comment.", 400);
   }
   const now = Date.now();
+  const commentBody = body || "Voice note";
   await db.prepare(`INSERT INTO project_review_comments
-    (id, project_id, file_id, asset_id, author_name, author_email, body, timestamp_seconds, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`)
-    .bind(id, projectId, fileId, assetId, authorName, authorEmail || null, body, timestamp, now, now).run();
+    (id, project_id, file_id, asset_id, voice_note_id, author_name, author_email, body, timestamp_seconds, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`)
+    .bind(id, projectId, fileId, assetId, voiceNoteId, authorName, authorEmail || null, commentBody, timestamp, now, now).run();
   const owner = await db.prepare(`SELECT u.user_id, a.email
     FROM user_upload_projects u JOIN account_users a ON a.id = u.user_id
     WHERE u.project_id = ? LIMIT 1`).bind(projectId).first<{ user_id: string; email: string }>();
@@ -548,7 +558,33 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
     actorEmail: authorEmail || null,
     actionUrl: new URL(`/site/index.html#workspace?project=${encodeURIComponent(projectId)}`, request.url).toString(),
   }).catch(() => undefined);
-  return json({ comment: { id, projectId, fileId, assetId, authorName, authorEmail, body, timestampSeconds: timestamp, status: "open", createdAt: now, updatedAt: now } }, 201);
+  return json({ comment: { id, projectId, fileId, assetId, voiceNoteId, authorName, authorEmail, body:commentBody, timestampSeconds: timestamp, status: "open", createdAt: now, updatedAt: now } }, 201);
+}
+
+async function createCommentVoiceNote(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80); await requireProject(request, projectId, "view");
+  const dataUrl = cleanText(input.dataUrl, 1_800_000), duration = Number(input.durationSeconds);
+  const match = /^data:(audio\/(?:webm|ogg|mp4|mpeg));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
+  if (!match) throw new ClientError("Use a supported voice-note format.", 400);
+  if (!Number.isInteger(duration) || duration < 1 || duration > 60) throw new ClientError("Voice notes can be up to 60 seconds.", 400);
+  const binary = atob(match[2]); if (binary.length > 1_250_000) throw new ClientError("Voice note is too large.", 413);
+  const bytes = Uint8Array.from(binary, value => value.charCodeAt(0));
+  const id = randomId("vcn"), key = objectKey(projectId, id, `voice-note.${match[1].split("/")[1]}`), now = Date.now();
+  const { db, bucket } = getUploadBindings(); await enforceAccountStorageQuota(db, projectId, bytes.byteLength); await bucket.put(key, bytes, { httpMetadata:{ contentType:match[1] } });
+  try { await db.prepare(`INSERT INTO project_comment_voice_notes (id, project_id, object_key, content_type, size_bytes, duration_seconds, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .bind(id, projectId, key, match[1], bytes.byteLength, duration, now).run(); }
+  catch (error) { await bucket.delete(key).catch(() => undefined); throw error; }
+  return json({ voiceNoteId:id, durationSeconds:duration }, 201);
+}
+
+async function createCommentVoiceLink(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80), voiceNoteId = cleanText(input.voiceNoteId, 80); await requireProject(request, projectId, "view");
+  const { db } = getUploadBindings(); const voice = await db.prepare("SELECT id FROM project_comment_voice_notes WHERE id = ? AND project_id = ? LIMIT 1").bind(voiceNoteId, projectId).first();
+  if (!voice) throw new ClientError("Voice note not found.", 404);
+  const expires = Date.now() + 5 * 60 * 1000, signature = await createDownloadSignature(voiceNoteId, expires), url = new URL(request.url);
+  return json({ downloadUrl:`${url.origin}${url.pathname}?action=download&fileId=${encodeURIComponent(voiceNoteId)}&expires=${expires}&signature=${signature}&inline=1`, expires });
 }
 
 async function updateProjectCommentStatus(request: Request, input: JsonInput): Promise<Response> {
@@ -640,10 +676,10 @@ async function requireProjectManager(request: Request, projectId: string) {
 }
 
 async function accountStorageUsage(db: D1Database, userId: string): Promise<number> {
-  const usage = await db.prepare(`SELECT COALESCE(SUM(f.size_bytes), 0) AS total_bytes
-    FROM user_upload_projects u
-    JOIN upload_files f ON f.project_id = u.project_id
-    WHERE u.user_id = ? AND f.status IN ('uploading', 'ready')`).bind(userId).first<{ total_bytes: number }>();
+  const usage = await db.prepare(`SELECT
+    COALESCE((SELECT SUM(f.size_bytes) FROM user_upload_projects u JOIN upload_files f ON f.project_id = u.project_id WHERE u.user_id = ? AND f.status IN ('uploading', 'ready')), 0)
+    + COALESCE((SELECT SUM(v.size_bytes) FROM user_upload_projects u JOIN project_comment_voice_notes v ON v.project_id = u.project_id WHERE u.user_id = ?), 0) AS total_bytes`)
+    .bind(userId, userId).first<{ total_bytes: number }>();
   return Number(usage?.total_bytes || 0);
 }
 
@@ -876,6 +912,12 @@ async function downloadAdminFile(request: Request, params: URLSearchParams): Pro
   const { db, bucket } = getUploadBindings();
   const file = await db.prepare("SELECT * FROM upload_files WHERE id = ? AND status = 'ready' LIMIT 1")
     .bind(fileId).first<UploadFile>();
+  if (!file && fileId.startsWith("vcn_")) {
+    const voice = await db.prepare("SELECT * FROM project_comment_voice_notes WHERE id = ? LIMIT 1").bind(fileId).first<{ object_key:string; content_type:string; size_bytes:number }>();
+    if (!voice) throw new ClientError("Voice note not found.", 404);
+    const object = await bucket.get(voice.object_key); if (!object) throw new ClientError("Stored voice note not found.", 404);
+    return new Response(object.body, { headers:{ "Content-Type":voice.content_type, "Content-Length":String(voice.size_bytes), "Content-Disposition":"inline", "Cache-Control":"private, no-store", "X-Content-Type-Options":"nosniff" } });
+  }
   if (!file) throw new ClientError("File not found.", 404);
   const range = parseMediaRange(request.headers.get("Range"), Number(file.size_bytes));
   if (range === false) return new Response(null, { status:416, headers:{ "Content-Range":`bytes */${file.size_bytes}`, "Accept-Ranges":"bytes", "Cache-Control":"private, no-store" } });
@@ -887,7 +929,8 @@ async function downloadAdminFile(request: Request, params: URLSearchParams): Pro
   headers.set("Content-Length", String(range ? range.length : object.size));
   headers.set("Accept-Ranges", "bytes");
   if (range) headers.set("Content-Range", `bytes ${range.offset}-${range.offset + range.length - 1}/${file.size_bytes}`);
-  headers.set("Content-Disposition", contentDisposition(file.original_name));
+  const safeInline = params.get("inline") === "1" && /^(application\/pdf|text\/|image\/|audio\/|video\/)/.test(file.content_type || "");
+  headers.set("Content-Disposition", safeInline ? contentDisposition(file.original_name).replace(/^attachment/i, "inline") : contentDisposition(file.original_name));
   headers.set("Cache-Control", "private, no-store");
   headers.set("X-Content-Type-Options", "nosniff");
   return new Response(object.body, { status:range ? 206 : 200, headers });

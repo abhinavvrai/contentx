@@ -10,13 +10,15 @@ Live site:
 
 Current live release label:
 
-- `frame-native-12`
+- `frame-native-13`
 
 Important: do not write private passwords, OTPs, API keys, Razorpay secrets, Google client secrets, access codes or owner credentials in this file. Keep secrets in the proper environment variable system only.
 
 Profile details are stored in D1 and profile-photo bytes are stored in the private `UPLOADS` R2 binding. Mobile numbers are optional contact data; phone-number OTP login must not be shown as available until a verified SMS provider, abuse limits and delivery monitoring are configured. Google, email-code and password access remain the supported sign-in methods.
 
 Reliability note for future changes: normal sign-in and workspace navigation must never wait on the external Supabase health endpoint. Provider availability on `/api/auth` is configuration-based; actual OTP requests perform their own provider validation. Runtime D1 schema guards use a fast read-only sentinel and fall back to the complete idempotent bootstrap only when a table or required column is missing. Route renders use a generation guard so an older response cannot overwrite a newer click. Password-reset requests return the same generic response whether or not an account exists, use an 8-second provider timeout, and show a 60-second resend control. Resend acceptance does not guarantee instant inbox delivery; mailbox providers can add several minutes of delay. Uploaded-video card previews must stay lazy and private: request an authenticated five-minute media link only after hover or keyboard focus, never place private object URLs or access tokens in static markup or browser storage, mute inline playback, and preserve reduced-motion behavior.
+
+Review reliability: keep global Home/Projects/Review/Search navigation wired on every nested screen. Voice notes require microphone permission, are limited to 60 seconds and 1.25 MB, and must be stored privately with short-lived authorized playback links. PDFs use page-number feedback; safe text/script formats support selected-text quoting. Never downgrade private file delivery to a public object URL.
 
 ## Production Deployment — Read Before Publishing
 

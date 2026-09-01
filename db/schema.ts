@@ -67,6 +67,20 @@ export const uploadFiles = sqliteTable(
   ],
 );
 
+export const projectCommentVoiceNotes = sqliteTable(
+  "project_comment_voice_notes",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id").notNull().references(() => uploadProjects.id),
+    objectKey: text("object_key").notNull().unique(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    durationSeconds: integer("duration_seconds").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  table => [index("idx_project_comment_voice_notes_project").on(table.projectId, table.createdAt)],
+);
+
 export const projectFolders = sqliteTable(
   "project_folders",
   {
@@ -274,6 +288,7 @@ export const projectReviewComments = sqliteTable(
     projectId: text("project_id").notNull().references(() => uploadProjects.id),
     fileId: text("file_id"),
     assetId: text("asset_id"),
+    voiceNoteId: text("voice_note_id"),
     authorName: text("author_name").notNull(),
     authorEmail: text("author_email"),
     body: text("body").notNull(),

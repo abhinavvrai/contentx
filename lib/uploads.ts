@@ -92,7 +92,8 @@ export async function ensureUploadSchema(): Promise<void> {
           db.prepare("SELECT asset_id, version_number, parent_file_id, folder_id FROM upload_files LIMIT 0"),
           db.prepare("SELECT parent_id, position FROM project_folders LIMIT 0"),
           db.prepare("SELECT token_hash, allow_uploads, expires_at FROM project_share_links LIMIT 0"),
-          db.prepare("SELECT asset_id, status, deleted_at FROM project_review_comments LIMIT 0"),
+          db.prepare("SELECT asset_id, voice_note_id, status, deleted_at FROM project_review_comments LIMIT 0"),
+          db.prepare("SELECT object_key, duration_seconds FROM project_comment_voice_notes LIMIT 0"),
         ]);
         return;
       } catch {
@@ -148,6 +149,7 @@ export async function ensureUploadSchema(): Promise<void> {
         project_id TEXT NOT NULL,
         file_id TEXT,
         asset_id TEXT,
+        voice_note_id TEXT,
         author_name TEXT NOT NULL,
         author_email TEXT,
         body TEXT NOT NULL,
@@ -159,6 +161,17 @@ export async function ensureUploadSchema(): Promise<void> {
         FOREIGN KEY (project_id) REFERENCES upload_projects(id)
       )`),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_project_review_comments_project_created ON project_review_comments(project_id, created_at)"),
+      db.prepare(`CREATE TABLE IF NOT EXISTS project_comment_voice_notes (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL,
+        object_key TEXT NOT NULL UNIQUE,
+        content_type TEXT NOT NULL,
+        size_bytes INTEGER NOT NULL,
+        duration_seconds INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES upload_projects(id)
+      )`),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_project_comment_voice_notes_project ON project_comment_voice_notes(project_id, created_at)"),
       db.prepare(`CREATE TABLE IF NOT EXISTS project_folders (
         id TEXT PRIMARY KEY NOT NULL,
         project_id TEXT NOT NULL,
@@ -177,6 +190,8 @@ export async function ensureUploadSchema(): Promise<void> {
       if (!names.has("version_number")) await db.prepare("ALTER TABLE upload_files ADD COLUMN version_number INTEGER NOT NULL DEFAULT 1").run();
       if (!names.has("parent_file_id")) await db.prepare("ALTER TABLE upload_files ADD COLUMN parent_file_id TEXT").run();
       if (!names.has("folder_id")) await db.prepare("ALTER TABLE upload_files ADD COLUMN folder_id TEXT").run();
+      const commentColumns = await db.prepare("PRAGMA table_info(project_review_comments)").all<{ name: string }>();
+      if (!commentColumns.results.some(column => column.name === "voice_note_id")) await db.prepare("ALTER TABLE project_review_comments ADD COLUMN voice_note_id TEXT").run();
       await db.batch([
         db.prepare("UPDATE upload_files SET asset_id = id WHERE asset_id IS NULL"),
         db.prepare("CREATE INDEX IF NOT EXISTS idx_upload_files_asset_version ON upload_files(asset_id, version_number)"),

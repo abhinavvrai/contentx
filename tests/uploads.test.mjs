@@ -163,6 +163,32 @@ test("loads private video-card previews only on hover or keyboard focus", async 
   assert.match(styles, /@media\(hover:none\)/);
 });
 
+test("supports secure voice notes and multi-format review", async () => {
+  const [route, storage, schema, review, ui, styles] = await Promise.all([
+    readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/uploads.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/review-room.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/ui.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/frame-workspace.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(storage, /project_comment_voice_notes/);
+  assert.match(schema, /projectCommentVoiceNotes/);
+  assert.match(route, /create-comment-voice/);
+  assert.match(route, /comment-voice-link/);
+  assert.match(route, /bytes\.byteLength/);
+  assert.match(route, /DELETE FROM project_comment_voice_notes/);
+  assert.match(review, /MediaRecorder/);
+  assert.match(review, /sx-document-frame/);
+  assert.match(review, /Quote selected text/);
+  assert.match(review, /Page \$\{page\}/);
+  assert.match(ui, /togglePlayback/);
+  assert.match(ui, /bindProductNavigation/);
+  assert.match(ui, /rootMargin:"320px 0px"/);
+  assert.match(styles, /playback-flash/);
+  assert.match(styles, /sx-script-preview::selection/);
+});
+
 test("lets account owners permanently delete a project with explicit confirmation", async () => {
   const [route, workspace, styles] = await Promise.all([
     readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),

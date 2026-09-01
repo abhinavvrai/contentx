@@ -785,13 +785,41 @@ export function enhanceReview(root, actions) {
   const annotations = initFrameAnnotations(wrap, video, root);
   const commentForm = root.querySelector(".comment-form");
   if (commentForm) {
-    commentForm.insertAdjacentHTML("afterbegin", `<div class="comment-mode-row"><button type="button" data-range-comment><span>↔</span> Mark range</button><button type="button" data-toggle-annotations><span>✎</span> Annotate</button></div>`);
+    commentForm.insertAdjacentHTML("afterbegin", `<div class="comment-mode-row"><button type="button" data-range-comment><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10M7 17h10M4 12h16"/></svg> Mark range</button><button type="button" data-toggle-annotations><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10zM14 7l3 3"/></svg> Annotate</button><button type="button" data-voice-note><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg> Voice note</button></div><div class="voice-note-preview" data-voice-preview hidden></div>`);
     commentForm.insertAdjacentHTML("beforeend", '<input type="file" class="comment-attachment" accept="image/*,video/*,audio/*,.pdf" multiple hidden><div class="attachment-chips"></div>');
     const picker = commentForm.querySelector(".comment-attachment");
     const addLink = commentForm.querySelector('.comment-action-row button[type="button"]') || commentForm.querySelector('button[type="button"]');
     if (addLink) { addLink.textContent = "＋ Attach files"; addLink.addEventListener("click", () => picker.click()); }
     picker.addEventListener("change", () => { commentForm.querySelector(".attachment-chips").innerHTML = [...picker.files].slice(0,6).map(file => `<span>${file.type.startsWith("video") ? "▶" : file.type.startsWith("image") ? "▧" : "◇"} ${escapeHTML(file.name)}</span>`).join(""); recordNotification("upload", "Comment attachments added", `${Math.min(picker.files.length,6)} attachment${picker.files.length === 1 ? "" : "s"} were added to review feedback.`); });
     commentForm.querySelector("[data-toggle-annotations]").addEventListener("click", () => annotations.open());
+    const voiceButton = commentForm.querySelector("[data-voice-note]"), voicePreview = commentForm.querySelector("[data-voice-preview]");
+    let recorder = null, voiceStream = null, voiceChunks = [], voiceTimer = null, voiceStarted = 0;
+    const clearVoice = () => { clearTimeout(voiceTimer); voiceTimer = null; voiceStream?.getTracks().forEach(track => track.stop()); voiceStream = null; recorder = null; voiceChunks = []; voiceButton.classList.remove("is-recording"); voiceButton.lastChild.textContent = " Voice note"; };
+    const blobToDataUrl = blob => new Promise((resolve,reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(blob); });
+    const stopVoice = () => { if (recorder?.state === "recording") recorder.stop(); };
+    voiceButton.addEventListener("click", async () => {
+      if (recorder?.state === "recording") return stopVoice();
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") return notify("Voice notes are not supported by this browser.");
+      try {
+        voiceStream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true } });
+        const type = ["audio/webm;codecs=opus","audio/mp4","audio/ogg"].find(value => MediaRecorder.isTypeSupported?.(value)) || "";
+        recorder = new MediaRecorder(voiceStream, type ? { mimeType:type } : undefined); voiceChunks = []; voiceStarted = Date.now();
+        recorder.addEventListener("dataavailable", event => { if (event.data.size) voiceChunks.push(event.data); });
+        recorder.addEventListener("stop", async () => {
+          const duration = Math.max(1, Math.round((Date.now() - voiceStarted) / 1000));
+          const blob = new Blob(voiceChunks, { type:(recorder?.mimeType || voiceChunks[0]?.type || "audio/webm").split(";")[0] });
+          clearVoice();
+          if (blob.size > 1_250_000) return notify("Voice note is too large. Please keep it under 60 seconds.");
+          const src = await blobToDataUrl(blob); commentForm.cxVoiceNote = { src, duration };
+          voicePreview.hidden = false; voicePreview.innerHTML = `<audio controls preload="metadata" src="${src}"></audio><span>${duration}s voice note ready</span><button type="button" data-remove-voice>Remove</button>`;
+          voicePreview.querySelector("[data-remove-voice]").addEventListener("click", () => { commentForm.cxVoiceNote = null; voicePreview.hidden = true; voicePreview.replaceChildren(); });
+        }, { once:true });
+        recorder.start(250); voiceButton.classList.add("is-recording"); voiceButton.lastChild.textContent = " Stop recording"; voicePreview.hidden = false; voicePreview.innerHTML = '<span class="voice-recording-status"><i></i> Recording… tap again to stop</span>';
+        voiceTimer = setTimeout(stopVoice, 60_000);
+      } catch (error) { clearVoice(); notify(error?.name === "NotAllowedError" ? "Microphone permission was not allowed." : "The microphone could not be started."); }
+    });
+    root.addEventListener("cx:comment-sent", () => { clearVoice(); commentForm.cxVoiceNote = null; voicePreview.hidden = true; voicePreview.replaceChildren(); });
+    window.addEventListener("hashchange", () => { if (recorder?.state === "recording") recorder.stop(); clearVoice(); }, { once:true });
     let rangeStart = null;
     commentForm.querySelector("[data-range-comment]").addEventListener("click", event => { if (rangeStart === null) { rangeStart = video.currentTime; event.currentTarget.classList.add("active"); event.currentTarget.innerHTML = `<span>↔</span> Range starts ${formatReviewTime(rangeStart)} · choose end`; video.pause(); } else { const end = video.currentTime; event.currentTarget.classList.remove("active"); event.currentTarget.innerHTML = `<span>↔</span> ${formatReviewTime(rangeStart)}–${formatReviewTime(end)}`; commentForm.dataset.range = `${rangeStart},${end}`; } });
   }
