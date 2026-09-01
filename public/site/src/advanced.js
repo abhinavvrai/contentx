@@ -127,6 +127,25 @@ export function enhanceReviewSuite(root, actions) {
   if (passiveControls[0]) { passiveControls[0].dataset.reviewSettings = ""; passiveControls[0].title = "Playback settings"; }
   if (passiveControls[1]) { passiveControls[1].dataset.reviewFullscreen = ""; passiveControls[1].title = "Fullscreen"; }
 
+  const loopKey = `cx_review_loop_${activeProject.id}`;
+  let loopState = { in:null, out:null, enabled:false, ...local.get(loopKey, {}) };
+  controls.insertAdjacentHTML("afterend", `<div class="review-loop-strip"><span>LOOP RANGE</span><button type="button" data-loop-in><kbd>I</kbd> Set in</button><button type="button" data-loop-out><kbd>O</kbd> Set out</button><button type="button" data-loop-toggle aria-pressed="false"><kbd>L</kbd> Loop off</button><button type="button" data-loop-clear>Clear</button><output data-loop-readout>Not set</output></div>`);
+  const loopStrip = root.querySelector(".review-loop-strip"), loopReadout = loopStrip.querySelector("[data-loop-readout]");
+  const paintLoop = () => { const ready = Number.isFinite(loopState.in) && Number.isFinite(loopState.out) && loopState.out > loopState.in; loopState.enabled = ready && loopState.enabled; loopStrip.classList.toggle("is-active", loopState.enabled); loopStrip.querySelector("[data-loop-toggle]").setAttribute("aria-pressed", String(loopState.enabled)); loopStrip.querySelector("[data-loop-toggle]").lastChild.textContent = loopState.enabled ? " Loop on" : " Loop off"; loopReadout.textContent = ready ? `${fmt(loopState.in)} → ${fmt(loopState.out)}` : "Not set"; local.set(loopKey, loopState); };
+  const setLoopPoint = side => { loopState[side] = Number(video.currentTime || 0); if (side === "in" && Number.isFinite(loopState.out) && loopState.out <= loopState.in) loopState.out = null; if (side === "out" && Number.isFinite(loopState.in) && loopState.out <= loopState.in) { loopState.out = null; paintLoop(); return toast("Move the playhead after the In point before setting Out."); } paintLoop(); toast(`${side === "in" ? "In" : "Out"} point set at ${fmt(video.currentTime)}.`); };
+  loopStrip.querySelector("[data-loop-in]").addEventListener("click", () => setLoopPoint("in"));
+  loopStrip.querySelector("[data-loop-out]").addEventListener("click", () => setLoopPoint("out"));
+  loopStrip.querySelector("[data-loop-toggle]").addEventListener("click", () => { const ready = Number.isFinite(loopState.in) && Number.isFinite(loopState.out) && loopState.out > loopState.in; if (!ready) return toast("Set an In and Out point before enabling the loop."); loopState.enabled = !loopState.enabled; if (loopState.enabled && (video.currentTime < loopState.in || video.currentTime >= loopState.out)) video.currentTime = loopState.in; paintLoop(); });
+  loopStrip.querySelector("[data-loop-clear]").addEventListener("click", () => { loopState = { in:null, out:null, enabled:false }; paintLoop(); });
+  video.addEventListener("timeupdate", () => { if (loopState.enabled && Number.isFinite(loopState.in) && Number.isFinite(loopState.out) && video.currentTime >= loopState.out) { video.currentTime = loopState.in; if (video.paused) video.play().catch(() => {}); } });
+  paintLoop();
+
+  const pinLayer = document.createElement("div"); pinLayer.className = "review-timeline-pins"; pinLayer.setAttribute("aria-label", "Feedback positions"); root.querySelector(".player-wrap").append(pinLayer);
+  const paintPins = () => { const duration = Number(video.duration || 0); if (!duration) return; pinLayer.innerHTML = [...comments.querySelectorAll(".comment .timecode[data-time]")].map((button,index) => { const time = Math.max(0,Math.min(duration,Number(button.dataset.time || 0))); return `<button type="button" style="--pin:${time / duration * 100}%" data-pin-time="${time}" aria-label="Feedback ${index + 1} at ${fmt(time)}"><span>${index + 1}</span></button>`; }).join(""); };
+  pinLayer.addEventListener("click", event => { const pin = event.target.closest("[data-pin-time]"); if (!pin) return; video.pause(); video.currentTime = Number(pin.dataset.pinTime); commentForm.querySelector("textarea")?.focus(); });
+  video.addEventListener("loadedmetadata", paintPins); if (video.readyState >= 1) paintPins();
+  new MutationObserver(paintPins).observe(comments, { childList:true, subtree:true });
+
   const transcript = document.createElement("section");
   transcript.className = "review-transcript";
   transcript.hidden = true;
@@ -212,6 +231,9 @@ export function enhanceReviewSuite(root, actions) {
     else if (event.key === "ArrowRight") video.currentTime = Math.min(video.duration || 999, video.currentTime + 5);
     else if (event.key === "[") { video.pause(); video.currentTime = Math.max(0, video.currentTime - 1 / 30); }
     else if (event.key === "]") { video.pause(); video.currentTime = Math.min(video.duration || 999, video.currentTime + 1 / 30); }
+    else if (event.key.toLowerCase() === "i") setLoopPoint("in");
+    else if (event.key.toLowerCase() === "o") setLoopPoint("out");
+    else if (event.key.toLowerCase() === "l") loopStrip.querySelector("[data-loop-toggle]").click();
     else if (event.key.toLowerCase() === "c") commentForm.querySelector("textarea")?.focus();
     else if (event.key.toLowerCase() === "m") root.querySelector("[data-toggle-annotations]")?.click();
     else if (event.key === "?") openShortcutGuide();
@@ -233,11 +255,13 @@ function openClientManagedReview(client, project, actions) {
 }
 
 function openComparison(versions) {
-  const { layer } = openLayer(`<p class="eyebrow"><span></span>Version comparison</p><h2>Compare cuts side by side.</h2><p class="advanced-subcopy">Playback stays synchronised so timing, graphics and colour changes are easier to spot.</p><div class="comparison-selects"><label>Left version<select data-side="left">${Object.keys(versions).map(v => `<option ${v === "V2" ? "selected" : ""}>${v}</option>`).join("")}</select></label><label>Right version<select data-side="right">${Object.keys(versions).map(v => `<option ${v === "V3" ? "selected" : ""}>${v}</option>`).join("")}</select></label></div><div class="comparison-grid"><article><span data-left-label>V2</span><video src="${versions.V2.src}" muted playsinline></video></article><article><span data-right-label>V3</span><video src="${versions.V3.src}" muted playsinline></video></article></div><div class="comparison-controls"><button data-sync-back>−5s</button><button class="pill pill-hot" data-sync-play>▶ Play both</button><button data-sync-forward>+5s</button><span data-sync-time>00:00</span></div>`, "advanced-modal comparison-modal");
+  const { layer } = openLayer(`<p class="eyebrow"><span></span>Version comparison</p><h2>Compare every change precisely.</h2><p class="advanced-subcopy">Use side-by-side for timing or drag the wipe to inspect colour, graphics and framing.</p><div class="comparison-mode" role="group" aria-label="Comparison mode"><button class="active" data-compare-mode="side">Side by side</button><button data-compare-mode="wipe">Wipe</button></div><div class="comparison-selects"><label>Left version<select data-side="left">${Object.keys(versions).map(v => `<option ${v === "V2" ? "selected" : ""}>${v}</option>`).join("")}</select></label><label>Right version<select data-side="right">${Object.keys(versions).map(v => `<option ${v === "V3" ? "selected" : ""}>${v}</option>`).join("")}</select></label></div><div class="comparison-grid" style="--wipe:50%"><article><span data-left-label>V2</span><video src="${versions.V2.src}" muted playsinline></video></article><article><span data-right-label>V3</span><video src="${versions.V3.src}" muted playsinline></video></article><i class="comparison-wipe-line" aria-hidden="true"></i></div><label class="comparison-wipe" hidden><span>Reveal newer version</span><input type="range" min="0" max="100" value="50" aria-label="Version wipe position"><output>50%</output></label><div class="comparison-controls"><button data-sync-back>−5s</button><button class="pill pill-hot" data-sync-play>Play both</button><button data-sync-forward>+5s</button><span data-sync-time>00:00</span></div>`, "advanced-modal comparison-modal");
   const videos = [...layer.querySelectorAll("video")];
   const sync = time => videos.forEach(video => video.currentTime = Math.max(0, Math.min(video.duration || 999, time)));
+  layer.querySelectorAll("[data-compare-mode]").forEach(button => button.addEventListener("click", () => { const wipe = button.dataset.compareMode === "wipe"; layer.querySelectorAll("[data-compare-mode]").forEach(item => item.classList.toggle("active", item === button)); layer.querySelector(".comparison-grid").classList.toggle("wipe-mode", wipe); layer.querySelector(".comparison-wipe").hidden = !wipe; }));
+  layer.querySelector(".comparison-wipe input").addEventListener("input", event => { layer.querySelector(".comparison-grid").style.setProperty("--wipe", `${event.target.value}%`); layer.querySelector(".comparison-wipe output").textContent = `${event.target.value}%`; });
   layer.querySelectorAll("[data-side]").forEach(select => select.addEventListener("change", () => { const side = select.dataset.side, index = side === "left" ? 0 : 1; videos[index].src = versions[select.value].src; layer.querySelector(`[data-${side}-label]`).textContent = select.value; }));
-  layer.querySelector("[data-sync-play]").addEventListener("click", event => { if (videos[0].paused) { const time = Math.max(videos[0].currentTime, videos[1].currentTime); sync(time); videos.forEach(video => video.play()); event.currentTarget.textContent = "Ⅱ Pause both"; } else { videos.forEach(video => video.pause()); event.currentTarget.textContent = "▶ Play both"; } });
+  layer.querySelector("[data-sync-play]").addEventListener("click", event => { if (videos[0].paused) { const time = Math.max(videos[0].currentTime, videos[1].currentTime); sync(time); videos.forEach(video => video.play().catch(() => {})); event.currentTarget.textContent = "Pause both"; } else { videos.forEach(video => video.pause()); event.currentTarget.textContent = "Play both"; } });
   layer.querySelector("[data-sync-back]").addEventListener("click", () => sync(videos[0].currentTime - 5));
   layer.querySelector("[data-sync-forward]").addEventListener("click", () => sync(videos[0].currentTime + 5));
   videos[0].addEventListener("timeupdate", () => { if (!videos[0].paused && Math.abs(videos[1].currentTime - videos[0].currentTime) > .2) videos[1].currentTime = videos[0].currentTime; layer.querySelector("[data-sync-time]").textContent = fmt(videos[0].currentTime); });
@@ -260,7 +284,7 @@ function openReviewChecklist(root) {
 }
 
 function openShortcutGuide() {
-  openLayer(`<p class="eyebrow"><span></span>Fast review</p><h2>Keyboard shortcuts</h2><div class="shortcut-grid">${[["Space","Play / pause"],["← / →","Jump 5 seconds"],["[ / ]","Previous / next frame"],["C","Write a comment"],["M","Open annotation tools"],["?","Show this guide"]].map(([key, copy]) => `<span><kbd>${key}</kbd><strong>${copy}</strong></span>`).join("")}</div>`);
+  openLayer(`<p class="eyebrow"><span></span>Fast review</p><h2>Keyboard shortcuts</h2><div class="shortcut-grid">${[["Space","Play / pause"],["← / →","Jump 5 seconds"],["[ / ]","Previous / next frame"],["I / O","Set loop In / Out"],["L","Toggle review loop"],["C","Write a comment"],["M","Open annotation tools"],["?","Show this guide"]].map(([key, copy]) => `<span><kbd>${key}</kbd><strong>${copy}</strong></span>`).join("")}</div>`);
 }
 
 function openReviewShare() {

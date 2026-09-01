@@ -3,7 +3,7 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { filterFiles, filterComments, commentsForVersion, hasTimestamp, timecode, reviewSummary, workspacePulse, enhanceStudioDashboard } from "../public/site/src/studio-workspace.js";
-import { reviewCommentMarkup, exportReviewText } from "../public/site/src/review-room.js";
+import { reviewCommentMarkup, exportReviewCsv, exportReviewEdl, exportReviewText } from "../public/site/src/review-room.js";
 import { parseMediaRange } from "../lib/media-range.ts";
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const files = [
@@ -53,6 +53,11 @@ test("review notes escape content and expose completion only to project managers
   assert.match(reviewCommentMarkup(comments[2],true),/Reopen/);
   assert.match(exportReviewText("Cut",2,comments),/\[OPEN\] 00:00/);
   assert.match(exportReviewText("Cut",2,comments),/\[DONE\] 00:08/);
+  assert.match(exportReviewCsv("Cut",2,comments),/"Project file","Version","Timecode"/);
+  assert.match(exportReviewCsv("Cut",2,[{...comments[1],body:"=HYPERLINK(\"bad\")"}]),/"'=HYPERLINK\(""bad""\)"/);
+  assert.match(exportReviewEdl("Cut",2,comments),/TITLE: Content X - Cut - V2/);
+  assert.match(exportReviewEdl("Cut",2,comments),/001  AX       V     C/);
+  assert.match(exportReviewEdl("Cut",2,comments),/\* COMMENT: \[OPEN\] Client: Fix title/);
 });
 test("dashboard is optional on unrelated routes and metrics use project records", () => {
   assert.doesNotThrow(()=>enhanceStudioDashboard({querySelector:()=>null}));
@@ -76,6 +81,9 @@ test("new review uses authorized APIs, scopes comments and keeps tokens out of b
   assert.match(review,/ticket !== request/);
   assert.match(review,/dialog.showModal\(\)/);
   assert.match(review,/addEventListener\("close", close\)/);
+  assert.match(review,/data-export-format/);
+  assert.match(review,/exportReviewCsv/);
+  assert.match(review,/exportReviewEdl/);
   assert.doesNotMatch(review,/localStorage|sessionStorage|frame\.io/);
   assert.match(route,/WHERE id = \? AND project_id = \? AND status = 'ready'/);
   assert.match(route,/requireProjectManager\(request, projectId\)/);
@@ -90,5 +98,5 @@ test("dashboard styles parse and include mobile, contrast and reduced-motion con
   const css = await read("public/site/src/studio-workspace.css");
   assert.doesNotThrow(()=>require("postcss").parse(css));
   for(const pattern of [/prefers-reduced-motion/,/max-width:560px/,/:focus-visible/,/\.sx-media-grid\.is-comparing/,/\.sx-list/,/\.sx-review-room::backdrop/]) assert.match(css,pattern);
-  assert.match(await read("public/site/index.html"),/studio-workspace\.css\?v=review-studio-1/);
+  assert.match(await read("public/site/index.html"),/studio-workspace\.css\?v=frame-native-14/);
 });

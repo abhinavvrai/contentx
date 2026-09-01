@@ -166,7 +166,7 @@ html[data-theme="dark"] .sx-review-room { position:fixed; inset:16px; width:calc
 .sx-room-toolbar label { display:grid; gap:6px; max-width:100%; flex:1; min-width:140px; color:#c4bac9; font-size:11px; }
 .sx-review-room :is(select,input:not([type=checkbox]),textarea) { min-width:0; width:100%; min-height:40px; padding:10px; border:1px solid #4b404e; border-radius:8px; background:#201d26; color:#f5edf7; font:inherit; font-size:12px; }
 .sx-review-room :is(button,select,input,textarea):focus-visible { outline:2px solid #ffc397; outline-offset:3px; }
-.sx-room-toolbar>button,.sx-room-feedback>header>button,.sx-capture-row>button,.sx-resolve { min-height:40px; padding:9px 12px; border:1px solid #57454a; border-radius:8px; background:#2d2426; color:#ffd1ae; font-size:12px; cursor:pointer; }
+.sx-room-toolbar>button,.sx-export-notes>button,.sx-capture-row>button,.sx-resolve { min-height:40px; padding:9px 12px; border:1px solid #57454a; border-radius:8px; background:#2d2426; color:#ffd1ae; font-size:12px; cursor:pointer; }
 .sx-review-room button:disabled { opacity:.5; cursor:not-allowed; }
 .sx-review-room button[aria-pressed=true] { border-color:#ffc397; background:#49352a; color:#ffe4d0; }
 .sx-media-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
@@ -192,7 +192,9 @@ html[data-theme="dark"] .sx-review-room { position:fixed; inset:16px; width:calc
 .sx-room-feedback>header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .sx-room-feedback h3 { font-size:18px; }
 .sx-room-feedback h3 span { margin-left:4px; color:#c3b2c9; font-size:12px; }
-.sx-room-feedback>header>button { min-height:34px; padding:6px 9px; font-size:10px; }
+.sx-export-notes { display:flex; align-items:center; gap:5px; padding:3px; border:1px solid #403943; border-radius:9px; background:#111217; }
+.sx-review-room .sx-export-notes select { width:62px; min-height:32px; padding:6px 7px; border:0; background:transparent; color:#c8bdcc; font-size:10px; }
+.sx-export-notes>button { min-height:32px; padding:6px 9px; font-size:10px; }
 .sx-note-filters { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:18px 0; }
 .sx-note-filters input { grid-column:1/-1; }
 .sx-room-notes { display:grid; gap:12px; max-height:42vh; overflow-y:auto; padding:2px 5px 4px 2px; }

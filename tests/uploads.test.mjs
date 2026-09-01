@@ -189,6 +189,23 @@ test("supports secure voice notes and multi-format review", async () => {
   assert.match(styles, /sx-script-preview::selection/);
 });
 
+test("adds focused pro review controls without duplicating workspace navigation", async () => {
+  const [advanced, advancedStyles, room] = await Promise.all([
+    readFile(new URL("../public/site/src/advanced.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/advanced.css", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/review-room.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(advanced, /review-loop-strip/);
+  assert.match(advanced, /data-loop-in/);
+  assert.match(advanced, /data-loop-out/);
+  assert.match(advanced, /review-timeline-pins/);
+  assert.match(advanced, /data-compare-mode="wipe"/);
+  assert.match(advancedStyles, /\.comparison-grid\.wipe-mode/);
+  assert.match(advancedStyles, /\.review-timeline-pins/);
+  assert.match(room, /data-export-format/);
+  assert.match(room, /review-v\$\{selected\.version_number\}\.\$\{extensions\[format\]\}/);
+});
+
 test("lets account owners permanently delete a project with explicit confirmation", async () => {
   const [route, workspace, styles] = await Promise.all([
     readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
