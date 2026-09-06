@@ -10,6 +10,7 @@ import {
   cleanText,
   contentDisposition,
   createDownloadSignature,
+  deriveSharePasswordHash,
   ensureUploadSchema,
   formatBytes,
   getUploadBindings,
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
     if (action === "shares") return getProjectShares(request, url.searchParams.get("projectId") || "");
     if (action === "account-projects") return getAccountProjects(request);
     if (action === "comments") return getProjectComments(request, url.searchParams);
+    if (action === "activity") return getProjectActivity(request, url.searchParams.get("projectId") || "");
     if (action === "deleted-files") return getDeletedProjectFiles(request, url.searchParams.get("projectId") || "");
     if (action === "download") return downloadAdminFile(request, url.searchParams);
     throw new ClientError("Unknown file action.", 404);
@@ -238,7 +240,18 @@ async function getClientProject(request: Request, projectId: string): Promise<Re
       };
     }
   }
-  return json({ project: publicProject(project), files: files.results, folders: folders.results, revisionPolicy, permissions: { canUpload: access.canUpload, accessType: access.accessType } });
+  const scopedAssets = new Set(access.assetScope);
+  const visibleFiles = scopedAssets.size ? files.results.filter(file => scopedAssets.has(String((file as Record<string,unknown>).asset_id || ""))) : files.results;
+  if (access.shareId) await incrementShareMetric(db, access.shareId, "view_count");
+  return json({ project: publicProject(project), files: visibleFiles, folders: scopedAssets.size ? [] : folders.results, revisionPolicy, permissions: {
+    canUpload: access.canUpload,
+    canDownload: access.canDownload,
+    canComment: access.canComment,
+    canApprove: access.canApprove,
+    canViewPrevious: access.canViewPrevious,
+    scopedAssets: access.assetScope.length,
+    accessType: access.accessType,
+  } });
 }
 
 async function createProjectFolder(request: Request, input: JsonInput): Promise<Response> {
@@ -479,7 +492,8 @@ async function getAssetVersions(request: Request, params: URLSearchParams): Prom
   const projectId = cleanText(params.get("projectId"), 80);
   const assetId = cleanText(params.get("assetId"), 80);
   if (!projectId || !assetId) throw new ClientError("Choose a project file.");
-  await requireProject(request, projectId);
+  const access = await authorizeProject(request, projectId);
+  if (!shareAssetAllowed(access, assetId)) throw new ClientError("This file is not included in the share link.", 403);
   const { db } = getUploadBindings();
   const versions = await db.prepare(`SELECT id, original_name, content_type, size_bytes, status,
     uploader_name, uploader_email, created_at, completed_at, COALESCE(asset_id, id) AS asset_id,
@@ -491,7 +505,11 @@ async function getAssetVersions(request: Request, params: URLSearchParams): Prom
   const decisions = await db.prepare(`SELECT id, project_id, asset_id, file_id, decision, note, actor_name, actor_email, created_at
     FROM project_version_decisions WHERE project_id = ? AND asset_id = ? ORDER BY created_at DESC LIMIT 100`)
     .bind(projectId, assetId).all();
-  return json({ versions: versions.results, decisions: decisions.results });
+  return json({
+    versions: access.canViewPrevious ? versions.results : versions.results.slice(0,1),
+    decisions: decisions.results,
+    permissions:{ canDownload:access.canDownload, canComment:access.canComment, canApprove:access.canApprove, canViewPrevious:access.canViewPrevious },
+  });
 }
 
 async function createVersionDecision(request: Request, input: JsonInput): Promise<Response> {
@@ -500,6 +518,8 @@ async function createVersionDecision(request: Request, input: JsonInput): Promis
   const decision = cleanText(input.decision, 30), note = cleanText(input.note, 500) || null;
   if (!projectId || !assetId || !fileId || !["approved", "changes_requested"].includes(decision)) throw new ClientError("Choose a valid version decision.");
   const access = await authorizeProject(request, projectId, "view");
+  if (!access.canApprove) throw new ClientError("Approval is disabled for this share link.", 403);
+  if (!shareAssetAllowed(access, assetId)) throw new ClientError("This file is not included in the share link.", 403);
   const sessionUser = access.accessType === "account" ? await getSessionUser(request) : null;
   const actorName = cleanText(input.actorName, 100) || sessionUser?.name || "";
   const actorEmail = input.actorEmail ? cleanEmail(input.actorEmail) : sessionUser?.email || "";
@@ -520,6 +540,7 @@ async function createVersionDecision(request: Request, input: JsonInput): Promis
     (id, project_id, asset_id, file_id, decision, note, actor_name, actor_email, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .bind(id, projectId, assetId, fileId, decision, note, actorName, actorEmail || null, now).run();
+  if (access.shareId) await incrementShareMetric(db, access.shareId, "approval_count");
   if (access.accessType !== "account") {
     const owner = await db.prepare(`SELECT u.user_id, a.email FROM user_upload_projects u
       JOIN account_users a ON a.id = u.user_id WHERE u.project_id = ? LIMIT 1`)
@@ -543,24 +564,48 @@ async function getProjectShares(request: Request, projectId: string): Promise<Re
   if (!projectId) throw new ClientError("Choose a project.");
   await requireProjectManager(request, projectId);
   const { db } = getUploadBindings();
-  const shares = await db.prepare(`SELECT id, name, allow_uploads, status, expires_at,
+  const shares = await db.prepare(`SELECT id, name, allow_uploads, allow_downloads, allow_comments, allow_approval,
+    allow_previous_versions, asset_scope_json, password_hash IS NOT NULL AS password_protected,
+    view_count, download_count, comment_count, approval_count, status, expires_at,
     created_at, updated_at, last_used_at FROM project_share_links
     WHERE project_id = ? ORDER BY updated_at DESC LIMIT 100`).bind(projectId).all();
   return json({ shares: shares.results });
 }
 
+async function getProjectActivity(request: Request, projectId: string): Promise<Response> {
+  if (!projectId) throw new ClientError("Choose a project.");
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  const activity = await db.prepare(`SELECT * FROM (
+    SELECT 'upload' AS event_type, id AS event_id, original_name AS label, uploader_name AS actor_name,
+      COALESCE(completed_at,created_at) AS created_at, COALESCE(asset_id,id) AS asset_id, id AS file_id
+      FROM upload_files WHERE project_id = ? AND status = 'ready'
+    UNION ALL
+    SELECT 'comment', id, substr(body,1,160), author_name, created_at, asset_id, file_id
+      FROM project_review_comments WHERE project_id = ? AND deleted_at IS NULL
+    UNION ALL
+    SELECT decision, id, COALESCE(note,decision), actor_name, created_at, asset_id, file_id
+      FROM project_version_decisions WHERE project_id = ?
+    UNION ALL
+    SELECT 'share', id, name, NULL, created_at, NULL, NULL
+      FROM project_share_links WHERE project_id = ?
+  ) ORDER BY created_at DESC LIMIT 120`).bind(projectId, projectId, projectId, projectId).all();
+  return json({ activity:activity.results });
+}
+
 async function getProjectComments(request: Request, params: URLSearchParams): Promise<Response> {
   const projectId = cleanText(params.get("projectId"), 80);
   if (!projectId) throw new ClientError("Choose a project.");
-  const access = await requireProject(request, projectId, "view");
+  const access = await authorizeProject(request, projectId, "view");
   const { db } = getUploadBindings();
+  const scopeClause = access.assetScope.length ? `AND asset_id IN (${access.assetScope.map(() => "?").join(",")})` : "";
   const comments = await db.prepare(`SELECT id, project_id, file_id, asset_id, voice_note_id, author_name, author_email,
     body, timestamp_seconds, range_end_seconds, priority, assignee, due_at, visibility, parent_comment_id,
     status, created_at, updated_at
     FROM project_review_comments
-    WHERE project_id = ? AND deleted_at IS NULL ${access.accessType === "account" ? "" : "AND visibility = 'project'"}
-    ORDER BY created_at DESC LIMIT 300`).bind(projectId).all();
-  return json({ comments: comments.results });
+    WHERE project_id = ? AND deleted_at IS NULL ${access.accessType === "account" ? "" : "AND visibility = 'project'"} ${scopeClause}
+    ORDER BY created_at DESC LIMIT 300`).bind(projectId, ...access.assetScope).all();
+  return json({ comments: comments.results, permissions:{ canComment:access.canComment, canApprove:access.canApprove } });
 }
 
 async function getDeletedProjectFiles(request: Request, projectId: string): Promise<Response> {
@@ -620,12 +665,14 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
   requireSameOrigin(request);
   const projectId = cleanText(input.projectId, 80);
   if (!projectId) throw new ClientError("Choose a project.");
-  const access = await requireProject(request, projectId, "view");
+  const access = await authorizeProject(request, projectId, "view");
+  if (!access.canComment) throw new ClientError("Comments are disabled for this share link.", 403);
   const body = cleanText(input.body, 2000);
   const authorName = cleanText(input.authorName, 100);
   const authorEmail = input.authorEmail ? cleanEmail(input.authorEmail) : "";
   const fileId = cleanText(input.fileId, 80) || null;
   const assetId = cleanText(input.assetId, 80) || null;
+  if (access.assetScope.length && (!fileId || !assetId)) throw new ClientError("Choose one of the files included in this share link before commenting.", 400);
   const voiceNoteId = cleanText(input.voiceNoteId, 80) || null;
   const timestamp = input.timestampSeconds === "" || input.timestampSeconds == null ? null : Number(input.timestampSeconds);
   const rangeEnd = input.rangeEndSeconds === "" || input.rangeEndSeconds == null ? null : Number(input.rangeEndSeconds);
@@ -658,6 +705,7 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
     const file = await db.prepare("SELECT id, asset_id FROM upload_files WHERE id = ? AND project_id = ? AND status = 'ready' LIMIT 1")
       .bind(fileId, projectId).first<{ id: string; asset_id: string | null }>();
     if (!file || (assetId && assetId !== (file.asset_id || file.id))) throw new ClientError("Choose a file from this project.", 400);
+    if (!shareAssetAllowed(access, String(file.asset_id || file.id))) throw new ClientError("This file is not included in the share link.", 403);
   } else if (assetId || timestamp !== null) {
     throw new ClientError("Choose a file before adding a timestamp or asset comment.", 400);
   }
@@ -667,6 +715,7 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
     (id, project_id, file_id, asset_id, voice_note_id, author_name, author_email, body, timestamp_seconds, range_end_seconds, priority, assignee, due_at, visibility, parent_comment_id, status, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`)
     .bind(id, projectId, fileId, assetId, voiceNoteId, authorName, authorEmail || null, commentBody, timestamp, rangeEnd, priority, assignee, dueAt, visibility, parentCommentId, now, now).run();
+  if (access.shareId) await incrementShareMetric(db, access.shareId, "comment_count");
   const owner = await db.prepare(`SELECT u.user_id, a.email
     FROM user_upload_projects u JOIN account_users a ON a.id = u.user_id
     WHERE u.project_id = ? LIMIT 1`).bind(projectId).first<{ user_id: string; email: string }>();
@@ -686,7 +735,8 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
 
 async function createCommentVoiceNote(request: Request, input: JsonInput): Promise<Response> {
   requireSameOrigin(request);
-  const projectId = cleanText(input.projectId, 80); await requireProject(request, projectId, "view");
+  const projectId = cleanText(input.projectId, 80); const access = await authorizeProject(request, projectId, "view");
+  if (!access.canComment) throw new ClientError("Comments are disabled for this share link.", 403);
   const dataUrl = cleanText(input.dataUrl, 1_800_000), duration = Number(input.durationSeconds);
   const match = /^data:(audio\/(?:webm|ogg|mp4|mpeg));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
   if (!match) throw new ClientError("Use a supported voice-note format.", 400);
@@ -706,8 +756,8 @@ async function createCommentVoiceLink(request: Request, input: JsonInput): Promi
   const projectId = cleanText(input.projectId, 80), voiceNoteId = cleanText(input.voiceNoteId, 80); await requireProject(request, projectId, "view");
   const { db } = getUploadBindings(); const voice = await db.prepare("SELECT id FROM project_comment_voice_notes WHERE id = ? AND project_id = ? LIMIT 1").bind(voiceNoteId, projectId).first();
   if (!voice) throw new ClientError("Voice note not found.", 404);
-  const expires = Date.now() + 5 * 60 * 1000, signature = await createDownloadSignature(voiceNoteId, expires), url = new URL(request.url);
-  return json({ downloadUrl:`${url.origin}${url.pathname}?action=download&fileId=${encodeURIComponent(voiceNoteId)}&expires=${expires}&signature=${signature}&inline=1`, expires });
+  const expires = Date.now() + 5 * 60 * 1000, signature = await createDownloadSignature(voiceNoteId, expires, true), url = new URL(request.url);
+  return json({ downloadUrl:`${url.origin}${url.pathname}?action=download&fileId=${encodeURIComponent(voiceNoteId)}&expires=${expires}&signature=${signature}&inline=1&inlineOnly=1`, expires });
 }
 
 async function updateProjectCommentStatus(request: Request, input: JsonInput): Promise<Response> {
@@ -763,20 +813,30 @@ async function createProjectShareLink(request: Request, input: JsonInput): Promi
   const manager = await requireProjectManager(request, projectId);
   const name = cleanText(input.name, 100) || "Client review link";
   const allowUploads = input.allowUploads === true;
-  const expiryDays = input.expiryDays == null || input.expiryDays === "" ? 0 : Number(input.expiryDays);
-  if (!Number.isInteger(expiryDays) || expiryDays < 0 || expiryDays > 90) throw new ClientError("Choose an expiry between 1 and 90 days.");
+  const allowDownloads = input.allowDownloads !== false;
+  const allowComments = input.allowComments !== false;
+  const allowApproval = input.allowApproval !== false;
+  const allowPreviousVersions = input.allowPreviousVersions !== false;
+  const password = typeof input.password === "string" ? input.password.trim() : "";
+  if (password && (password.length < 6 || password.length > 128)) throw new ClientError("Use a share password between 6 and 128 characters.");
   const id = randomId("shr");
   const token = randomToken();
   const now = Date.now();
-  const expiresAt = expiryDays ? now + expiryDays * 24 * 60 * 60 * 1000 : null;
+  const expiresAt = shareExpiry(input, now);
   const { db } = getUploadBindings();
+  const assetScope = await validatedAssetScope(db, projectId, input.assetIds);
+  const passwordSalt = password ? randomToken() : null;
+  const passwordHash = password && passwordSalt ? await deriveSharePasswordHash(password, passwordSalt) : null;
   await db.prepare(`INSERT INTO project_share_links
-    (id, project_id, token_hash, created_by_user_id, name, allow_uploads, status, expires_at, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`)
-    .bind(id, projectId, await hashToken(token), manager?.id || null, name, allowUploads ? 1 : 0, expiresAt, now, now).run();
+    (id, project_id, token_hash, created_by_user_id, name, allow_uploads, allow_downloads, allow_comments,
+      allow_approval, allow_previous_versions, asset_scope_json, password_hash, password_salt, status, expires_at, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`)
+    .bind(id, projectId, await hashToken(token), manager?.id || null, name, allowUploads ? 1 : 0,
+      allowDownloads ? 1 : 0, allowComments ? 1 : 0, allowApproval ? 1 : 0, allowPreviousVersions ? 1 : 0,
+      JSON.stringify(assetScope), passwordHash, passwordSalt, expiresAt, now, now).run();
   const origin = new URL(request.url).origin;
   return json({
-    share: { id, name, allowUploads, status: "active", expiresAt, createdAt: now },
+    share: { id, name, allowUploads, allowDownloads, allowComments, allowApproval, allowPreviousVersions, scopedAssets:assetScope.length, passwordProtected:Boolean(passwordHash), status: "active", expiresAt, createdAt: now },
     shareUrl: `${origin}/s/${encodeURIComponent(token)}`,
   }, 201);
 }
@@ -789,15 +849,29 @@ async function updateProjectShareLink(request: Request, input: JsonInput): Promi
   if (!projectId || !shareId || !["active", "revoked"].includes(status)) throw new ClientError("Choose a valid share link.");
   await requireProjectManager(request, projectId);
   const allowUploads = input.allowUploads === true;
+  const allowDownloads = input.allowDownloads !== false;
+  const allowComments = input.allowComments !== false;
+  const allowApproval = input.allowApproval !== false;
+  const allowPreviousVersions = input.allowPreviousVersions !== false;
   const name = cleanText(input.name, 100) || "Client review link";
-  const expiryDays = input.expiryDays == null || input.expiryDays === "" ? 0 : Number(input.expiryDays);
-  if (!Number.isInteger(expiryDays) || expiryDays < 0 || expiryDays > 90) throw new ClientError("Choose an expiry between 1 and 90 days.");
-  const expiresAt = expiryDays ? Date.now() + expiryDays * 24 * 60 * 60 * 1000 : null;
+  const now = Date.now(), expiresAt = shareExpiry(input, now);
   const { db } = getUploadBindings();
-  const result = await db.prepare(`UPDATE project_share_links SET name = ?, allow_uploads = ?, status = ?, expires_at = ?, updated_at = ?
-    WHERE id = ? AND project_id = ?`).bind(name, allowUploads ? 1 : 0, status, expiresAt, Date.now(), shareId, projectId).run();
+  const existing = await db.prepare("SELECT password_hash, password_salt, asset_scope_json FROM project_share_links WHERE id = ? AND project_id = ? LIMIT 1")
+    .bind(shareId, projectId).first<{ password_hash:string|null; password_salt:string|null; asset_scope_json:string }>();
+  if (!existing) throw new ClientError("Share link not found.", 404);
+  const password = typeof input.password === "string" ? input.password.trim() : "";
+  if (password && (password.length < 6 || password.length > 128)) throw new ClientError("Use a share password between 6 and 128 characters.");
+  let passwordHash = existing.password_hash, passwordSalt = existing.password_salt;
+  if (input.clearPassword === true) passwordHash = passwordSalt = null;
+  else if (password) { passwordSalt = randomToken(); passwordHash = await deriveSharePasswordHash(password, passwordSalt); }
+  const assetScope = Array.isArray(input.assetIds) ? await validatedAssetScope(db, projectId, input.assetIds) : safeAssetScope(existing.asset_scope_json);
+  const result = await db.prepare(`UPDATE project_share_links SET name = ?, allow_uploads = ?, allow_downloads = ?, allow_comments = ?,
+    allow_approval = ?, allow_previous_versions = ?, asset_scope_json = ?, password_hash = ?, password_salt = ?, status = ?, expires_at = ?, updated_at = ?
+    WHERE id = ? AND project_id = ?`).bind(name, allowUploads ? 1 : 0, allowDownloads ? 1 : 0, allowComments ? 1 : 0,
+      allowApproval ? 1 : 0, allowPreviousVersions ? 1 : 0, JSON.stringify(assetScope), passwordHash, passwordSalt,
+      status, expiresAt, now, shareId, projectId).run();
   if (!result.meta.changes) throw new ClientError("Share link not found.", 404);
-  return json({ ok: true, share: { id: shareId, name, allowUploads, status, expiresAt } });
+  return json({ ok: true, share: { id: shareId, name, allowUploads, allowDownloads, allowComments, allowApproval, allowPreviousVersions, scopedAssets:assetScope.length, passwordProtected:Boolean(passwordHash), status, expiresAt } });
 }
 
 async function createProjectDownloadLink(request: Request, input: JsonInput): Promise<Response> {
@@ -805,15 +879,19 @@ async function createProjectDownloadLink(request: Request, input: JsonInput): Pr
   const projectId = cleanText(input.projectId, 80);
   const fileId = cleanText(input.fileId, 80);
   if (!projectId || !fileId) throw new ClientError("Choose a project file.");
-  await requireProject(request, projectId);
+  const access = await authorizeProject(request, projectId);
+  const inlineOnly = input.inline === true;
+  if (!inlineOnly && !access.canDownload) throw new ClientError("Downloads are disabled for this share link.", 403);
   const { db } = getUploadBindings();
-  const file = await db.prepare("SELECT id FROM upload_files WHERE id = ? AND project_id = ? AND status = 'ready' LIMIT 1")
-    .bind(fileId, projectId).first<{ id: string }>();
+  const file = await db.prepare("SELECT id, COALESCE(asset_id,id) AS asset_id FROM upload_files WHERE id = ? AND project_id = ? AND status = 'ready' LIMIT 1")
+    .bind(fileId, projectId).first<{ id: string; asset_id:string }>();
   if (!file) throw new ClientError("File not found.", 404);
+  if (!shareAssetAllowed(access, file.asset_id)) throw new ClientError("This file is not included in the share link.", 403);
   const expires = Date.now() + 5 * 60 * 1000;
-  const signature = await createDownloadSignature(file.id, expires);
+  const signature = await createDownloadSignature(file.id, expires, inlineOnly);
+  if (!inlineOnly && access.shareId) await incrementShareMetric(db, access.shareId, "download_count");
   const url = new URL(request.url);
-  return json({ downloadUrl: `${url.origin}${url.pathname}?action=download&fileId=${encodeURIComponent(file.id)}&expires=${expires}&signature=${signature}`, expires });
+  return json({ downloadUrl: `${url.origin}${url.pathname}?action=download&fileId=${encodeURIComponent(file.id)}&expires=${expires}&signature=${signature}${inlineOnly ? "&inline=1&inlineOnly=1" : ""}`, expires });
 }
 
 async function requireProjectManager(request: Request, projectId: string) {
@@ -828,6 +906,51 @@ async function requireProjectManager(request: Request, projectId: string) {
   const project = await db.prepare("SELECT id FROM upload_projects WHERE id = ? LIMIT 1").bind(projectId).first();
   if (!project) throw new ClientError("Project not found.", 404);
   return null;
+}
+
+function shareAssetAllowed(access: Awaited<ReturnType<typeof authorizeProject>>, assetId: string): boolean {
+  return access.accessType !== "share-link" || access.assetScope.length === 0 || access.assetScope.includes(assetId);
+}
+
+function safeAssetScope(value: string | null | undefined): string[] {
+  try {
+    const parsed = JSON.parse(value || "[]");
+    return Array.isArray(parsed) ? [...new Set(parsed.map(item => cleanText(item,80)).filter(Boolean))].slice(0,100) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function incrementShareMetric(db: D1Database, shareId: string, metric: "view_count" | "download_count" | "comment_count" | "approval_count"): Promise<void> {
+  const statements = {
+    view_count:"UPDATE project_share_links SET view_count = view_count + 1, last_used_at = ? WHERE id = ?",
+    download_count:"UPDATE project_share_links SET download_count = download_count + 1, last_used_at = ? WHERE id = ?",
+    comment_count:"UPDATE project_share_links SET comment_count = comment_count + 1, last_used_at = ? WHERE id = ?",
+    approval_count:"UPDATE project_share_links SET approval_count = approval_count + 1, last_used_at = ? WHERE id = ?",
+  };
+  await db.prepare(statements[metric]).bind(Date.now(), shareId).run();
+}
+
+function shareExpiry(input: JsonInput, now: number): number | null {
+  if (input.expiresAt !== undefined && input.expiresAt !== null && input.expiresAt !== "") {
+    const expiresAt = Number(input.expiresAt);
+    if (!Number.isInteger(expiresAt) || expiresAt < now + 60_000 || expiresAt > now + 365 * 24 * 60 * 60 * 1000) throw new ClientError("Choose a future expiry within one year.");
+    return expiresAt;
+  }
+  const expiryDays = input.expiryDays == null || input.expiryDays === "" ? 0 : Number(input.expiryDays);
+  if (!Number.isInteger(expiryDays) || expiryDays < 0 || expiryDays > 365) throw new ClientError("Choose an expiry within one year.");
+  return expiryDays ? now + expiryDays * 24 * 60 * 60 * 1000 : null;
+}
+
+async function validatedAssetScope(db: D1Database, projectId: string, rawAssetIds: unknown): Promise<string[]> {
+  const assetIds = [...new Set((Array.isArray(rawAssetIds) ? rawAssetIds : []).map(value => cleanText(value,80)).filter(Boolean))].slice(0,100);
+  if (!assetIds.length) return [];
+  const placeholders = assetIds.map(() => "?").join(",");
+  const available = await db.prepare(`SELECT DISTINCT COALESCE(asset_id,id) AS asset_id FROM upload_files
+    WHERE project_id = ? AND status = 'ready' AND COALESCE(asset_id,id) IN (${placeholders})`).bind(projectId, ...assetIds).all<{ asset_id:string }>();
+  const valid = new Set(available.results.map(item => item.asset_id));
+  if (valid.size !== assetIds.length) throw new ClientError("One or more selected files are no longer available.");
+  return assetIds;
 }
 
 async function accountStorageUsage(db: D1Database, userId: string): Promise<number> {
@@ -907,7 +1030,8 @@ async function createAdminDownloadLink(request: Request, input: JsonInput): Prom
 async function startUpload(request: Request, input: JsonInput): Promise<Response> {
   requireSameOrigin(request);
   const projectId = cleanText(input.projectId, 80);
-  const project = await requireProject(request, projectId, "upload");
+  const access = await authorizeProject(request, projectId, "upload");
+  const project = access.project;
   const validatedFile = validateUploadFileMetadata(input.fileName, input.contentType);
   const originalName = validatedFile.fileName;
   const sizeBytes = validateFileSize(input.fileSize, project.max_file_size);
@@ -922,12 +1046,14 @@ async function startUpload(request: Request, input: JsonInput): Promise<Response
   let assetId = fileId;
   let versionNumber = 1;
   let parentFileId: string | null = null;
+  if (access.assetScope.length && !replaceFileId) throw new ClientError("This share link can only upload a new version of a selected file.", 403);
   if (replaceFileId) {
     const previous = await db.prepare(`SELECT id, COALESCE(asset_id, id) AS asset_id, COALESCE(version_number, 1) AS version_number
       FROM upload_files WHERE id = ? AND project_id = ? AND status = 'ready' LIMIT 1`)
       .bind(replaceFileId, project.id).first<{ id: string; asset_id: string; version_number: number }>();
     if (!previous) throw new ClientError("Choose an existing project file for the new version.", 404);
     assetId = previous.asset_id;
+    if (!shareAssetAllowed(access, assetId)) throw new ClientError("This file is not included in the share link.", 403);
     parentFileId = previous.id;
     const latest = await db.prepare(`SELECT MAX(COALESCE(version_number, 1)) AS latest
       FROM upload_files WHERE project_id = ? AND COALESCE(asset_id, id) = ?`)
@@ -1063,7 +1189,8 @@ async function downloadAdminFile(request: Request, params: URLSearchParams): Pro
   const fileId = params.get("fileId") || "";
   const expires = Number(params.get("expires"));
   const signature = params.get("signature") || "";
-  if (!(await verifyDownloadSignature(fileId, expires, signature))) await requireOwner(request);
+  const inlineOnly = params.get("inlineOnly") === "1";
+  if (!(await verifyDownloadSignature(fileId, expires, signature, inlineOnly))) await requireOwner(request);
   const { db, bucket } = getUploadBindings();
   const file = await db.prepare("SELECT * FROM upload_files WHERE id = ? AND status = 'ready' LIMIT 1")
     .bind(fileId).first<UploadFile>();

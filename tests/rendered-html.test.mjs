@@ -14,7 +14,7 @@ test("server-renders the Content X application shell", async () => {
 
   const html = await response.text();
   assert.match(html, /className="site-frame"/i);
-  assert.match(html, /src="\/site\/index\.html\?v=frame-native-16"/i);
+  assert.match(html, /src="\/site\/index\.html\?v=frame-native-17"/i);
   assert.match(html, /title="Content X"/i);
   assert.doesNotMatch(html, /site is taking shape|Building your site/i);
 });
@@ -73,7 +73,7 @@ test("ships the advanced review command center and shared task workflow", async 
     readFile(new URL("../public/site/src/advanced.css", import.meta.url), "utf8"),
   ]);
 
-  assert.match(index, /advanced\.css\?v=frame-native-16/);
+  assert.match(index, /advanced\.css\?v=frame-native-17/);
   assert.match(main, /enhanceReviewSuite/);
   assert.match(main, /enhanceDashboardSuite/);
   assert.match(main, /enhanceAdminSuite/);

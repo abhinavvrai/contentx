@@ -5,9 +5,10 @@ Your complete website code is in this folder. GitHub is your backup and change h
 ## Normal publishing
 
 1. Make your website changes in this folder.
-2. Commit and push the changes to the `main` branch on GitHub.
-3. Cloudflare automatically builds and publishes that commit to `contentx.co.in`.
-4. Open `https://contentx.co.in/?version=latest` and confirm the change.
+2. If the change includes a new file in `drizzle/`, inspect and apply that unapplied migration to the production D1 database first. Never edit a migration that has already been applied.
+3. Commit and push the changes to the `main` branch on GitHub.
+4. Cloudflare automatically builds and publishes that commit to `contentx.co.in`.
+5. Open `https://contentx.co.in/?version=latest` and confirm the change.
 
 The Cloudflare project is connected to `abhinavvrai/contentx`, and `main` is the production branch. Both `contentx.co.in` and `www.contentx.co.in` use the same Worker; `www` redirects to the main domain.
 
@@ -49,6 +50,8 @@ Client upload links contain a high-entropy project token. Creating a new link in
 
 ## Client accounts
 
-Client accounts, sessions, paid-order links, and project briefs use the same D1 database. Apply the latest checked-in migration whenever these tables change. Runtime initialization is also idempotent so a fresh deployment can safely create missing tables.
+Client accounts, sessions, paid-order links, and project briefs use the same D1 database. Apply each new checked-in migration whenever these tables change. Production schema changes are migration-owned; runtime guards may verify the expected schema but must not replace the migration step.
+
+`frame-native-17` requires `drizzle/0009_share_permissions.sql` before the application commit is deployed. This adds password, exact permission, selected-file scope and link-activity columns to existing share links without exposing any secret values.
 
 Passwords are never encrypted and stored for later recovery. They are salted and irreversibly hashed with PBKDF2-SHA-256 at 310,000 iterations. Session cookies are HTTP-only, secure on HTTPS, and mapped to token hashes stored in D1.

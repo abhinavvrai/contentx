@@ -71,6 +71,12 @@ export type UploadFile = {
 export type ProjectAccess = {
   project: UploadProject;
   canUpload: boolean;
+  canDownload: boolean;
+  canComment: boolean;
+  canApprove: boolean;
+  canViewPrevious: boolean;
+  assetScope: string[];
+  shareId: string | null;
   accessType: "account" | "legacy-link" | "share-link";
 };
 
@@ -271,6 +277,12 @@ export async function authorizeProject(request: Request, projectId: string, purp
   const { db } = getUploadBindings();
   let project: UploadProject | null = null;
   let canUpload = false;
+  let canDownload = true;
+  let canComment = true;
+  let canApprove = true;
+  let canViewPrevious = true;
+  let assetScope: string[] = [];
+  let shareId: string | null = null;
   let accessType: ProjectAccess["accessType"] = "account";
   if (token) {
     const tokenHash = await hashToken(token);
@@ -284,20 +296,38 @@ export async function authorizeProject(request: Request, projectId: string, purp
     } else {
       const share = projectId
         ? await db.prepare(`SELECT p.id, p.name, p.client_name, p.client_email, p.status,
-            p.max_file_size, p.created_at, p.updated_at, s.allow_uploads, s.id AS share_id
+            p.max_file_size, p.created_at, p.updated_at, s.allow_uploads, s.allow_downloads,
+            s.allow_comments, s.allow_approval, s.allow_previous_versions, s.asset_scope_json,
+            s.password_hash, s.password_salt, s.id AS share_id
             FROM project_share_links s JOIN upload_projects p ON p.id = s.project_id
             WHERE s.project_id = ? AND s.token_hash = ? AND s.status = 'active'
               AND (s.expires_at IS NULL OR s.expires_at > ?) LIMIT 1`)
             .bind(projectId, tokenHash, Date.now()).first<UploadProject & { allow_uploads: number; share_id: string }>()
         : await db.prepare(`SELECT p.id, p.name, p.client_name, p.client_email, p.status,
-            p.max_file_size, p.created_at, p.updated_at, s.allow_uploads, s.id AS share_id
+            p.max_file_size, p.created_at, p.updated_at, s.allow_uploads, s.allow_downloads,
+            s.allow_comments, s.allow_approval, s.allow_previous_versions, s.asset_scope_json,
+            s.password_hash, s.password_salt, s.id AS share_id
             FROM project_share_links s JOIN upload_projects p ON p.id = s.project_id
             WHERE s.token_hash = ? AND s.status = 'active'
               AND (s.expires_at IS NULL OR s.expires_at > ?) LIMIT 1`)
             .bind(tokenHash, Date.now()).first<UploadProject & { allow_uploads: number; share_id: string }>();
       if (share) {
+        const protectedLink = Boolean((share as unknown as { password_hash?:string }).password_hash);
+        const suppliedPassword = request.headers.get("x-contentx-share-password") || "";
+        if (protectedLink && !(await verifySharePassword(suppliedPassword, String((share as unknown as { password_salt?:string }).password_salt || ""), String((share as unknown as { password_hash?:string }).password_hash || "")))) {
+          throw new ClientError("This share link requires its password.", 401);
+        }
         project = share;
         canUpload = Boolean(share.allow_uploads);
+        canDownload = Boolean((share as unknown as { allow_downloads?:number }).allow_downloads);
+        canComment = Boolean((share as unknown as { allow_comments?:number }).allow_comments);
+        canApprove = Boolean((share as unknown as { allow_approval?:number }).allow_approval);
+        canViewPrevious = Boolean((share as unknown as { allow_previous_versions?:number }).allow_previous_versions);
+        try {
+          const parsed = JSON.parse(String((share as unknown as { asset_scope_json?:string }).asset_scope_json || "[]"));
+          assetScope = Array.isArray(parsed) ? parsed.map(value => cleanText(value,80)).filter(Boolean).slice(0,100) : [];
+        } catch { assetScope = []; }
+        shareId = share.share_id;
         accessType = "share-link";
         await db.prepare("UPDATE project_share_links SET last_used_at = ? WHERE id = ?").bind(Date.now(), share.share_id).run();
       }
@@ -315,7 +345,7 @@ export async function authorizeProject(request: Request, projectId: string, purp
   if (!project || (project.status !== "active" && accessType !== "account")) throw new ClientError("This upload link is invalid or no longer active.", 403);
   if (project.status !== "active") canUpload = false;
   if (purpose === "upload" && !canUpload) throw new ClientError("This share link is view-only. Ask the project owner to enable uploads.", 403);
-  return { project, canUpload, accessType };
+  return { project, canUpload, canDownload, canComment, canApprove, canViewPrevious, assetScope, shareId, accessType };
 }
 
 export async function requireProject(request: Request, projectId: string, purpose: "view" | "upload" = "view"): Promise<UploadProject> {
@@ -328,7 +358,7 @@ export async function hashToken(token: string): Promise<string> {
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export async function createDownloadSignature(fileId: string, expires: number): Promise<string> {
+export async function createDownloadSignature(fileId: string, expires: number, inlineOnly = false): Promise<string> {
   const secret = ownerSecret();
   if (!secret) throw new ClientError("Owner file access is not configured yet.", 503);
   const key = await crypto.subtle.importKey(
@@ -338,14 +368,25 @@ export async function createDownloadSignature(fileId: string, expires: number): 
     false,
     ["sign"],
   );
-  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${fileId}.${expires}`));
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${fileId}.${expires}.${inlineOnly ? "inline" : "download"}`));
   return Array.from(new Uint8Array(signature), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export async function verifyDownloadSignature(fileId: string, expires: number, signature: string): Promise<boolean> {
+export async function verifyDownloadSignature(fileId: string, expires: number, signature: string, inlineOnly = false): Promise<boolean> {
   if (!fileId || !signature || !Number.isSafeInteger(expires) || expires < Date.now() || expires > Date.now() + 10 * 60 * 1000) return false;
-  const expected = await createDownloadSignature(fileId, expires);
+  const expected = await createDownloadSignature(fileId, expires, inlineOnly);
   return safeTokenEqual(signature, expected);
+}
+
+export async function deriveSharePasswordHash(password: string, salt: string): Promise<string> {
+  const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name:"PBKDF2", hash:"SHA-256", salt:new TextEncoder().encode(salt), iterations:210_000 }, material, 256);
+  return Array.from(new Uint8Array(bits), byte => byte.toString(16).padStart(2,"0")).join("");
+}
+
+export async function verifySharePassword(password: string, salt: string, expected: string): Promise<boolean> {
+  if (!password || !salt || !expected) return false;
+  return safeTokenEqual(await deriveSharePasswordHash(password, salt), expected);
 }
 
 export function randomId(prefix: string): string {

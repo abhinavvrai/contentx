@@ -132,7 +132,7 @@ test("new review uses authorized APIs, scopes comments and keeps tokens out of b
   assert.match(route,/requireProjectManager\(request, projectId\)/);
   assert.match(route,/import \{[^}]*requireSessionUser[^}]*\} from "\.\.\/\.\.\/\.\.\/lib\/auth"/);
   assert.match(route,/status:range \? 206 : 200/);
-  assert.ok(route.indexOf('verifyDownloadSignature(fileId, expires, signature)') < route.indexOf('parseMediaRange(request.headers'));
+  assert.ok(route.indexOf('verifyDownloadSignature(fileId, expires, signature, inlineOnly)') < route.indexOf('parseMediaRange(request.headers'));
   assert.match(workspace,/enhanceFileLibrary\(root, data.files/);
   assert.match(main,/delete root.dataset\[key\]/);
 });
@@ -143,5 +143,5 @@ test("dashboard styles parse and include mobile, contrast and reduced-motion con
   assert.doesNotThrow(()=>require("postcss").parse(frameCss));
   for(const pattern of [/prefers-reduced-motion/,/max-width:560px/,/:focus-visible/,/\.sx-media-grid\.is-comparing/,/\.sx-list/,/\.sx-review-room::backdrop/]) assert.match(css,pattern);
   for(const pattern of [/\.sx-voice-composer/,/\.sx-voice-wave/,/data-state="recording"/,/data-state="error"/]) assert.match(frameCss,pattern);
-  assert.match(await read("public/site/index.html"),/studio-workspace\.css\?v=frame-native-16/);
+  assert.match(await read("public/site/index.html"),/studio-workspace\.css\?v=frame-native-17/);
 });

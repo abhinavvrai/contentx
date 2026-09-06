@@ -68,7 +68,7 @@ test("groups replacement uploads into versions and supports controlled short sha
   assert.match(schema, /versionNumber/);
   assert.match(schema, /projectShareLinks/);
   assert.match(workspace, /Drop replacement here/);
-  assert.match(workspace, /Allow uploads/);
+  assert.match(workspace, /Uploads/);
   assert.match(workspace, /Executables, archives, scripts, HTML and SVG are blocked/);
   assert.match(workspace, /Create & copy share link/);
   assert.match(workspace, /shareIntent\("whatsapp"/);
@@ -328,7 +328,7 @@ test("adds free account workspaces with 50 GB quota and review comments", async 
   assert.match(route, /enforceAccountStorageQuota/);
   assert.match(route, /comment-status/);
   assert.match(route, /createProjectComment/);
-  assert.match(route, /requireProject\(request, projectId, "view"\)/);
+  assert.match(route, /authorizeProject\(request, projectId, "view"\)/);
   assert.match(route, /publishNotification/);
   assert.match(workspace, /Your free review workspace is ready/);
   assert.match(workspace, /50 GB/);
@@ -358,4 +358,37 @@ test("keeps the workspace usable through transient refresh and upload failures",
   assert.match(styles, /workspace-refresh-error/);
   assert.match(styles, /workspace-mobile-nav/);
   assert.match(styles, /env\(safe-area-inset-bottom\)/);
+});
+
+test("ships password-protected, file-scoped share permissions with audit metrics", async () => {
+  const [route, storage, schema, migration, workspace, review, styles] = await Promise.all([
+    readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/uploads.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0009_share_permissions.sql", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/review-room.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/frame-workspace.css", import.meta.url), "utf8"),
+  ]);
+  for (const pattern of [/allow_downloads/,/allow_comments/,/allow_approval/,/allow_previous_versions/,/asset_scope_json/,/password_hash/,/view_count/,/download_count/]) {
+    assert.match(schema, pattern); assert.match(migration, pattern); assert.match(route, pattern);
+  }
+  assert.match(storage, /PBKDF2/);
+  assert.match(storage, /iterations:210_000/);
+  assert.match(storage, /x-contentx-share-password/);
+  assert.match(storage, /inlineOnly \? "inline" : "download"/);
+  assert.match(route, /shareAssetAllowed/);
+  assert.match(route, /Comments are disabled for this share link/);
+  assert.match(route, /Approval is disabled for this share link/);
+  assert.match(route, /Downloads are disabled for this share link/);
+  assert.match(route, /function getProjectActivity/);
+  assert.match(workspace, /sharedPasswordGate/);
+  assert.match(workspace, /Files included/);
+  assert.match(workspace, /data-project-activity/);
+  assert.match(workspace, /activeWorkspaceUploads/);
+  assert.match(review, /New feedback is disabled/);
+  assert.match(review, /Approval controls are disabled/);
+  assert.match(review, /Refreshing private preview/);
+  assert.match(styles, /workspace-share-permissions/);
+  assert.match(styles, /workspace-activity-list/);
 });

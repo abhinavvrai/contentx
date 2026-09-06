@@ -19,31 +19,23 @@ This ledger is the accepted product scope for the signed-in app, private review 
 - Files: private multipart upload, type/size/duration validation, replacement versions, grid/list views, field visibility, sorting and lazy private video hover preview.
 - Review: video, audio, image, PDF and text/script preview; timestamped comments; PDF page references; selected-text quotes; comment completion; version history and comparison.
 - Precision review: In/Out loops, timeline pins, synchronized side-by-side/wipe comparison and TXT/CSV/EDL export.
-- Sharing: opaque short links, expiry, upload permission, revocation and social/email copy actions.
+- Sharing: opaque short links, exact expiry, optional passwords, selected-file scope, independent upload/download/comment/approval/version-history permissions, revocation, analytics and social/email copy actions.
 - Notifications: in-app activity, per-event email/in-app controls, comment digest preference and test notification.
 - Commerce inside the app: package-linked revision counters and extra-round purchase actions.
 
-## Current release work — frame-native-16
+## Current release work — frame-native-17
 
-- Voice recording no longer depends on a stale click event after the asynchronous recorder stops.
-- Microphone permission states, useful hardware errors, device selection and a three-second mic test.
-- Live waveform, 60-second timer, pause/resume, finish and cancel controls.
-- Local preview, playback-speed selection, record-again and discard actions before upload.
-- Retry-safe voice attachment: a failed comment request keeps the recording and reuses an already uploaded private voice object.
-- Device-local text draft recovery per project and asset; no credentials are stored with the draft.
-- Next/previous open-note navigation, keyboard shortcuts, five-second seek, 30-fps frame step, mute, playback speed, Picture-in-Picture and fullscreen.
-- Upload pause/resume and cancel controls between multipart chunks, with server-side multipart cleanup after cancellation or failure.
-- Non-blocking unread notification badge in the global rail and a mark-all-read action inside the unified account panel.
-- Persistent comment time ranges, threaded replies, priority, assignee, due date, internal-team visibility and open/in-progress/completed workflow states.
-- Original inline SVG icons for the main project, search, notification, account, menu and add controls.
-- Ctrl/Cmd+K search now includes loaded projects, folders, files and feedback, with direct keyboard-open actions.
-- Manager-only asset removal moves every version into Recently deleted; the project can restore the complete asset for 30 days before the existing cleanup policy purges it.
-- Per-version Approve and Request changes decisions are stored as an immutable history with reviewer identity and an optional note; approval stays unavailable while that version has open visible feedback.
-- Project managers can select many asset cards, move them to one folder, or place all selected version stacks into Recently deleted in one recoverable action.
-- Feedback filters expose one bulk Complete/Reopen action for the currently visible notes, and video review can export the loaded playhead frame as a bounded PNG.
-- Failed project/account refreshes preserve the last usable workspace and offer inline Retry instead of replacing the product with an error page.
-- Mobile workspace navigation keeps Home, Projects, Search, Alerts and Account reachable without reopening the project drawer.
-- Multipart upload parts automatically retry transient connection, timeout, rate-limit and server failures twice with short backoff while keeping pause/cancel responsive.
+- Per-link password protection using a unique salt and PBKDF2-SHA-256 derivation; readable passwords never enter D1, URLs or browser storage.
+- Exact expiry date and time plus immediate Active/Disabled control.
+- Independent permissions for uploads, original downloads, comments, approval and previous-version access.
+- Whole-project or selected-file sharing, with server-side scope checks on lists, history, comments, decisions, previews, downloads and replacements.
+- Preview-only signatures are cryptographically distinct from original-download signatures.
+- Shared review pages show a concise permission summary and remove unavailable comment, approval and download actions.
+- Link-level view, download, comment and approval counts in the share manager.
+- Manager-only project activity for uploads, feedback, approvals/changes requested and share creation.
+- Automatic one-time refresh for expired private media and voice-note playback links.
+- Browser warning before closing or refreshing while a multipart upload is active.
+- Production migration: `drizzle/0009_share_permissions.sql` must run before the application release.
 
 ## Approved next releases
 
@@ -63,7 +55,7 @@ This ledger is the accepted product scope for the signed-in app, private review 
 - Bulk download/tag/status and keyboard range selection on top of the shipped multi-select move/removal controls.
 - Saved views and filters, custom metadata fields, card-density presets and list columns.
 - Duplicate project/folder templates, client contacts, member roles and restricted-folder permissions.
-- Activity history for uploads, moves, comments, approvals, downloads and share changes.
+- Expand the shipped activity history with moves, restores, downloads and share-setting changes.
 
 ### Search and discovery
 
@@ -74,8 +66,8 @@ This ledger is the accepted product scope for the signed-in app, private review 
 
 ### Share links and client review
 
-- Password-protected links, download permission, watermark option and per-link asset selection.
-- Link templates, default expiry rules, view/download audit, recipient identity and link activity export.
+- Watermark option, link templates and default expiry rules on top of the shipped password, file-scope and permission controls.
+- Recipient identity, completed-review state and link activity export on top of the shipped counters.
 - Client-friendly decision mode, approval reminders and clear expired/revoked pages.
 - Branded link title/cover and a compact mobile review composer.
 

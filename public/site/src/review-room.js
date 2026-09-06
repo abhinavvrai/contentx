@@ -1,13 +1,13 @@
 import { escapeText as esc, commentsForVersion, filterComments, hasTimestamp, isComplete, reviewSummary, timecode } from "./studio-workspace.js?v=frame-workspace-1";
 
-export function reviewCommentMarkup(comment, canManage) {
+export function reviewCommentMarkup(comment, canManage, canComment = true) {
   const status = comment.status === "in_progress" ? "In progress" : isComplete(comment) ? "Completed" : "Open";
   const priority = ["low","normal","high","urgent"].includes(comment.priority) ? comment.priority : "normal";
   const dueValue = comment.due_at ? new Date(Number(comment.due_at)).toISOString().slice(0,10) : "";
   const metadata = [priority !== "normal" ? `<span class="priority ${priority}">${esc(priority)}</span>` : "", comment.assignee ? `<span>Assigned · ${esc(comment.assignee)}</span>` : "", comment.due_at ? `<span>Due · ${esc(new Date(Number(comment.due_at)).toLocaleDateString([], { dateStyle:"medium" }))}</span>` : "", comment.visibility === "internal" ? `<span class="internal">Internal team</span>` : ""].filter(Boolean).join("");
   const timeLabel = hasTimestamp(comment.timestamp_seconds) ? `${timecode(comment.timestamp_seconds)}${Number(comment.range_end_seconds) > Number(comment.timestamp_seconds) ? `–${timecode(comment.range_end_seconds)}` : ""}` : "";
   const workflow = canManage ? `<details class="sx-note-workflow"><summary>Manage</summary><div><label>Status<select data-workflow-status><option value="open" ${comment.status === "open" ? "selected" : ""}>Open</option><option value="in_progress" ${comment.status === "in_progress" ? "selected" : ""}>In progress</option><option value="completed" ${isComplete(comment) ? "selected" : ""}>Completed</option></select></label><label>Priority<select data-workflow-priority><option value="low" ${priority === "low" ? "selected" : ""}>Low</option><option value="normal" ${priority === "normal" ? "selected" : ""}>Normal</option><option value="high" ${priority === "high" ? "selected" : ""}>High</option><option value="urgent" ${priority === "urgent" ? "selected" : ""}>Urgent</option></select></label><label>Assignee<input data-workflow-assignee maxlength="100" value="${esc(comment.assignee || "")}" placeholder="Name or role"></label><label>Due date<input data-workflow-due type="date" value="${dueValue}"></label><label>Visibility<select data-workflow-visibility><option value="project" ${comment.visibility !== "internal" ? "selected" : ""}>Everyone with access</option><option value="internal" ${comment.visibility === "internal" ? "selected" : ""}>Internal team only</option></select></label><button type="button" data-save-workflow="${esc(comment.id)}">Save</button></div></details>` : "";
-  return `<article class="sx-review-note ${isComplete(comment) ? "is-complete" : ""} ${comment.parent_comment_id ? "is-reply" : ""}" data-note-id="${esc(comment.id)}"><header><span>${esc((comment.author_name || "?").slice(0,1))}</span><strong>${esc(comment.author_name || "Reviewer")}</strong><small>${status}</small></header>${timeLabel ? `<button type="button" class="sx-timecode" data-seek="${Number(comment.timestamp_seconds)}">▶ ${timeLabel}</button>` : ""}${metadata ? `<div class="sx-note-meta">${metadata}</div>` : ""}<p>${esc(comment.body)}</p>${comment.voice_note_id ? `<button type="button" class="sx-play-voice" data-play-voice="${esc(comment.voice_note_id)}">Play voice note</button><div data-voice-player="${esc(comment.voice_note_id)}"></div>` : ""}<div class="sx-note-actions"><button type="button" data-reply-note="${esc(comment.id)}">Reply</button>${canManage ? `<button type="button" class="sx-resolve" data-review-resolve="${esc(comment.id)}">${isComplete(comment) ? "↶ Reopen" : "✓ Mark complete"}</button>` : ""}</div>${workflow}</article>`;
+  return `<article class="sx-review-note ${isComplete(comment) ? "is-complete" : ""} ${comment.parent_comment_id ? "is-reply" : ""}" data-note-id="${esc(comment.id)}"><header><span>${esc((comment.author_name || "?").slice(0,1))}</span><strong>${esc(comment.author_name || "Reviewer")}</strong><small>${status}</small></header>${timeLabel ? `<button type="button" class="sx-timecode" data-seek="${Number(comment.timestamp_seconds)}">▶ ${timeLabel}</button>` : ""}${metadata ? `<div class="sx-note-meta">${metadata}</div>` : ""}<p>${esc(comment.body)}</p>${comment.voice_note_id ? `<button type="button" class="sx-play-voice" data-play-voice="${esc(comment.voice_note_id)}">Play voice note</button><div data-voice-player="${esc(comment.voice_note_id)}"></div>` : ""}<div class="sx-note-actions">${canComment ? `<button type="button" data-reply-note="${esc(comment.id)}">Reply</button>` : ""}${canManage ? `<button type="button" class="sx-resolve" data-review-resolve="${esc(comment.id)}">${isComplete(comment) ? "↶ Reopen" : "✓ Mark complete"}</button>` : ""}</div>${workflow}</article>`;
 }
 
 export function exportReviewText(name, version, comments) {
@@ -69,6 +69,10 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
     if (!active || !dialog.isConnected) return;
     const versions = [...history.versions].sort((a,b) => Number(b.version_number) - Number(a.version_number));
     if (!versions.length) throw new Error("No versions are available for this file.");
+    const permissions = history.permissions || {};
+    const canDownload = canManage || permissions.canDownload !== false;
+    const canComment = canManage || permissions.canComment !== false;
+    const canApprove = canManage || permissions.canApprove !== false;
     let comments = feedback.comments || [], decisions = history.decisions || [], selected = versions[0], comparison = false, pinnedTime = 0, openNoteIndex = -1;
     dialog.innerHTML = `<header class="sx-room-header"><div><span class="sx-overline">CONTENT X / REVIEW ROOM</span><h2>${esc(selected.original_name)}</h2></div><button type="button" data-room-close aria-label="Close review">×</button></header><div class="sx-room-body"><section class="sx-room-stage"><div class="sx-room-toolbar"><label>Review version<select data-review-version>${versions.map(version => `<option value="${esc(version.id)}">V${Number(version.version_number)} · ${esc(version.original_name)}</option>`).join("")}</select></label><button type="button" data-compare aria-pressed="false" ${versions.length < 2 ? "disabled title=\"Upload another version to compare\"" : ""}>Compare versions</button><button type="button" data-version-download>Download</button></div><div class="sx-compare-choice" hidden><label>Compare against<select data-compare-version></select></label><p>Playback follows the review version. Comparison audio is muted.</p></div><div class="sx-media-grid"><figure><figcaption data-primary-caption></figcaption><div data-primary-media class="sx-media-slot" tabindex="0"></div></figure><figure data-comparison hidden><figcaption data-compare-caption></figcaption><div data-compare-media class="sx-media-slot"></div></figure></div><p class="sx-player-help">Click video to pause or resume. For scripts, select text and add it as a quote. PDF notes can include a page number.</p><div class="sx-document-tools" data-document-tools hidden><label>PDF page <input type="number" min="1" max="9999" value="1" data-document-page></label><button type="button" data-quote-selection>Quote selected text</button></div><p data-room-error role="alert" hidden></p><section class="sx-version-strip" aria-label="Version history">${versions.map(version => `<button type="button" data-pick-version="${esc(version.id)}"><span>V${Number(version.version_number)}</span><small>${Number(version.version_number) === Number(versions[0].version_number) ? "Latest cut" : "Earlier cut"}</small></button>`).join("")}</section><div class="sx-review-progress"><span data-feedback-progress></span><progress max="100" value="0" aria-label="Feedback completion"></progress><small>Completed feedback is not a final approval.</small></div></section><aside class="sx-room-feedback"><header><h3>Feedback <span data-note-count></span></h3><div class="sx-export-notes"><select data-export-format aria-label="Export format"><option value="text">TXT</option><option value="csv">CSV</option><option value="edl">EDL</option></select><button type="button" data-export-notes>Export</button></div></header><div class="sx-note-filters"><input type="search" data-note-search aria-label="Search review comments" placeholder="Search feedback…"><select data-note-status aria-label="Filter review comments"><option value="all">All notes</option><option value="open">Open</option><option value="complete">Completed</option></select><select data-note-sort aria-label="Sort review comments"><option value="time">Timecode</option><option value="newest">Newest</option></select></div><div class="sx-room-notes" data-room-notes></div><form class="sx-note-form"><label>Your name<input name="authorName" required minlength="2" maxlength="100" autocomplete="name"></label><label>Email (optional)<input name="authorEmail" type="email" maxlength="254" autocomplete="email"></label><label>Feedback<textarea name="body" required maxlength="2000" rows="3" placeholder="What should change in this file?"></textarea></label><div class="sx-capture-row"><label><input type="checkbox" data-attach-time checked>At <output data-pinned-time>00:00</output></label><button type="button" data-capture-time>Use playhead</button></div><button class="workspace-button primary" type="submit">Send feedback ↗</button><p role="alert" hidden></p></form></aside></div>`;
     const roomToolbar = dialog.querySelector(".sx-room-toolbar");
@@ -82,6 +86,9 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
     const versionSelect = dialog.querySelector("[data-review-version]"), compareSelect = dialog.querySelector("[data-compare-version]");
     const primarySlot = dialog.querySelector("[data-primary-media]"), compareSlot = dialog.querySelector("[data-compare-media]");
     const form = dialog.querySelector("form"), attachTime = dialog.querySelector("[data-attach-time]");
+    dialog.querySelector("[data-version-download]").hidden = !canDownload;
+    if (!canComment) { form.hidden = true; form.insertAdjacentHTML("beforebegin", `<div class="sx-review-locked"><span>◇</span><div><b>New feedback is disabled</b><small>You can still read existing notes on this link.</small></div></div>`); }
+    if (!canApprove) { dialog.querySelectorAll("[data-version-decision]").forEach(button => { button.disabled = true; }); dialog.querySelector(".sx-version-decision").classList.add("is-read-only"); dialog.querySelector(".sx-version-decision .sx-decision-actions").insertAdjacentHTML("beforebegin", `<p class="sx-decision-locked">Approval controls are disabled for this link.</p>`); }
     form.elements.body.required = false;
     form.querySelector(".sx-capture-row").insertAdjacentHTML("beforebegin", `<div class="sx-reply-target" data-reply-target hidden><span>Replying in thread</span><button type="button" data-cancel-reply>Cancel</button><input type="hidden" name="parentCommentId"></div>${canManage ? `<div class="sx-comment-meta-compose"><label>Priority<select name="priority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option><option value="low">Low</option></select></label><label>Assignee<input name="assignee" maxlength="100" placeholder="Name or role"></label><label>Due date<input name="dueDate" type="date"></label><label>Visibility<select name="visibility"><option value="project">Everyone with access</option><option value="internal">Internal team only</option></select></label></div>` : ""}`);
     form.querySelector(".sx-capture-row").insertAdjacentHTML("beforeend", `<button type="button" data-range-end>Set range end</button><output data-range-label hidden></output>`);
@@ -134,7 +141,7 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
     const renderNotes = () => {
       const versionComments = commentsForVersion(comments, selected);
       const filtered = filterComments(versionComments, { query:dialog.querySelector("[data-note-search]").value, status:dialog.querySelector("[data-note-status]").value, sort:dialog.querySelector("[data-note-sort]").value });
-      dialog.querySelector("[data-room-notes]").innerHTML = filtered.length ? filtered.map(comment => reviewCommentMarkup(comment, canManage)).join("") : '<p class="sx-note-empty">No matching feedback for this version.</p>';
+      dialog.querySelector("[data-room-notes]").innerHTML = filtered.length ? filtered.map(comment => reviewCommentMarkup(comment, canManage, canComment)).join("") : '<p class="sx-note-empty">No matching feedback for this version.</p>';
       dialog.querySelector("[data-note-count]").textContent = versionComments.length;
       const summary = reviewSummary(versionComments);
       dialog.querySelector("[data-feedback-progress]").textContent = `${summary.complete} of ${summary.total} notes completed · ${summary.open} open`;
@@ -159,8 +166,8 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
       status.textContent = latest?.decision === "approved" && !newerFeedback ? "Approved" : latest?.decision === "changes_requested" || newerFeedback ? "Changes requested" : "Not decided";
       byline.textContent = latest ? `${latest.actor_name || "Reviewer"} · ${new Date(Number(latest.created_at)).toLocaleString()}${newerFeedback ? " · newer feedback added" : ""}` : "Choose when this cut is ready.";
       const approve = dialog.querySelector('[data-version-decision="approved"]');
-      approve.disabled = openCount > 0;
-      approve.title = openCount ? `Complete ${openCount} open note${openCount === 1 ? "" : "s"} before approval` : "Record final approval for this version";
+      approve.disabled = !canApprove || openCount > 0;
+      approve.title = !canApprove ? "Approval controls are disabled for this link" : openCount ? `Complete ${openCount} open note${openCount === 1 ? "" : "s"} before approval` : "Record final approval for this version";
       historyList.innerHTML = versionDecisions.length ? versionDecisions.map(item => `<article><span class="${item.decision === "approved" ? "approved" : "changes"}">${item.decision === "approved" ? "Approved" : "Changes requested"}</span><div><b>${esc(item.actor_name || "Reviewer")}</b><small>${esc(new Date(Number(item.created_at)).toLocaleString())}</small>${item.note ? `<p>${esc(item.note)}</p>` : ""}</div></article>`).join("") : `<p>No decision has been recorded for this version.</p>`;
     };
     const currentMedia = () => primarySlot.querySelector("video,audio");
@@ -172,28 +179,27 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
       if (hasTimestamp(note.timestamp_seconds)) { const media = currentMedia(); if (media && Number.isFinite(media.duration)) { media.pause(); media.currentTime = Math.min(Number(note.timestamp_seconds),Math.max(0,media.duration - .01)); capture(); } }
       const card = dialog.querySelector(`[data-note-id="${CSS.escape(String(note.id))}"]`); card?.scrollIntoView({ behavior:"smooth", block:"center" }); card?.classList.add("is-current"); setTimeout(() => card?.classList.remove("is-current"),900);
     };
-    const signedUrl = async version => {
-      const data = await api("/api/uploads", { method:"POST", headers:headers(true), body:JSON.stringify({ action:"project-download-link", projectId, fileId:version.id }) });
+    const signedUrl = async (version, inline = true) => {
+      const data = await api("/api/uploads", { method:"POST", headers:headers(true), body:JSON.stringify({ action:"project-download-link", projectId, fileId:version.id, inline }) });
       const url = new URL(data.downloadUrl, location.origin);
       if (url.origin !== location.origin || url.pathname !== "/api/uploads") throw new Error("The file service returned an invalid preview URL.");
       return url.href;
     };
-    const mountMedia = async (slot, version, secondary, ticket) => {
+    const mountMedia = async (slot, version, secondary, ticket, retry = 0) => {
       slot.replaceChildren();
       const type = version.content_type || "";
       const isPdf = type === "application/pdf" || /\.pdf$/i.test(version.original_name || "");
       const isText = /^(text\/(plain|markdown|csv)|application\/(json|javascript))/.test(type) || /\.(txt|md|csv|json|js|ts|jsx|tsx|srt|vtt)$/i.test(version.original_name || "");
       if (!/^(video|audio|image)\//.test(type) && !isPdf && !isText) { slot.textContent = "Preview is available for video, audio, images, PDFs and text scripts. Download this file to open it in its original app."; return; }
       slot.textContent = "Preparing private preview…";
-      const url = new URL(await signedUrl(version));
-      if (isPdf || isText) url.searchParams.set("inline", "1");
+      const url = new URL(await signedUrl(version, true));
       if (!active || !dialog.isConnected || ticket !== request) return;
       if (isPdf) { const frame = document.createElement("iframe"); frame.className = "sx-document-frame"; frame.title = `${secondary ? "Comparison" : "Review"} PDF: ${version.original_name}`; frame.src = url.href; slot.replaceChildren(frame); return; }
       if (isText) { const response = await fetch(url.href, { cache:"no-store" }); if (!response.ok) throw new Error("The script preview could not be loaded."); const text = (await response.text()).slice(0,250_000); const pre = document.createElement("pre"); pre.className = "sx-script-preview"; pre.textContent = text; slot.replaceChildren(pre); return; }
       const media = document.createElement(type.startsWith("video/") ? "video" : type.startsWith("audio/") ? "audio" : "img");
       if (media.tagName === "IMG") media.alt = `${secondary ? "Comparison" : "Review"} version: ${version.original_name}`;
       else { media.controls = true; media.preload = "metadata"; media.playsInline = true; media.muted = secondary; media.playbackRate = Number(dialog.querySelector("[data-playback-rate]")?.value || 1); }
-      media.addEventListener("error", () => { if (active && ticket === request) { slot.replaceChildren(document.createTextNode("Preview unavailable or expired. Reselect the version to retry, or download the original.")); } });
+      media.addEventListener("error", () => { if (!active || ticket !== request || !slot.contains(media)) return; if (retry < 1) { slot.textContent = "Refreshing private preview…"; mountMedia(slot, version, secondary, ticket, retry + 1).catch(error => { if (active && ticket === request) slot.textContent = error.message; }); } else slot.replaceChildren(document.createTextNode("Preview unavailable. The file may use an unsupported browser codec; download the original if available.")); }, { once:true });
       media.src = url.href; slot.replaceChildren(media);
       if (!secondary && media.tagName !== "IMG") {
         const sync = event => {
@@ -242,6 +248,7 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
     dialog.querySelector("[data-compare]").addEventListener("click", event => { comparison = !comparison; event.currentTarget.setAttribute("aria-pressed", String(comparison)); load(); });
     dialog.querySelectorAll("[data-pick-version]").forEach(button => button.addEventListener("click", () => { versionSelect.value = button.dataset.pickVersion; choose(); }));
     dialog.querySelectorAll("[data-version-decision]").forEach(button => button.addEventListener("click", async () => {
+      if (!canApprove) return fail(new Error("Approval controls are disabled for this link."));
       const actorName = form.elements.authorName.value.trim(), actorEmail = form.elements.authorEmail.value.trim();
       if (!canManage && actorName.length < 2) { form.elements.authorName.focus(); return fail(new Error("Enter your name in the feedback panel before recording a decision.")); }
       const controls = [...dialog.querySelectorAll("[data-version-decision]")]; controls.forEach(control => { control.disabled = true; });
@@ -252,7 +259,7 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
         decisions.unshift({ id:saved.id, project_id:projectId, asset_id:saved.assetId, file_id:saved.fileId, decision:saved.decision, note:saved.note, actor_name:saved.actorName, actor_email:saved.actorEmail, created_at:saved.createdAt });
         dialog.querySelector("[data-decision-note]").value = ""; changed = true; renderDecision();
       } catch (error) { fail(error); renderDecision(); }
-      finally { controls.forEach(control => { if (control.isConnected && control.dataset.versionDecision !== "approved") control.disabled = false; }); }
+      finally { controls.forEach(control => { if (control.isConnected && canApprove && control.dataset.versionDecision !== "approved") control.disabled = false; }); }
     }));
     dialog.querySelector("[data-capture-time]").addEventListener("click", capture);
     dialog.querySelector("[data-range-end]").addEventListener("click", () => { const media = currentMedia(); if (!media || !Number.isFinite(media.duration)) return fail(new Error("A time range is available for video and audio only.")); media.pause(); const end = Math.min(86400,Math.floor(media.currentTime || 0)); if (end <= pinnedTime) return fail(new Error("Move the playhead after the range start, then set the end.")); rangeEnd = end; const output = dialog.querySelector("[data-range-label]"); output.textContent = `${timecode(pinnedTime)}–${timecode(rangeEnd)}`; output.hidden = false; });
@@ -304,7 +311,11 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
       const voiceButton = event.target.closest("[data-play-voice]");
       if (voiceButton) {
         voiceButton.disabled = true;
-        try { const data = await api("/api/uploads", { method:"POST", headers:headers(true), body:JSON.stringify({ action:"comment-voice-link", projectId, voiceNoteId:voiceButton.dataset.playVoice }) }); const player = dialog.querySelector(`[data-voice-player="${CSS.escape(voiceButton.dataset.playVoice)}"]`); if (player) { const audio = document.createElement("audio"); audio.controls = true; audio.autoplay = true; audio.src = data.downloadUrl; player.replaceChildren(audio); } } catch (error) { fail(error); } finally { voiceButton.disabled = false; }
+        try {
+          const voiceNoteId = voiceButton.dataset.playVoice, player = dialog.querySelector(`[data-voice-player="${CSS.escape(voiceNoteId)}"]`);
+          const play = async (attempt = 0) => { const data = await api("/api/uploads", { method:"POST", headers:headers(true), body:JSON.stringify({ action:"comment-voice-link", projectId, voiceNoteId }) }); if (!player?.isConnected) return; const audio = document.createElement("audio"); audio.controls = true; audio.autoplay = true; audio.preload = "metadata"; audio.src = data.downloadUrl; audio.addEventListener("error", () => { if (attempt < 1 && player.contains(audio)) { player.textContent = "Refreshing voice note…"; play(attempt + 1).catch(fail); } }, { once:true }); player.replaceChildren(audio); };
+          await play();
+        } catch (error) { fail(error); } finally { voiceButton.disabled = false; }
       }
       const seek = event.target.closest("[data-seek]");
       if (seek) { const media = primarySlot.querySelector("video,audio"); if (media && Number.isFinite(media.duration)) { media.pause(); media.currentTime = Math.min(Number(seek.dataset.seek), media.duration); capture(); } }
@@ -318,6 +329,7 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
     form.querySelector("[data-cancel-reply]").addEventListener("click", () => { form.elements.parentCommentId.value = ""; form.querySelector("[data-reply-target]").hidden = true; });
     form.addEventListener("submit", async event => {
       event.preventDefault();
+      if (!canComment) return fail(new Error("New feedback is disabled for this link."));
       const version = selected, timestampSeconds = attachTime.checked && !attachTime.disabled ? pinnedTime : null;
       const page = Number(dialog.querySelector("[data-document-page]").value || 0); if (version.content_type === "application/pdf" && page > 0 && !/^Page \d+ —/.test(form.elements.body.value)) form.elements.body.value = `Page ${page} — ${form.elements.body.value}`;
       const button = form.querySelector('[type="submit"]'), alert = form.querySelector('[role="alert"]');
@@ -337,7 +349,7 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
     });
     dialog.querySelector("[data-version-download]").addEventListener("click", async event => {
       const button = event.currentTarget; button.disabled = true;
-      try { const url = await signedUrl(selected); if (active) { const link = document.createElement("a"); link.href = url; link.download = selected.original_name; link.click(); } } catch (error) { fail(error); } finally { button.disabled = false; }
+      try { const url = await signedUrl(selected, false); if (active) { const link = document.createElement("a"); link.href = url; link.download = selected.original_name; link.click(); } } catch (error) { fail(error); } finally { button.disabled = false; }
     });
     dialog.querySelector("[data-export-notes]").addEventListener("click", () => {
       const format = dialog.querySelector("[data-export-format]").value, notes = commentsForVersion(comments,selected);

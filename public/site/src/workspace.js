@@ -1,6 +1,6 @@
 import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-9";
-import { openReviewRoom } from "./review-room.js?v=frame-native-16";
-import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-16";
+import { openReviewRoom } from "./review-room.js?v=frame-native-17";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-17";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -34,6 +34,14 @@ const SAFE_WORKSPACE_EXTENSIONS = new Set(["mp4","mov","m4v","webm","mkv","avi",
 const RECENT_PROJECTS_KEY = "cx_recent_projects_v1";
 let workspaceRenderVersion = 0;
 let workspaceShortcutHandler = null;
+let activeWorkspaceUploads = 0;
+const sharePasswords = new Map();
+
+window.addEventListener("beforeunload", event => {
+  if (!activeWorkspaceUploads) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
 
 function hydrateUnreadNotificationBadge(root) {
   const badge = root.querySelector("[data-notification-badge]");
@@ -64,7 +72,11 @@ async function api(url, options = {}) {
   return body;
 }
 
-const bearerHeaders = (token, json = false) => ({ ...(token ? { Authorization:`Bearer ${token}` } : {}), ...(json ? { "Content-Type":"application/json" } : {}) });
+const bearerHeaders = (token, json = false) => ({
+  ...(token ? { Authorization:`Bearer ${token}` } : {}),
+  ...(token && sharePasswords.has(token) ? { "X-ContentX-Share-Password":sharePasswords.get(token) } : {}),
+  ...(json ? { "Content-Type":"application/json" } : {}),
+});
 
 export async function renderClientWorkspace(root, actions, route) {
   const renderVersion = ++workspaceRenderVersion;
@@ -141,8 +153,8 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       <div class="workspace-user"><span class="${user.avatarUrl ? "has-image" : ""}" data-account-avatar>${userAvatar(user)}</span><div><b data-account-name>${escapeHTML(user.name)}</b><small data-account-email>${escapeHTML(user.email)}</small></div><a href="#workspace?panel=account" aria-label="Account settings">•••</a></div>
     </aside>
     <main class="workspace-main">
-      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">${workspaceIcon("menu")}</button><div><span>All projects</span>${accountPanel ? `<b>/ Account</b>` : project ? `<i>/</i><b>${escapeHTML(project.name)}</b>` : ""}</div>${project && !accountPanel ? `<label class="workspace-global-search"><span>${workspaceIcon("search")}</span><input type="search" data-global-file-search placeholder="Search files" aria-label="Search this project"></label>` : `<button class="workspace-command-trigger" type="button" data-command-menu><span>${workspaceIcon("search")}</span> Quick find <kbd>Ctrl K</kbd></button>`}<div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button subtle" type="button" data-project-settings aria-label="Project settings">•••</button><button class="workspace-button" type="button" data-share-project ${project.status === "archived" ? "disabled" : ""}>Share</button><button class="workspace-button primary" type="button" data-upload-files ${project.status === "archived" ? "disabled" : ""}>${workspaceIcon("plus")} Add</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
-      ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, folders, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy, project.status === "active") : projects.length ? workspaceOverview(projects, storage) : emptyWorkspace()}
+      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">${workspaceIcon("menu")}</button><div><span>All projects</span>${accountPanel ? `<b>/ Account</b>` : project ? `<i>/</i><b>${escapeHTML(project.name)}</b>` : ""}</div>${project && !accountPanel ? `<label class="workspace-global-search"><span>${workspaceIcon("search")}</span><input type="search" data-global-file-search placeholder="Search files" aria-label="Search this project"></label>` : `<button class="workspace-command-trigger" type="button" data-command-menu><span>${workspaceIcon("search")}</span> Quick find <kbd>Ctrl K</kbd></button>`}<div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button subtle" type="button" data-project-activity>Activity</button><button class="workspace-button subtle" type="button" data-project-settings aria-label="Project settings">•••</button><button class="workspace-button" type="button" data-share-project ${project.status === "archived" ? "disabled" : ""}>Share</button><button class="workspace-button primary" type="button" data-upload-files ${project.status === "archived" ? "disabled" : ""}>${workspaceIcon("plus")} Add</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
+      ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, folders, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy, project.status === "active", projectData.permissions) : projects.length ? workspaceOverview(projects, storage) : emptyWorkspace()}
     </main>
   </div><nav class="workspace-mobile-nav" aria-label="Mobile workspace navigation"><a href="#home"><span>CX</span><small>Home</small></a><a class="${!accountPanel ? "active" : ""}" href="#workspace">${workspaceIcon("projects")}<small>Projects</small></a><button type="button" data-command-menu>${workspaceIcon("search")}<small>Search</small></button><a href="#workspace?panel=account&view=notifications">${workspaceIcon("bell")}<small>Alerts</small></a><a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account">${workspaceIcon("account")}<small>Account</small></a></nav><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
 
@@ -210,7 +222,8 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       features:["1 additional revision round", `Attached to ${button.dataset.fileName}`, "Timestamped feedback and version history stay in this workspace"],
     });
   }));
-  root.querySelectorAll("[data-share-project]").forEach(button => button.addEventListener("click", () => openSharePanel(root, project, shares)));
+  root.querySelectorAll("[data-share-project]").forEach(button => button.addEventListener("click", () => openSharePanel(root, project, shares, files)));
+  root.querySelectorAll("[data-project-activity]").forEach(button => button.addEventListener("click", () => openActivityPanel(root, project)));
   root.querySelector("[data-recycle-bin]")?.addEventListener("click", () => openRecycleBinModal(root, project, actions));
   root.querySelectorAll("[data-project-settings]").forEach(button => button.addEventListener("click", () => openProjectSettingsModal(root, project, actions)));
   const globalSearch = root.querySelector("[data-global-file-search]");
@@ -318,14 +331,14 @@ function folderTreeNodes(folders, parentId = null, depth = 0) {
   return folders.filter(folder => (folder.parent_id || null) === parentId).map(folder => `<div class="workspace-tree-node" style="--depth:${depth}"><button type="button" draggable="true" data-folder-id="${escapeHTML(folder.id)}" data-folder-drag="${escapeHTML(folder.id)}"><span>▸</span><b>${escapeHTML(folder.name)}</b><em>${Number(folder.asset_count || 0)}</em></button>${folderTreeNodes(folders, folder.id, depth + 1)}</div>`).join("");
 }
 
-function projectSurface(project, files, folders, canUpload, comments = [], canManageComments = false, revisionPolicy = null, canManageFolders = false) {
+function projectSurface(project, files, folders, canUpload, comments = [], canManageComments = false, revisionPolicy = null, canManageFolders = false, permissions = {}) {
   const rootFolders = folders.filter(folder => !folder.parent_id);
   const openComments = comments.filter(comment => !commentIsComplete(comment)).length;
   return `<section class="workspace-project-head"><div><p>PROJECT ${project.status === "archived" ? `<b class="workspace-status-badge">ARCHIVED</b>` : ""}</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
     ${openComments ? `<button class="workspace-review-attention" type="button" data-review-attention><span>${openComments}</span><div><b>Feedback needs attention</b><small>${openComments} open comment${openComments === 1 ? "" : "s"} waiting for a decision</small></div><em>Review now →</em></button>` : ""}
     <section class="workspace-browser"><div class="workspace-browser-head"><nav aria-label="Folder breadcrumb"><button class="active" type="button" data-folder-id="">${escapeHTML(project.name)}</button><span data-folder-crumbs></span></nav><div>${canManageFolders ? `<button type="button" data-folder-settings-current hidden>Folder options</button><button type="button" data-create-folder>＋ New folder</button>` : ""}</div></div><div class="workspace-folder-grid">${rootFolders.map(folder => folderCard(folder)).join("")}</div></section>
     <section class="workspace-files" title="Executables, archives, scripts, HTML and SVG are blocked"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header>${files.length ? `${fileToolbar()}${canManageFolders ? assetBulkBar(folders) : ""}` : ""}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy, canManageFolders)).join("") : `<button class="workspace-empty-files" type="button" ${canUpload ? "data-project-drop" : "disabled"}><span>↑</span><h3>${canUpload ? "Add your first file" : "No files shared yet"}</h3><p>${canUpload ? "Upload footage, references, or drag files here." : "Uploads are disabled for this project."}</p>${canUpload ? `<b>Choose files</b>` : ""}</button>`}</div></section>
-    ${files.length ? commentsPanel(comments, canManageComments) : ""}
+    ${files.length ? commentsPanel(comments, canManageComments, permissions.canComment !== false) : ""}
     <section class="workspace-queue" data-workspace-queue></section>`;
 }
 
@@ -454,7 +467,7 @@ function bindVideoHoverPreviews(root, projectId, token = "") {
       linkRequest ||= api(UPLOAD_API, {
         method:"POST",
         headers:bearerHeaders(token, true),
-        body:JSON.stringify({ action:"project-download-link", projectId, fileId:card.dataset.fileId }),
+        body:JSON.stringify({ action:"project-download-link", projectId, fileId:card.dataset.fileId, inline:true }),
       });
       return linkRequest;
     };
@@ -546,22 +559,26 @@ async function openVersions(root, projectId, assetId, token, canManage = false, 
   return openReviewRoom({ layer:root.querySelector("[data-workspace-layer]"), api, headers:json => bearerHeaders(token, json), projectId, assetId, canManage, onChange });
 }
 
-async function openSharePanel(root, project, shares) {
+async function openSharePanel(root, project, shares, files = []) {
   const layer = root.querySelector("[data-workspace-layer]");
-  layer.innerHTML = `<div class="workspace-modal-backdrop"><section class="workspace-share-modal"><button type="button" data-close-share>×</button><p class="workspace-kicker">SHARE PROJECT</p><h2>Create a review link</h2><p>One secure link can include every current project video, plus future versions. The random secret URL is copied immediately when created.</p><form><label>Link label<input name="name" value="Client review" maxlength="100" placeholder="Client review, agency review, final approval..."></label><label class="workspace-switch"><span><b>Allow uploads</b><small>People with the link can add files and create new versions.</small></span><input type="checkbox" name="allowUploads"><i></i></label><label>Link expiry<select name="expiryDays"><option value="0">Never expires</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option></select></label><p role="alert" data-share-error hidden></p><button class="workspace-button primary" type="submit">Create & copy share link</button></form><div class="workspace-existing-shares"><h3>Manage links</h3><small class="workspace-share-safe-note">Secret URLs are only shown at creation. If a client loses one, disable it and create a fresh random link.</small>${shares.length ? shares.map(shareRow).join("") : `<p>No share links created yet.</p>`}</div></section></div>`;
+  const defaultExpiry = localDateTime(Date.now() + 14 * 24 * 60 * 60 * 1000);
+  layer.innerHTML = `<div class="workspace-modal-backdrop"><section class="workspace-share-modal workspace-share-control"><button type="button" data-close-share aria-label="Close">×</button><p class="workspace-kicker">SHARE PROJECT</p><h2>Create a secure review link</h2><p>Choose exactly what a reviewer can see and do. The secret link appears once and is copied when created.</p><form><label>Link label<input name="name" value="Client review" maxlength="100" placeholder="Client review, agency review, final approval..."></label><div class="workspace-share-permissions">${sharePermissionSwitch("uploads","Uploads","Add files or new versions.",false)}${sharePermissionSwitch("downloads","Downloads","Save original files.",true)}${sharePermissionSwitch("comments","Comments","Write text or voice feedback.",true)}${sharePermissionSwitch("approval","Approval","Approve or request changes.",true)}${sharePermissionSwitch("previous","Version history","Open earlier versions.",true)}</div><div class="workspace-share-edit-grid"><label>Exact expiry <span>optional</span><input name="expiresAt" type="datetime-local" value="${defaultExpiry}"></label><label>Password <span>optional</span><input name="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="At least 6 characters"></label></div>${shareAssetChoices(files)}<p role="alert" data-share-error hidden></p><button class="workspace-button primary" type="submit">Create & copy share link</button></form><div class="workspace-existing-shares"><h3>Manage links</h3><small class="workspace-share-safe-note">Secret URLs are only shown at creation. Disable a lost link and create a fresh one.</small>${shares.length ? shares.map(share => shareRow(share, files)).join("") : `<p>No share links created yet.</p>`}</div></section></div>`;
   const close = () => { layer.innerHTML = ""; };
   layer.querySelector("[data-close-share]").addEventListener("click", close);
   layer.querySelector(".workspace-modal-backdrop").addEventListener("click", event => { if (event.target === event.currentTarget) close(); });
   layer.querySelector("form").addEventListener("submit", async event => {
     event.preventDefault();
-    const button = event.currentTarget.querySelector("button[type=submit]");
-    const error = event.currentTarget.querySelector("[data-share-error]");
-    const values = Object.fromEntries(new FormData(event.currentTarget));
+    const form = event.currentTarget, button = form.querySelector("button[type=submit]"), error = form.querySelector("[data-share-error]");
+    const values = Object.fromEntries(new FormData(form));
+    const permission = key => form.querySelector(`[data-share-permission="${key}"]`).checked;
+    const assetIds = [...form.querySelectorAll('[data-share-asset="new"]:checked')].map(input => input.value);
+    const expiresAt = values.expiresAt ? Date.parse(String(values.expiresAt)) : null;
     button.disabled = true; button.textContent = "Creating link…"; error.hidden = true;
     try {
-      const result = await api(UPLOAD_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"create-share-link", projectId:project.id, name:values.name, expiryDays:values.expiryDays, allowUploads:Boolean(values.allowUploads) }) });
+      const result = await api(UPLOAD_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"create-share-link", projectId:project.id, name:values.name, expiresAt, password:values.password, assetIds, allowUploads:permission("uploads"), allowDownloads:permission("downloads"), allowComments:permission("comments"), allowApproval:permission("approval"), allowPreviousVersions:permission("previous") }) });
       await copyShareUrl(result.shareUrl);
-      layer.querySelector(".workspace-share-modal").innerHTML = `<span class="workspace-share-success">✓</span><p class="workspace-kicker">LINK READY</p><h2>${escapeHTML(result.share.name)}</h2><p>${result.share.allowUploads ? "This link accepts downloads, new files and replacement versions." : "This link is view and download only."}</p><label>Shareable project link<input data-created-share value="${escapeHTML(result.shareUrl)}" readonly></label><div class="workspace-share-actions"><button class="workspace-button primary" type="button" data-copy-share>Copied to clipboard ✓</button><a class="workspace-button" href="${shareIntent("whatsapp", result.shareUrl, result.share.name)}" target="_blank" rel="noreferrer">WhatsApp</a><a class="workspace-button" href="${shareIntent("email", result.shareUrl, result.share.name)}">Email</a><a class="workspace-button" href="${shareIntent("facebook", result.shareUrl, result.share.name)}" target="_blank" rel="noreferrer">Facebook</a></div><button class="workspace-button" type="button" data-done-share>Done</button>`;
+      const capabilities = [result.share.allowUploads ? "uploads" : "", result.share.allowDownloads ? "downloads" : "", result.share.allowComments ? "comments" : "", result.share.allowApproval ? "approval" : ""].filter(Boolean).join(", ") || "viewing only";
+      layer.querySelector(".workspace-share-modal").innerHTML = `<span class="workspace-share-success">✓</span><p class="workspace-kicker">LINK READY</p><h2>${escapeHTML(result.share.name)}</h2><p>Access: ${escapeHTML(capabilities)}${result.share.scopedAssets ? ` · ${result.share.scopedAssets} selected file${result.share.scopedAssets === 1 ? "" : "s"}` : " · whole project"}${result.share.passwordProtected ? " · password protected" : ""}.</p><label>Shareable project link<input data-created-share value="${escapeHTML(result.shareUrl)}" readonly></label><div class="workspace-share-actions"><button class="workspace-button primary" type="button" data-copy-share>Copied to clipboard ✓</button><a class="workspace-button" href="${shareIntent("whatsapp", result.shareUrl, result.share.name)}" target="_blank" rel="noreferrer">WhatsApp</a><a class="workspace-button" href="${shareIntent("email", result.shareUrl, result.share.name)}">Email</a><a class="workspace-button" href="${shareIntent("facebook", result.shareUrl, result.share.name)}" target="_blank" rel="noreferrer">Facebook</a></div><button class="workspace-button" type="button" data-done-share>Done</button>`;
       layer.querySelector("[data-copy-share]").addEventListener("click", async event => { const copyButton = event.currentTarget; await copyShareUrl(result.shareUrl); if (copyButton.isConnected) copyButton.textContent = "Copied again ✓"; });
       layer.querySelector("[data-done-share]").addEventListener("click", close);
     } catch (failure) {
@@ -570,10 +587,37 @@ async function openSharePanel(root, project, shares) {
   });
   layer.querySelectorAll("[data-share-save]").forEach(button => button.addEventListener("click", async () => {
     const row = button.closest("[data-share-row]");
-    button.disabled = true; button.textContent = "Saving…";
-    await api(UPLOAD_API, { method:"PATCH", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"share-link", projectId:project.id, shareId:row.dataset.shareRow, status:row.querySelector("[data-share-status]").value, allowUploads:row.querySelector("[data-share-uploads]").checked, name:row.querySelector("[data-share-name]").value, expiryDays:row.querySelector("[data-share-expiry]").value }) });
-    button.textContent = "Saved ✓"; setTimeout(() => { button.disabled = false; button.textContent = "Save"; }, 1200);
+    const permission = key => row.querySelector(`[data-share-permission="${key}"]`).checked;
+    const assetIds = [...row.querySelectorAll(`[data-share-asset="${CSS.escape(row.dataset.shareRow)}"]:checked`)].map(input => input.value);
+    const expiresValue = row.querySelector("[data-share-expires]").value;
+    const rowError = row.querySelector("[data-share-row-error]");
+    button.disabled = true; button.textContent = "Saving…"; rowError.hidden = true;
+    try {
+      await api(UPLOAD_API, { method:"PATCH", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"share-link", projectId:project.id, shareId:row.dataset.shareRow, status:row.querySelector("[data-share-status]").value, name:row.querySelector("[data-share-name]").value, expiresAt:expiresValue ? Date.parse(expiresValue) : null, password:row.querySelector("[data-share-password]").value, clearPassword:row.querySelector("[data-share-clear-password]").checked, assetIds, allowUploads:permission("uploads"), allowDownloads:permission("downloads"), allowComments:permission("comments"), allowApproval:permission("approval"), allowPreviousVersions:permission("previous") }) });
+      button.textContent = "Saved ✓"; setTimeout(() => { if (button.isConnected) { button.disabled = false; button.textContent = "Save access"; } }, 1200);
+    } catch (error) {
+      rowError.textContent = error.message; rowError.hidden = false; button.disabled = false; button.textContent = "Save access";
+    }
   }));
+}
+
+async function openActivityPanel(root, project) {
+  const layer = root.querySelector("[data-workspace-layer]");
+  layer.innerHTML = `<div class="workspace-modal-backdrop"><section class="workspace-share-modal workspace-activity-modal"><button type="button" data-close-activity aria-label="Close">×</button><p class="workspace-kicker">PROJECT ACTIVITY</p><h2>${escapeHTML(project.name)}</h2><p>Uploads, feedback, version decisions and share links in one chronological trail.</p><div class="workspace-activity-loading" role="status"><i></i><span>Loading activity…</span></div></section></div>`;
+  const close = () => { layer.innerHTML = ""; };
+  layer.querySelector("[data-close-activity]").addEventListener("click", close);
+  layer.querySelector(".workspace-modal-backdrop").addEventListener("click", event => { if (event.target === event.currentTarget) close(); });
+  try {
+    const data = await api(`${UPLOAD_API}?action=activity&projectId=${encodeURIComponent(project.id)}`, { cache:"no-store" });
+    const modal = layer.querySelector(".workspace-activity-modal");
+    if (!modal) return;
+    const labels = { upload:"Uploaded", comment:"Commented", approved:"Approved", changes_requested:"Requested changes", share:"Created share link" };
+    const items = data.activity || [];
+    modal.querySelector(".workspace-activity-loading").outerHTML = items.length ? `<div class="workspace-activity-list">${items.map(item => `<article><span data-kind="${escapeHTML(item.event_type)}">${item.event_type === "upload" ? "↑" : item.event_type === "comment" ? "◌" : item.event_type === "approved" ? "✓" : item.event_type === "changes_requested" ? "↺" : "↗"}</span><div><b>${escapeHTML(labels[item.event_type] || "Updated")}</b><p>${escapeHTML(item.label || "Project activity")}</p><small>${escapeHTML(item.actor_name || "Content X")} · ${escapeHTML(new Date(Number(item.created_at)).toLocaleString())}</small></div></article>`).join("")}</div>` : `<div class="workspace-recycle-empty"><span>◇</span><b>No activity yet</b><small>Uploads, comments, decisions and links will appear here.</small></div>`;
+  } catch (error) {
+    const loading = layer.querySelector(".workspace-activity-loading");
+    if (loading) loading.outerHTML = `<div class="workspace-recycle-empty is-error"><span>!</span><b>Activity could not load.</b><small>${escapeHTML(error.message)}</small></div>`;
+  }
 }
 
 function openCreateProjectModal(root, actions) {
@@ -673,10 +717,10 @@ function commentIsComplete(comment) {
   return comment.status === "completed" || comment.status === "resolved";
 }
 
-function commentsPanel(comments, canManageComments) {
+function commentsPanel(comments, canManageComments, canComment = true) {
   const ordered = [...comments].sort((a, b) => Number(commentIsComplete(a)) - Number(commentIsComplete(b)) || Number(b.created_at || 0) - Number(a.created_at || 0));
   const open = ordered.filter(comment => !commentIsComplete(comment)).length;
-  return `<section class="workspace-comments"><header><div><h2>Review comments</h2><p>Open feedback stays first so the next decision is always clear.</p></div><div class="workspace-comment-summary"><span>${open} open · ${comments.length} total</span>${comments.length ? `<div><button class="active" type="button" data-comment-filter="open">Open</button><button type="button" data-comment-filter="all">All</button></div>` : ""}</div></header><div class="workspace-comment-list">${ordered.length ? ordered.map(comment => commentRow(comment, canManageComments)).join("") : `<article class="workspace-comment-empty"><span>◌</span><b>No feedback yet</b><small>Share this project with your client to collect comments here.</small></article>`}</div><p class="workspace-comment-filter-empty" hidden>Everything is resolved. Switch to All to view completed feedback.</p><form class="workspace-comment-form"><div><input name="authorName" required maxlength="100" placeholder="Your name"><input name="authorEmail" type="email" maxlength="254" placeholder="Email optional"></div><textarea name="body" required maxlength="2000" rows="3" placeholder="Write feedback for this project…"></textarea><button class="workspace-button primary" type="submit">Send comment</button><p role="alert" hidden></p></form></section>`;
+  return `<section class="workspace-comments"><header><div><h2>Review comments</h2><p>Open feedback stays first so the next decision is always clear.</p></div><div class="workspace-comment-summary"><span>${open} open · ${comments.length} total</span>${comments.length ? `<div><button class="active" type="button" data-comment-filter="open">Open</button><button type="button" data-comment-filter="all">All</button></div>` : ""}</div></header><div class="workspace-comment-list">${ordered.length ? ordered.map(comment => commentRow(comment, canManageComments)).join("") : `<article class="workspace-comment-empty"><span>◌</span><b>No feedback yet</b><small>Share this project with your client to collect comments here.</small></article>`}</div><p class="workspace-comment-filter-empty" hidden>Everything is resolved. Switch to All to view completed feedback.</p>${canComment ? `<form class="workspace-comment-form"><div><input name="authorName" required maxlength="100" placeholder="Your name"><input name="authorEmail" type="email" maxlength="254" placeholder="Email optional"></div><textarea name="body" required maxlength="2000" rows="3" placeholder="Write feedback for this project…"></textarea><button class="workspace-button primary" type="submit">Send comment</button><p role="alert" hidden></p></form>` : `<div class="workspace-comment-locked"><span>◇</span><div><b>Comments are view-only</b><small>The project owner disabled new feedback for this link.</small></div></div>`}</section>`;
 }
 
 function commentRow(comment, canManageComments) {
@@ -687,7 +731,6 @@ function commentRow(comment, canManageComments) {
 
 function bindComments(root, projectId, token, actions, canManageComments = false) {
   const form = root.querySelector(".workspace-comment-form");
-  if (!form) return;
   const filterEmpty = root.querySelector(".workspace-comment-filter-empty");
   root.querySelectorAll("[data-comment-filter]").forEach(button => button.addEventListener("click", () => {
     const filter = button.dataset.commentFilter; let visible = 0;
@@ -696,6 +739,7 @@ function bindComments(root, projectId, token, actions, canManageComments = false
     if (filterEmpty) filterEmpty.hidden = visible > 0 || filter !== "open";
   }));
   root.querySelector('[data-comment-filter="open"]')?.click();
+  if (!form) return;
   form.addEventListener("submit", async event => {
     event.preventDefault();
     const button = form.querySelector("button[type=submit]");
@@ -717,9 +761,32 @@ function bindComments(root, projectId, token, actions, canManageComments = false
   }
 }
 
-function shareRow(share) {
-  const active = share.status === "active";
-  return `<article data-share-row="${escapeHTML(share.id)}" class="workspace-share-row"><div><label>Label<input data-share-name value="${escapeHTML(share.name)}"></label><small>${active ? (share.allow_uploads ? "Uploads enabled" : "View and download") : "Disabled"} · ${share.expires_at ? `Expires ${formatDate(share.expires_at)}` : "No expiry"}</small></div><label class="mini-check"><input type="checkbox" data-share-uploads ${share.allow_uploads ? "checked" : ""}>Uploads</label><select data-share-expiry><option value="0">No expiry</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option></select><select data-share-status><option value="active" ${active ? "selected" : ""}>Active</option><option value="revoked" ${!active ? "selected" : ""}>Disabled</option></select><button type="button" data-share-save>Save</button></article>`;
+function localDateTime(value) {
+  if (!value) return "";
+  const date = new Date(Number(value));
+  if (Number.isNaN(date.getTime())) return "";
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0,16);
+}
+
+function parseShareScope(value) {
+  try { const parsed = JSON.parse(value || "[]"); return Array.isArray(parsed) ? parsed.map(String) : []; }
+  catch { return []; }
+}
+
+function shareAssetChoices(files, selected = [], prefix = "new") {
+  const selectedIds = new Set(selected);
+  if (!files.length) return `<p class="workspace-share-no-assets">Upload a file before creating a file-specific link.</p>`;
+  return `<fieldset class="workspace-share-assets"><legend>Files included</legend><p>Leave every file unchecked to share the whole project, including future files.</p><div>${files.map(file => { const assetId = String(file.asset_id || file.id); return `<label><input type="checkbox" data-share-asset="${escapeHTML(prefix)}" value="${escapeHTML(assetId)}" ${selectedIds.has(assetId) ? "checked" : ""}><span>${fileGlyph(file.content_type)}</span><b>${escapeHTML(file.original_name)}</b></label>`; }).join("")}</div></fieldset>`;
+}
+
+function sharePermissionSwitch(key, title, description, checked = true) {
+  return `<label class="workspace-switch compact"><span><b>${title}</b><small>${description}</small></span><input type="checkbox" data-share-permission="${key}" ${checked ? "checked" : ""}><i></i></label>`;
+}
+
+function shareRow(share, files) {
+  const active = share.status === "active", scope = parseShareScope(share.asset_scope_json);
+  const metrics = `${Number(share.view_count || 0)} views · ${Number(share.comment_count || 0)} comments · ${Number(share.approval_count || 0)} decisions · ${Number(share.download_count || 0)} downloads`;
+  return `<article data-share-row="${escapeHTML(share.id)}" class="workspace-share-row"><header><div><label>Label<input data-share-name value="${escapeHTML(share.name)}" maxlength="100"></label><small>${active ? "Active" : "Disabled"} · ${scope.length ? `${scope.length} selected file${scope.length === 1 ? "" : "s"}` : "Whole project"} · ${share.expires_at ? `Expires ${formatDate(share.expires_at)}` : "No expiry"}</small><em>${metrics}</em></div><span>${share.password_protected ? "Password protected" : "No password"}</span></header><details><summary>Edit access</summary><div class="workspace-share-permissions">${sharePermissionSwitch("uploads","Uploads","Add files or new versions.",Boolean(share.allow_uploads))}${sharePermissionSwitch("downloads","Downloads","Save original files.",share.allow_downloads !== 0)}${sharePermissionSwitch("comments","Comments","Write text or voice feedback.",share.allow_comments !== 0)}${sharePermissionSwitch("approval","Approval","Approve or request changes.",share.allow_approval !== 0)}${sharePermissionSwitch("previous","Version history","Open earlier versions.",share.allow_previous_versions !== 0)}</div><div class="workspace-share-edit-grid"><label>Exact expiry<input type="datetime-local" data-share-expires value="${localDateTime(share.expires_at)}"></label><label>Status<select data-share-status><option value="active" ${active ? "selected" : ""}>Active</option><option value="revoked" ${!active ? "selected" : ""}>Disabled</option></select></label><label>New password <span>optional</span><input type="password" data-share-password minlength="6" maxlength="128" autocomplete="new-password" placeholder="Keep current password"></label><label class="mini-check"><input type="checkbox" data-share-clear-password> Remove password</label></div>${shareAssetChoices(files, scope, share.id)}<button class="workspace-button primary" type="button" data-share-save>Save access</button><p role="alert" data-share-row-error hidden></p></details></article>`;
 }
 
 async function copyShareUrl(url) {
@@ -746,7 +813,9 @@ export async function renderSharedWorkspace(root, actions, route) {
     const resolvedProjectId = data.project.id;
     const canUpload = Boolean(data.permissions?.canUpload);
     const commentData = await api(`${UPLOAD_API}?action=comments&projectId=${encodeURIComponent(resolvedProjectId)}`, { headers:bearerHeaders(token), cache:"no-store" }).catch(() => ({ comments:[] }));
-    root.innerHTML = `<header class="shared-header"><a href="#home"><span>CX</span><b>Content X</b></a><div><b>Shared project</b><small>${canUpload ? "Uploads enabled" : "View and download"}</small></div></header><main class="shared-main"><section class="shared-title"><p class="workspace-kicker">PRIVATE CLIENT LINK</p><h1>${escapeHTML(data.project.name)}</h1><p>Review the latest files, download any version${canUpload ? ", or add new files and replacements" : ""}. Leave your name and feedback below — no login needed.</p></section>${projectSurface(data.project, data.files || [], data.folders || [], canUpload, commentData.comments || [], false)}</main><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
+    const permissions = data.permissions || {};
+    const allowed = [permissions.canComment ? "Feedback" : "", permissions.canApprove ? "Approval" : "", permissions.canDownload ? "Downloads" : "", canUpload ? "Uploads" : ""].filter(Boolean);
+    root.innerHTML = `<header class="shared-header"><a href="#home"><span>CX</span><b>Content X</b></a><div><b>Shared project</b><small>${allowed.length ? allowed.join(" · ") : "View only"}</small></div></header><main class="shared-main"><section class="shared-title"><p class="workspace-kicker">PRIVATE CLIENT LINK</p><h1>${escapeHTML(data.project.name)}</h1><p>Open the shared files and use the available review controls below. No Content X account is required.</p><div class="shared-permission-chips">${allowed.map(label => `<span>✓ ${label}</span>`).join("")}${permissions.canViewPrevious ? `<span>✓ Version history</span>` : `<span>Latest version only</span>`}${permissions.scopedAssets ? `<span>${permissions.scopedAssets} selected file${permissions.scopedAssets === 1 ? "" : "s"}</span>` : `<span>Whole project</span>`}</div></section>${projectSurface(data.project, data.files || [], data.folders || [], canUpload, commentData.comments || [], false, null, false, permissions)}</main><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
     enhanceFileLibrary(root, data.files || [], commentData.comments || []);
     bindVideoHoverPreviews(root, resolvedProjectId, token);
     const picker = root.querySelector("[data-workspace-picker]");
@@ -763,7 +832,18 @@ export async function renderSharedWorkspace(root, actions, route) {
       }
     });
     bindComments(root, resolvedProjectId, token, { refreshRoute:() => renderSharedWorkspace(root, actions, route) }, false);
-  } catch (error) { sharedError(root, error.message); }
+  } catch (error) { error.status === 401 ? sharedPasswordGate(root, actions, route, token, error.message) : sharedError(root, error.message); }
+}
+
+function sharedPasswordGate(root, actions, route, token, message) {
+  root.innerHTML = `<main class="shared-password-gate"><a href="#home" class="workspace-brand"><span>CX</span><b>Content X</b></a><form><p class="workspace-kicker">PROTECTED REVIEW</p><h1>Enter the share password.</h1><p>${escapeHTML(message || "This private link is password protected.")}</p><label>Password<input name="password" type="password" minlength="6" maxlength="128" autocomplete="current-password" required autofocus></label><button class="workspace-button primary" type="submit">Open shared project</button><p role="alert" hidden></p></form></main>`;
+  const form = root.querySelector("form");
+  form.addEventListener("submit", async event => {
+    event.preventDefault(); const password = form.elements.password.value; const button = form.querySelector("button[type=submit]"), error = form.querySelector("[role=alert]");
+    button.disabled = true; button.textContent = "Checking…"; error.hidden = true; sharePasswords.set(token, password);
+    try { await renderSharedWorkspace(root, actions, route); }
+    catch (failure) { sharePasswords.delete(token); error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Open shared project"; }
+  });
 }
 
 function sharedError(root, message) {
@@ -785,6 +865,7 @@ async function uploadSelectedFiles(root, projectId, token, selected, replaceFile
       if (!control.paused) { control.resume?.(); control.resume = null; }
     });
     row.querySelector("[data-upload-cancel]").addEventListener("click", event => { if (row.classList.contains("done") || row.classList.contains("error")) return; control.cancelled = true; control.paused = false; control.resume?.(); control.resume = null; event.currentTarget.disabled = true; row.querySelector("small").textContent = "Cancelling secure upload…"; });
+    activeWorkspaceUploads += 1;
     try {
       if (!fileLooksSafe(file)) throw new Error("This file type is blocked for safety. Use video, audio, image, PDF, text, CSV or subtitle files.");
       await verifyVideoDuration(file, Number(maxVideoSeconds || 0), row);
@@ -792,6 +873,8 @@ async function uploadSelectedFiles(root, projectId, token, selected, replaceFile
     } catch (error) {
       row.classList.add("error"); row.querySelector("small").textContent = error.message; row.querySelector("strong").textContent = "!";
       row.querySelectorAll(".workspace-upload-actions button").forEach(button => { button.disabled = true; });
+    } finally {
+      activeWorkspaceUploads = Math.max(0, activeWorkspaceUploads - 1);
     }
   }
 }

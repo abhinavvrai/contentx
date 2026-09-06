@@ -505,6 +505,71 @@ html[data-theme="dark"] #app.review-app .comment:focus-within .comment-tools :is
   #app .workspace-account-content.account-settings-content { width:calc(100% - 28px); }
 }
 
+/* frame-native-17: precise share access, audit activity, and calm protected-link states. */
+#app .workspace-share-control { width:min(820px,100%); }
+#app .workspace-share-control>form { gap:14px; }
+#app .workspace-share-control label { font-size:13px; }
+#app .workspace-share-control :is(input,select) { font-size:14px; }
+#app .workspace-share-permissions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+#app .workspace-switch.compact { min-height:58px; padding:9px 10px; background:#202129; }
+#app .workspace-switch.compact b { color:#f2f2f4; font-size:13px; }
+#app .workspace-switch.compact small { font-size:12px; line-height:1.35; }
+#app .workspace-share-edit-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+#app .workspace-share-assets { min-width:0; margin:0; padding:12px; border:1px solid #343641; border-radius:10px; }
+#app .workspace-share-assets legend { padding:0 6px; color:#f0f0f2; font-size:13px; font-weight:900; }
+#app .workspace-share-assets>p { color:#90929d; font-size:12px; line-height:1.45; }
+#app .workspace-share-assets>div { max-height:164px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:9px; overflow:auto; }
+#app .workspace-share-assets label { min-width:0; display:grid; grid-template-columns:18px 24px minmax(0,1fr); align-items:center; gap:7px; min-height:38px; padding:6px 8px; border:1px solid #30323c; border-radius:8px; background:#1d1f27; cursor:pointer; }
+#app .workspace-share-assets input { width:15px; min-height:15px; padding:0; accent-color:#ff6a2e; }
+#app .workspace-share-assets span { color:#ff9b73; text-align:center; }
+#app .workspace-share-assets b { min-width:0; overflow:hidden; color:#d9d9de; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+#app .workspace-share-no-assets { padding:10px; border:1px dashed #343641; border-radius:8px; color:#92949f; font-size:12px; }
+#app .workspace-existing-shares .workspace-share-row { display:block; margin-top:10px; padding:12px; border:1px solid #30323b; background:#1e2027; }
+#app .workspace-share-row>header { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:10px; }
+#app .workspace-share-row>header>div { min-width:0; }
+#app .workspace-share-row>header small,#app .workspace-share-row>header em { display:block; margin-top:5px; color:#92949e; font-size:12px; font-style:normal; line-height:1.4; }
+#app .workspace-share-row>header em { color:#9d9eaa; }
+#app .workspace-share-row>header>span { padding:5px 7px; border:1px solid #3d3f49; border-radius:99px; color:#b8bac3; font-size:12px; white-space:nowrap; }
+#app .workspace-share-row>details { margin-top:10px; border-top:1px solid #30323b; }
+#app .workspace-share-row>details>summary { padding:10px 0 0; color:#ff9a70; font-size:13px; font-weight:850; cursor:pointer; }
+#app .workspace-share-row>details>.workspace-share-permissions,#app .workspace-share-row>details>.workspace-share-edit-grid,#app .workspace-share-row>details>.workspace-share-assets { margin-top:10px; }
+#app .workspace-share-row>details>.workspace-button { margin-top:10px; }
+#app .workspace-share-row .mini-check { align-self:end; min-height:42px; display:flex; flex-direction:row; align-items:center; gap:8px; padding:0 10px; border:1px solid #35363c; border-radius:8px; background:#222329; }
+#app .workspace-share-row .mini-check input { width:15px; min-height:15px; padding:0; }
+#app .shared-permission-chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:14px; }
+#app .shared-permission-chips span { padding:6px 9px; border:1px solid #30333c; border-radius:99px; background:#191b22; color:#b8bac2; font-size:12px; }
+#app .shared-permission-chips span:first-child { color:#7ce0b4; }
+#app .shared-password-gate { min-height:100dvh; display:grid; place-items:center; padding:24px; background:radial-gradient(circle at 35% 20%,#4b2419 0,transparent 34%),#101114; }
+#app .shared-password-gate>.workspace-brand { position:fixed; top:24px; left:24px; }
+#app .shared-password-gate>form { width:min(440px,100%); padding:28px; border:1px solid #393b44; border-radius:16px; background:#191b22; box-shadow:0 30px 90px #0008; }
+#app .shared-password-gate h1 { margin-top:12px; color:#fff; font-size:30px; letter-spacing:-.04em; }
+#app .shared-password-gate p:not(.workspace-kicker) { margin-top:8px; color:#a2a4ad; font-size:14px; line-height:1.55; }
+#app .shared-password-gate label { display:grid; gap:7px; margin-top:20px; color:#d0d1d6; font-size:13px; font-weight:850; }
+#app .shared-password-gate input { min-height:46px; padding:0 12px; border:1px solid #3b3d47; border-radius:9px; background:#22242c; color:#fff; font:inherit; }
+#app .shared-password-gate .workspace-button { width:100%; margin-top:12px; }
+#app .workspace-comment-locked,#app .sx-review-locked { display:flex; align-items:center; gap:10px; margin-top:12px; padding:12px; border:1px solid #343640; border-radius:9px; background:#1e2027; }
+#app .workspace-comment-locked>span,#app .sx-review-locked>span { color:#ff996e; }
+#app .workspace-comment-locked b,#app .workspace-comment-locked small,#app .sx-review-locked b,#app .sx-review-locked small { display:block; }
+#app .workspace-comment-locked b,#app .sx-review-locked b { color:#e5e5e8; font-size:13px; }
+#app .workspace-comment-locked small,#app .sx-review-locked small { margin-top:3px; color:#989aa4; font-size:12px; }
+#app .sx-decision-locked { margin:8px 0; padding:8px 10px; border-radius:7px; background:#22242b; color:#a9abb4; font-size:12px; }
+#app .sx-version-decision.is-read-only .sx-decision-actions { display:none; }
+#app .workspace-activity-modal { width:min(600px,100%); }
+#app .workspace-activity-loading { display:flex; align-items:center; gap:10px; margin-top:24px; color:#a0a2ab; font-size:13px; }
+#app .workspace-activity-loading i { width:18px; height:18px; border:2px solid #3a3c46; border-top-color:#ff7b47; border-radius:50%; animation:spin .8s linear infinite; }
+#app .workspace-activity-list { display:grid; gap:8px; margin-top:20px; }
+#app .workspace-activity-list article { display:grid; grid-template-columns:36px minmax(0,1fr); align-items:start; gap:10px; padding:11px; border:1px solid #30323b; border-radius:10px; background:#202129; }
+#app .workspace-activity-list article>span { width:36px; height:36px; display:grid; place-items:center; border-radius:9px; background:#33231e; color:#ff9a70; font-weight:900; }
+#app .workspace-activity-list b,#app .workspace-activity-list p,#app .workspace-activity-list small { display:block; }
+#app .workspace-activity-list b { color:#f1f1f3; font-size:13px; }
+#app .workspace-activity-list p { margin-top:3px; color:#c0c1c8; font-size:13px; line-height:1.45; }
+#app .workspace-activity-list small { margin-top:4px; color:#9597a1; font-size:12px; }
+@media(max-width:620px) {
+  #app .workspace-share-permissions,#app .workspace-share-edit-grid,#app .workspace-share-assets>div { grid-template-columns:1fr; }
+  #app .workspace-share-row>header { grid-template-columns:1fr; }
+  #app .shared-password-gate>.workspace-brand { top:14px; left:14px; }
+}
+
 /* frame-native-13: premium navigation, resilient media and multi-format review. */
 #app :is(.cx-rail-brand,.review-global-rail .cx-rail-brand) {
   display:grid; place-items:center; padding:0; line-height:1; text-align:center; text-indent:0;

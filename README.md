@@ -10,7 +10,7 @@ Live site:
 
 Current live release label:
 
-- `frame-native-16`
+- `frame-native-17`
 
 Important: do not write private passwords, OTPs, API keys, Razorpay secrets, Google client secrets, access codes or owner credentials in this file. Keep secrets in the proper environment variable system only.
 
@@ -25,6 +25,8 @@ Deletion reliability: project-manager file removal is recoverable. Moving an ass
 Bulk and approval reliability: manager multi-select changes are always scoped again on the server and capped at 100 asset or comment IDs. A version approval is an immutable decision record, not a comment-status shortcut, and must be rejected while visible feedback remains open. Browser frame capture is local-only and bounded to 1920 pixels wide.
 
 Workspace continuity: failed route refreshes must keep the last usable workspace visible and offer an inline Retry action. On mobile, keep Home, Projects, Search, Alerts and Account available in the bottom navigation. Multipart upload parts retry transient network, timeout, rate-limit and server failures at most twice with short backoff; validation and permission failures must surface immediately, and pause/cancel checkpoints must remain active between attempts.
+
+Share-link reliability: each link may have its own exact expiry, password, selected-file scope and independent upload, original-download, comment, approval and previous-version permissions. Share passwords are derived with a unique salt and PBKDF2-SHA-256 and must never be stored in readable form, placed in URLs or persisted in browser storage. Inline preview signatures and original-download signatures are deliberately different; never remove that distinction. Every share-scoped file, version, comment, decision, preview, download and replacement request must be re-authorized on the server. Apply `drizzle/0009_share_permissions.sql` before deploying `frame-native-17`.
 
 The accepted signed-in app scope and phased implementation status live in `docs/APP_WORKSPACE_ROADMAP.md`. Public marketing and conversion work are intentionally excluded from that ledger.
 
@@ -67,11 +69,12 @@ Required Cloudflare variable names (values must never be written here or committ
 3. Confirm Cloudflare Worker `contentx` still has the required variable names, D1 `DB` binding and R2 `UPLOADS` binding. Inspect names and binding targets only; never reveal, copy or replace secret values unnecessarily.
 4. Confirm `wrangler.jsonc` contains the apex custom domain and the `www` route.
 5. Run `npm test` and `npm run build` locally.
-6. Push the intended commit to GitHub `main`. Do not publish the custom domain separately through OpenAI Sites.
-7. Watch the Cloudflare build until both the build and deploy steps report success. A successful Git push alone does not prove production was updated.
-8. Open both `https://contentx.co.in/` and `https://www.contentx.co.in/`. The `www` address must redirect to the apex address.
-9. Verify the current release/cache-buster in the root page and the direct `/site/` route so stale static assets are not mistaken for a failed deployment.
-10. Verify `GET /api/auth` returns Google, email OTP and password reset as available. Verify `GET /api/payments/razorpay/config` returns HTTP 200.
+6. If `db/schema.ts` changed, inspect the new checked-in Drizzle migration and apply only that unapplied migration to production D1 before the application deploy. Never edit an already applied migration.
+7. Push the intended commit to GitHub `main`. Do not publish the custom domain separately through OpenAI Sites.
+8. Watch the Cloudflare build until both the build and deploy steps report success. A successful Git push alone does not prove production was updated.
+9. Open both `https://contentx.co.in/` and `https://www.contentx.co.in/`. The `www` address must redirect to the apex address.
+10. Verify the current release/cache-buster in the root page and the direct `/site/` route so stale static assets are not mistaken for a failed deployment.
+11. Verify `GET /api/auth` returns Google, email OTP and password reset as available. Verify `GET /api/payments/razorpay/config` returns HTTP 200.
 
 Expected authentication availability:
 
