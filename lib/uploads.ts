@@ -92,8 +92,9 @@ export async function ensureUploadSchema(): Promise<void> {
           db.prepare("SELECT asset_id, version_number, parent_file_id, folder_id FROM upload_files LIMIT 0"),
           db.prepare("SELECT parent_id, position FROM project_folders LIMIT 0"),
           db.prepare("SELECT token_hash, allow_uploads, expires_at FROM project_share_links LIMIT 0"),
-          db.prepare("SELECT asset_id, voice_note_id, status, deleted_at FROM project_review_comments LIMIT 0"),
+          db.prepare("SELECT asset_id, voice_note_id, range_end_seconds, priority, assignee, due_at, visibility, parent_comment_id, status, deleted_at FROM project_review_comments LIMIT 0"),
           db.prepare("SELECT object_key, duration_seconds FROM project_comment_voice_notes LIMIT 0"),
+          db.prepare("SELECT asset_id, file_id, decision, actor_name FROM project_version_decisions LIMIT 0"),
         ]);
         return;
       } catch {
@@ -154,6 +155,12 @@ export async function ensureUploadSchema(): Promise<void> {
         author_email TEXT,
         body TEXT NOT NULL,
         timestamp_seconds INTEGER,
+        range_end_seconds INTEGER,
+        priority TEXT NOT NULL DEFAULT 'normal',
+        assignee TEXT,
+        due_at INTEGER,
+        visibility TEXT NOT NULL DEFAULT 'project',
+        parent_comment_id TEXT,
         status TEXT NOT NULL DEFAULT 'open',
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
@@ -172,6 +179,19 @@ export async function ensureUploadSchema(): Promise<void> {
         FOREIGN KEY (project_id) REFERENCES upload_projects(id)
       )`),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_project_comment_voice_notes_project ON project_comment_voice_notes(project_id, created_at)"),
+      db.prepare(`CREATE TABLE IF NOT EXISTS project_version_decisions (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL,
+        asset_id TEXT NOT NULL,
+        file_id TEXT NOT NULL,
+        decision TEXT NOT NULL,
+        note TEXT,
+        actor_name TEXT NOT NULL,
+        actor_email TEXT,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES upload_projects(id)
+      )`),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_project_version_decisions_asset_created ON project_version_decisions(project_id, asset_id, created_at)"),
       db.prepare(`CREATE TABLE IF NOT EXISTS project_folders (
         id TEXT PRIMARY KEY NOT NULL,
         project_id TEXT NOT NULL,
@@ -191,11 +211,19 @@ export async function ensureUploadSchema(): Promise<void> {
       if (!names.has("parent_file_id")) await db.prepare("ALTER TABLE upload_files ADD COLUMN parent_file_id TEXT").run();
       if (!names.has("folder_id")) await db.prepare("ALTER TABLE upload_files ADD COLUMN folder_id TEXT").run();
       const commentColumns = await db.prepare("PRAGMA table_info(project_review_comments)").all<{ name: string }>();
-      if (!commentColumns.results.some(column => column.name === "voice_note_id")) await db.prepare("ALTER TABLE project_review_comments ADD COLUMN voice_note_id TEXT").run();
+      const commentNames = new Set(commentColumns.results.map(column => column.name));
+      if (!commentNames.has("voice_note_id")) await db.prepare("ALTER TABLE project_review_comments ADD COLUMN voice_note_id TEXT").run();
+      if (!commentNames.has("range_end_seconds")) await db.prepare("ALTER TABLE project_review_comments ADD COLUMN range_end_seconds INTEGER").run();
+      if (!commentNames.has("priority")) await db.prepare("ALTER TABLE project_review_comments ADD COLUMN priority TEXT NOT NULL DEFAULT 'normal'").run();
+      if (!commentNames.has("assignee")) await db.prepare("ALTER TABLE project_review_comments ADD COLUMN assignee TEXT").run();
+      if (!commentNames.has("due_at")) await db.prepare("ALTER TABLE project_review_comments ADD COLUMN due_at INTEGER").run();
+      if (!commentNames.has("visibility")) await db.prepare("ALTER TABLE project_review_comments ADD COLUMN visibility TEXT NOT NULL DEFAULT 'project'").run();
+      if (!commentNames.has("parent_comment_id")) await db.prepare("ALTER TABLE project_review_comments ADD COLUMN parent_comment_id TEXT").run();
       await db.batch([
         db.prepare("UPDATE upload_files SET asset_id = id WHERE asset_id IS NULL"),
         db.prepare("CREATE INDEX IF NOT EXISTS idx_upload_files_asset_version ON upload_files(asset_id, version_number)"),
         db.prepare("CREATE INDEX IF NOT EXISTS idx_upload_files_project_folder ON upload_files(project_id, folder_id, status)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_project_review_comments_parent ON project_review_comments(project_id, parent_comment_id, created_at)"),
         db.prepare("PRAGMA optimize"),
       ]);
     })().catch((error) => {

@@ -131,17 +131,24 @@ test("keeps the signed-in project dashboard consistent with the preview workspac
   assert.match(styles, /workspace-overview-grid/);
   assert.match(styles, /sx-control-popover/);
   assert.match(workspace, /workspace-shell \$\{project && !accountPanel \? "project-open"/);
-  assert.match(workspace, /files\.length \? fileToolbar\(\) : ""/);
+  assert.match(workspace, /files\.length \? `\$\{fileToolbar\(\)\}\$\{canManageFolders \? assetBulkBar\(folders\)/);
   assert.match(workspace, /Add your first file/);
   assert.match(styles, /html\[data-theme="dark"\] #app\.workspace-app \.workspace-shell/);
   assert.match(styles, /grid-template-columns:56px 248px minmax\(0,1fr\)!important/);
   assert.match(workspace, /RECENT_PROJECTS_KEY/);
   assert.match(workspace, /function openWorkspaceCommandMenu/);
+  assert.match(workspace, /Search projects, folders, files or feedback/);
+  assert.match(workspace, /Open folder ·/);
+  assert.match(workspace, /Open file ·/);
+  assert.match(workspace, /Feedback ·/);
   assert.match(workspace, /Quick commands and search/);
   assert.match(workspace, /data-review-attention/);
   assert.match(workspace, /data-comment-filter="open"/);
   assert.match(styles, /workspace-command-menu/);
   assert.match(styles, /workspace-review-attention/);
+  assert.match(workspace, /const workspaceIcon/);
+  assert.match(workspace, /workspaceIcon\("bell"\)/);
+  assert.match(styles, /\.workspace-icon/);
 });
 
 test("loads private video-card previews only on hover or keyboard focus", async () => {
@@ -204,6 +211,85 @@ test("adds focused pro review controls without duplicating workspace navigation"
   assert.match(advancedStyles, /\.review-timeline-pins/);
   assert.match(room, /data-export-format/);
   assert.match(room, /review-v\$\{selected\.version_number\}\.\$\{extensions\[format\]\}/);
+  assert.match(room, /data-open-note-next/);
+  assert.match(room, /data-playback-rate/);
+  assert.match(room, /requestPictureInPicture/);
+  assert.match(room, /1\/30/);
+});
+
+test("keeps multipart uploads recoverable with pause, resume and cancellation", async () => {
+  const [workspace, styles] = await Promise.all([
+    readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/frame-workspace.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(workspace, /data-upload-pause/);
+  assert.match(workspace, /data-upload-cancel/);
+  assert.match(workspace, /Upload paused safely/);
+  assert.match(workspace, /abort-upload/);
+  assert.match(styles, /workspace-upload-actions/);
+  assert.match(styles, /workspace-queue article\.paused/);
+});
+
+test("persists review ranges, workflow metadata, internal notes and threaded replies", async () => {
+  const [route, storage, schema, migration, room] = await Promise.all([
+    readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/uploads.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0007_review_workflow.sql", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/review-room.js", import.meta.url), "utf8"),
+  ]);
+  for (const pattern of [/range_end_seconds/,/priority/,/assignee/,/due_at/,/visibility/,/parent_comment_id/]) {
+    assert.match(route,pattern); assert.match(storage,pattern); assert.match(migration,pattern);
+  }
+  assert.match(schema,/rangeEndSeconds/);
+  assert.match(route,/comment-workflow/);
+  assert.match(route,/access\.accessType === "account"/);
+  assert.match(route,/visibility = 'project'/);
+  assert.match(room,/data-range-end/);
+  assert.match(room,/data-reply-note/);
+  assert.match(room,/data-save-workflow/);
+  assert.match(room,/Internal team only/);
+});
+
+test("keeps removed project assets recoverable for managers", async () => {
+  const [route, workspace, styles] = await Promise.all([
+    readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/frame-workspace.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(route, /action === "deleted-files"/);
+  assert.match(route, /action === "project-file"/);
+  assert.match(route, /action === "project-file-restore"/);
+  assert.match(route, /function getDeletedProjectFiles/);
+  assert.match(route, /function deleteProjectFile/);
+  assert.match(route, /function restoreProjectFile/);
+  assert.match(route, /requireProjectManager\(request, projectId\)/);
+  assert.match(route, /SET status = 'deleted', deleted_at = \?/);
+  assert.match(route, /SET status = 'ready', deleted_at = NULL/);
+  assert.match(workspace, /data-recycle-bin/);
+  assert.match(workspace, /data-delete-asset/);
+  assert.match(workspace, /function openRecycleBinModal/);
+  assert.match(workspace, /Move .* and all its versions to Recently deleted/);
+  assert.match(styles, /workspace-recycle-list/);
+  assert.match(styles, /workspace-file-actions/);
+});
+
+test("supports manager-only multi-select move and recoverable bulk removal", async () => {
+  const [route, workspace, styles] = await Promise.all([
+    readFile(new URL("../app/api/uploads/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/frame-workspace.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(route,/action === "project-files-delete"/);
+  assert.match(route,/function deleteProjectFiles/);
+  assert.match(route,/COALESCE\(asset_id,id\) IN/);
+  assert.match(workspace,/data-select-asset/);
+  assert.match(workspace,/data-asset-bulk/);
+  assert.match(workspace,/function bindAssetSelection/);
+  assert.match(workspace,/action:"move-assets"/);
+  assert.match(workspace,/action:"project-files-delete"/);
+  assert.match(styles,/workspace-bulk-bar/);
+  assert.match(styles,/workspace-file-card\.is-selected/);
 });
 
 test("lets account owners permanently delete a project with explicit confirmation", async () => {
@@ -251,4 +337,25 @@ test("adds free account workspaces with 50 GB quota and review comments", async 
   assert.match(workspace, /create-comment/);
   assert.match(workspace, /data-comment-complete/);
   assert.match(account, /Open free workspace/);
+});
+
+test("keeps the workspace usable through transient refresh and upload failures", async () => {
+  const [workspace, styles] = await Promise.all([
+    readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/frame-workspace.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(workspace, /error\.status = response\.status/);
+  assert.match(workspace, /function uploadPartCanRetry/);
+  assert.match(workspace, /status === 408/);
+  assert.match(workspace, /status === 429/);
+  assert.match(workspace, /maximumAttempts = 3/);
+  assert.match(workspace, /uploadPartWithRetry/);
+  assert.match(workspace, /retrying part/);
+  assert.match(workspace, /data-workspace-refresh-error/);
+  assert.match(workspace, /Your open workspace is still safe/);
+  assert.match(workspace, /workspace-mobile-nav/);
+  assert.match(styles, /workspace-refresh-error/);
+  assert.match(styles, /workspace-mobile-nav/);
+  assert.match(styles, /env\(safe-area-inset-bottom\)/);
 });

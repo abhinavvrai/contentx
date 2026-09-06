@@ -293,10 +293,35 @@ export const projectReviewComments = sqliteTable(
     authorEmail: text("author_email"),
     body: text("body").notNull(),
     timestampSeconds: integer("timestamp_seconds"),
+    rangeEndSeconds: integer("range_end_seconds"),
+    priority: text("priority").notNull().default("normal"),
+    assignee: text("assignee"),
+    dueAt: integer("due_at"),
+    visibility: text("visibility").notNull().default("project"),
+    parentCommentId: text("parent_comment_id"),
     status: text("status").notNull().default("open"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
     deletedAt: integer("deleted_at"),
   },
-  table => [index("idx_project_review_comments_project_created").on(table.projectId, table.createdAt)],
+  table => [
+    index("idx_project_review_comments_project_created").on(table.projectId, table.createdAt),
+    index("idx_project_review_comments_parent").on(table.projectId, table.parentCommentId, table.createdAt),
+  ],
+);
+
+export const projectVersionDecisions = sqliteTable(
+  "project_version_decisions",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id").notNull().references(() => uploadProjects.id),
+    assetId: text("asset_id").notNull(),
+    fileId: text("file_id").notNull(),
+    decision: text("decision").notNull(),
+    note: text("note"),
+    actorName: text("actor_name").notNull(),
+    actorEmail: text("actor_email"),
+    createdAt: integer("created_at").notNull(),
+  },
+  table => [index("idx_project_version_decisions_asset_created").on(table.projectId, table.assetId, table.createdAt)],
 );

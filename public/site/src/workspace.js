@@ -1,6 +1,6 @@
 import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-9";
-import { openReviewRoom } from "./review-room.js?v=frame-native-14";
-import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-14";
+import { openReviewRoom } from "./review-room.js?v=frame-native-16";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-16";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -15,11 +15,36 @@ const formatBytes = bytes => {
   return `${value} B`;
 };
 const fileGlyph = type => String(type || "").startsWith("video/") ? "▶" : String(type || "").startsWith("image/") ? "▧" : String(type || "").startsWith("audio/") ? "♫" : "◇";
+const workspaceIcon = name => {
+  const paths = {
+    projects:'<path d="M4 7.5h6.5l1.6 2H20v9.5H4z"/><path d="M4 7.5V5h6l1.5 2"/>',
+    search:'<circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 4 4"/>',
+    bell:'<path d="M7 17h10l-1.2-2v-4a3.8 3.8 0 0 0-7.6 0v4z"/><path d="M10 19h4"/>',
+    account:'<circle cx="12" cy="8" r="3"/><path d="M6.5 19c.5-3.3 2.3-5 5.5-5s5 1.7 5.5 5"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    menu:'<path d="M5 7h14M5 12h14M5 17h14"/>',
+    folder:'<path d="M3.5 7.5h6l1.7 2H20v9H3.5z"/><path d="M3.5 7.5V5h6l1.5 2"/>',
+    trash:'<path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13M10 10v7M14 10v7"/>',
+    restore:'<path d="M5 8V4m0 0h4M5 4l3 3a7 7 0 1 1-2 7"/>',
+  };
+  return `<svg class="workspace-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name] || paths.projects}</svg>`;
+};
 const formatDate = value => value ? new Date(Number(value)).toLocaleDateString([], { dateStyle:"medium" }) : "—";
 const SAFE_WORKSPACE_EXTENSIONS = new Set(["mp4","mov","m4v","webm","mkv","avi","mp3","wav","m4a","aac","flac","ogg","jpg","jpeg","png","webp","gif","heic","heif","pdf","txt","md","csv","srt","vtt"]);
 const RECENT_PROJECTS_KEY = "cx_recent_projects_v1";
 let workspaceRenderVersion = 0;
 let workspaceShortcutHandler = null;
+
+function hydrateUnreadNotificationBadge(root) {
+  const badge = root.querySelector("[data-notification-badge]");
+  if (!badge) return;
+  api("/api/notifications", { cache:"no-store" }).then(data => {
+    if (!badge.isConnected) return;
+    const unread = (data.notifications || []).filter(item => !item.read_at).length;
+    badge.hidden = unread === 0; badge.textContent = unread > 99 ? "99+" : String(unread);
+    badge.closest("a")?.setAttribute("aria-label", unread ? `Notifications, ${unread} unread` : "Notifications");
+  }).catch(() => { badge.hidden = true; });
+}
 
 function readRecentProjects() {
   try { return JSON.parse(localStorage.getItem(RECENT_PROJECTS_KEY) || "[]").filter(Boolean).slice(0, 8); }
@@ -35,7 +60,7 @@ function rememberRecentProject(projectId) {
 async function api(url, options = {}) {
   const response = await fetch(url, { credentials:"same-origin", ...options });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || "This workspace request could not be completed.");
+  if (!response.ok) { const error = new Error(body.error || "This workspace request could not be completed."); error.status = response.status; throw error; }
   return body;
 }
 
@@ -67,6 +92,13 @@ export async function renderClientWorkspace(root, actions, route) {
     root.removeAttribute("aria-busy");
   } catch (error) {
     if (renderVersion !== workspaceRenderVersion) return;
+    if (existingShell?.isConnected) {
+      existingShell.classList.remove("is-refreshing"); root.removeAttribute("aria-busy");
+      const previous = root.querySelector("[data-workspace-refresh-error]"); previous?.remove();
+      const banner = document.createElement("div"); banner.className = "workspace-refresh-error"; banner.dataset.workspaceRefreshError = "";
+      banner.innerHTML = `<span>!</span><div><b>That view did not finish loading.</b><small>${escapeHTML(error.message)} Your open workspace is still safe.</small></div><button type="button">Retry</button>`;
+      banner.querySelector("button").addEventListener("click", actions.refreshRoute); root.querySelector(".workspace-main")?.prepend(banner); return;
+    }
     root.innerHTML = `<main class="workspace-error"><span>!</span><h1>Workspace unavailable.</h1><p>${escapeHTML(error.message)}</p><a class="workspace-button primary" href="#account">Return to account</a></main>`;
     root.removeAttribute("aria-busy");
   }
@@ -92,28 +124,30 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     <aside class="workspace-rail" aria-label="Workspace tools">
       <a class="workspace-rail-brand" href="#home" aria-label="Content X home">CX</a>
       <nav>
-        <a class="${accountPanel ? "" : "active"}" href="#workspace" aria-label="Projects" title="Projects">▱</a>
-        <button type="button" data-command-menu aria-label="Quick commands and search" title="Quick commands · Ctrl K">⌕</button>
-        <a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account" aria-label="Account and notifications" title="Account">◎</a>
+        <a class="${accountPanel ? "" : "active"}" href="#workspace" aria-label="Projects" title="Projects">${workspaceIcon("projects")}</a>
+         <button type="button" data-command-menu aria-label="Quick commands and search" title="Quick commands · Ctrl K">${workspaceIcon("search")}</button>
+         <a class="workspace-notification-link" href="#workspace?panel=account&view=notifications" aria-label="Notifications" title="Notifications">${workspaceIcon("bell")}<span data-notification-badge hidden></span></a>
+        <a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account" aria-label="Account and notifications" title="Account">${workspaceIcon("account")}</a>
       </nav>
       <a class="workspace-rail-user${user.avatarUrl ? " has-image" : ""}" data-account-avatar href="#workspace?panel=account" aria-label="Open account" title="Account">${userAvatar(user)}</a>
     </aside>
     <aside class="workspace-sidebar">
       <a class="workspace-brand" href="#home"><span>CX</span><b>Content X</b></a>
-      <nav><a class="${accountPanel ? "" : "active"}" href="#workspace"><span>▱</span>Projects</a><a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account"><span>◎</span>Account</a><button type="button" data-create-free-project><span>＋</span>New project</button></nav>
-      <label class="workspace-project-search"><span>⌕</span><input type="search" placeholder="Search projects" aria-label="Search projects" data-project-nav-search></label>
+      <nav><a class="${accountPanel ? "" : "active"}" href="#workspace"><span>${workspaceIcon("projects")}</span>Projects</a><a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account"><span>${workspaceIcon("account")}</span>Account</a><button type="button" data-create-free-project><span>${workspaceIcon("plus")}</span>New project</button></nav>
+      <label class="workspace-project-search"><span>${workspaceIcon("search")}</span><input type="search" placeholder="Search projects" aria-label="Search projects" data-project-nav-search></label>
       <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id ? "active" : ""} ${item.status === "archived" ? "archived" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}" data-project-nav-item><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${item.status === "archived" ? "Archived" : `${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}`}</small></a>`).join("") || `<p>Create a free project to begin.</p>`}</div>
-      ${project && !accountPanel ? `<button class="workspace-project-focus" type="button" data-project-settings><span>${escapeHTML(project.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(project.name)}</b><small>${escapeHTML(project.clientName || "Private production")}</small></div><em>⌄</em></button><div class="workspace-tree"><div><small>ASSETS</small><button type="button" data-create-folder title="New folder">＋</button></div><button class="active" type="button" data-folder-id=""><span>▱</span><b>All assets</b><em>${files.length}</em></button>${folderTreeNodes(folders)}<button type="button" data-create-folder><span>＋</span><b>New folder</b></button></div><div class="workspace-share-nav"><header><small>SHARE LINKS</small><button type="button" data-share-project title="New share link">＋</button></header><button class="all" type="button" data-share-project><span>☷</span><b>All share links</b><em>${shares.filter(share => share.status === "active").length}</em></button>${shares.slice(0,6).map(share => `<button type="button" data-share-project><span>↗</span><b>${escapeHTML(share.name)}</b><small>${share.status === "active" ? "Active" : "Disabled"}</small></button>`).join("") || `<p>No links yet. Create one when the project is ready.</p>`}</div>` : ""}
+      ${project && !accountPanel ? `<button class="workspace-project-focus" type="button" data-project-settings><span>${escapeHTML(project.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(project.name)}</b><small>${escapeHTML(project.clientName || "Private production")}</small></div><em>⌄</em></button><div class="workspace-tree"><div><small>ASSETS</small><button type="button" data-create-folder title="New folder">＋</button></div><button class="active" type="button" data-folder-id=""><span>▱</span><b>All assets</b><em>${files.length}</em></button>${folderTreeNodes(folders)}<button type="button" data-create-folder><span>＋</span><b>New folder</b></button><button class="workspace-recycle-link" type="button" data-recycle-bin><span>${workspaceIcon("restore")}</span><b>Recently deleted</b><em>30d</em></button></div><div class="workspace-share-nav"><header><small>SHARE LINKS</small><button type="button" data-share-project title="New share link">＋</button></header><button class="all" type="button" data-share-project><span>☷</span><b>All share links</b><em>${shares.filter(share => share.status === "active").length}</em></button>${shares.slice(0,6).map(share => `<button type="button" data-share-project><span>↗</span><b>${escapeHTML(share.name)}</b><small>${share.status === "active" ? "Active" : "Disabled"}</small></button>`).join("") || `<p>No links yet. Create one when the project is ready.</p>`}</div>` : ""}
       <div class="workspace-storage"><div><b>Free storage</b><small>${formatBytes(used)} of ${formatBytes(quota)}</small></div><i><em style="width:${percent}%"></em></i></div>
       <div class="workspace-user"><span class="${user.avatarUrl ? "has-image" : ""}" data-account-avatar>${userAvatar(user)}</span><div><b data-account-name>${escapeHTML(user.name)}</b><small data-account-email>${escapeHTML(user.email)}</small></div><a href="#workspace?panel=account" aria-label="Account settings">•••</a></div>
     </aside>
     <main class="workspace-main">
-      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">☰</button><div><span>All projects</span>${accountPanel ? `<b>/ Account</b>` : project ? `<i>/</i><b>${escapeHTML(project.name)}</b>` : ""}</div>${project && !accountPanel ? `<label class="workspace-global-search"><span>⌕</span><input type="search" data-global-file-search placeholder="Search files" aria-label="Search this project"></label>` : `<button class="workspace-command-trigger" type="button" data-command-menu><span>⌕</span> Quick find <kbd>Ctrl K</kbd></button>`}<div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button subtle" type="button" data-project-settings aria-label="Project settings">•••</button><button class="workspace-button" type="button" data-share-project ${project.status === "archived" ? "disabled" : ""}>Share</button><button class="workspace-button primary" type="button" data-upload-files ${project.status === "archived" ? "disabled" : ""}>＋ Add</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
+      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">${workspaceIcon("menu")}</button><div><span>All projects</span>${accountPanel ? `<b>/ Account</b>` : project ? `<i>/</i><b>${escapeHTML(project.name)}</b>` : ""}</div>${project && !accountPanel ? `<label class="workspace-global-search"><span>${workspaceIcon("search")}</span><input type="search" data-global-file-search placeholder="Search files" aria-label="Search this project"></label>` : `<button class="workspace-command-trigger" type="button" data-command-menu><span>${workspaceIcon("search")}</span> Quick find <kbd>Ctrl K</kbd></button>`}<div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button subtle" type="button" data-project-settings aria-label="Project settings">•••</button><button class="workspace-button" type="button" data-share-project ${project.status === "archived" ? "disabled" : ""}>Share</button><button class="workspace-button primary" type="button" data-upload-files ${project.status === "archived" ? "disabled" : ""}>${workspaceIcon("plus")} Add</button>` : `<button class="workspace-button primary" type="button" data-create-free-project>Create project</button>`}</div></header>
       ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, folders, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy, project.status === "active") : projects.length ? workspaceOverview(projects, storage) : emptyWorkspace()}
     </main>
-  </div><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
+  </div><nav class="workspace-mobile-nav" aria-label="Mobile workspace navigation"><a href="#home"><span>CX</span><small>Home</small></a><a class="${!accountPanel ? "active" : ""}" href="#workspace">${workspaceIcon("projects")}<small>Projects</small></a><button type="button" data-command-menu>${workspaceIcon("search")}<small>Search</small></button><a href="#workspace?panel=account&view=notifications">${workspaceIcon("bell")}<small>Alerts</small></a><a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account">${workspaceIcon("account")}<small>Account</small></a></nav><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
 
   root.querySelector("[data-workspace-menu]")?.addEventListener("click", () => root.querySelector(".workspace-sidebar").classList.toggle("open"));
+  hydrateUnreadNotificationBadge(root);
   root.querySelector(".workspace-main")?.addEventListener("click", () => root.querySelector(".workspace-sidebar")?.classList.remove("open"));
   root.querySelectorAll("[data-create-free-project]").forEach(button => button.addEventListener("click", () => openCreateProjectModal(root, actions)));
   const projectSearch = root.querySelector("[data-project-nav-search]");
@@ -121,12 +155,13 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     const query = projectSearch.value.trim().toLowerCase();
     root.querySelectorAll("[data-project-nav-item]").forEach(item => { item.hidden = Boolean(query) && !item.textContent.toLowerCase().includes(query); });
   });
-  bindWorkspaceShortcuts(root, projects, project, actions);
+  bindWorkspaceShortcuts(root, projects, project, actions, files, folders, comments);
   bindWorkspaceOverview(root, projects, actions);
   if (accountPanel || !project) return;
   enhanceFileLibrary(root, files, comments);
   bindVideoHoverPreviews(root, project.id, "");
   bindFolderBrowser(root, project.id, folders, actions);
+  bindAssetSelection(root, project.id, actions);
   const picker = root.querySelector("[data-workspace-picker]");
   root.querySelectorAll("[data-upload-files]").forEach(button => button.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); }));
   root.querySelector("[data-project-drop]")?.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });
@@ -144,6 +179,13 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     const assetId = card.dataset.assetId;
     card.querySelector("[data-file-open]").addEventListener("click", () => openVersions(root, project.id, assetId, "", true, actions.refreshRoute));
     card.querySelector("[data-new-version]")?.addEventListener("click", () => { picker.dataset.replaceFile = fileId; picker.click(); });
+    card.querySelector("[data-delete-asset]")?.addEventListener("click", async () => {
+      if (!confirm(`Move ${card.dataset.fileName || "this asset"} and all its versions to Recently deleted?`)) return;
+      try {
+        await api(`${UPLOAD_API}?action=project-file&projectId=${encodeURIComponent(project.id)}&assetId=${encodeURIComponent(assetId)}`, { method:"DELETE" });
+        actions.refreshRoute();
+      } catch (error) { alert(error.message); }
+    });
     bindDropTarget(card, async dropped => {
       await uploadSelectedFiles(root, project.id, "", dropped.slice(0, 1), fileId, project.maxFileSize, project.maxVideoSeconds || project.max_video_seconds || 0);
       actions.refreshRoute();
@@ -169,6 +211,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     });
   }));
   root.querySelectorAll("[data-share-project]").forEach(button => button.addEventListener("click", () => openSharePanel(root, project, shares)));
+  root.querySelector("[data-recycle-bin]")?.addEventListener("click", () => openRecycleBinModal(root, project, actions));
   root.querySelectorAll("[data-project-settings]").forEach(button => button.addEventListener("click", () => openProjectSettingsModal(root, project, actions)));
   const globalSearch = root.querySelector("[data-global-file-search]");
   globalSearch?.addEventListener("input", () => { const fileSearch = root.querySelector("[data-file-search]"); if (fileSearch) { fileSearch.value = globalSearch.value; fileSearch.dispatchEvent(new Event("input", { bubbles:true })); } });
@@ -206,7 +249,7 @@ function bindWorkspaceOverview(root, projects, actions) {
   update();
 }
 
-function bindWorkspaceShortcuts(root, projects, project, actions) {
+function bindWorkspaceShortcuts(root, projects, project, actions, files = [], folders = [], comments = []) {
   const navigate = route => {
     const next = `#${route}`;
     if (location.hash === next) actions.refreshRoute();
@@ -223,6 +266,9 @@ function bindWorkspaceShortcuts(root, projects, project, actions) {
       { label:"Create a folder", meta:"Project action", icon:"▱", run:() => root.querySelector("[data-create-folder]")?.click() },
       { label:"Create a share link", meta:"Project action", icon:"↗", run:() => root.querySelector("[data-share-project]")?.click() },
       { label:"Open project settings", meta:"Project action", icon:"•••", run:() => root.querySelector("[data-project-settings]")?.click() },
+      ...folders.slice(0,30).map(folder => ({ label:`Open folder · ${folder.name}`, meta:"Folder", icon:"▱", run:() => root.querySelector(`[data-folder-id="${CSS.escape(folder.id)}"]`)?.click() })),
+      ...files.slice(0,50).map(file => ({ label:`Open file · ${file.original_name}`, meta:`File · V${Number(file.version_number || 1)}`, icon:fileGlyph(file.content_type), run:() => openVersions(root, project.id, String(file.asset_id || file.id), "", true, actions.refreshRoute) })),
+      ...comments.slice(0,40).map(comment => ({ label:`Feedback · ${String(comment.body || "Voice note").slice(0,80)}`, meta:`${commentIsComplete(comment) ? "Completed" : "Open"} · ${comment.author_name || "Reviewer"}`, icon:"◌", run:() => comment.asset_id ? openVersions(root, project.id, comment.asset_id, "", true, actions.refreshRoute) : root.querySelector(".workspace-comments")?.scrollIntoView({ behavior:"smooth" }) })),
     ] : []),
   ];
   const open = () => openWorkspaceCommandMenu(root, commands);
@@ -243,7 +289,7 @@ function bindWorkspaceShortcuts(root, projects, project, actions) {
 function openWorkspaceCommandMenu(root, commands) {
   const layer = root.querySelector("[data-workspace-layer]");
   if (!layer) return;
-  layer.innerHTML = `<div class="workspace-modal-backdrop workspace-command-backdrop"><section class="workspace-command-menu" role="dialog" aria-modal="true" aria-label="Quick commands"><header><span>⌕</span><input type="search" data-command-search placeholder="Search projects or actions" aria-label="Search commands"><kbd>Esc</kbd></header><div data-command-list>${commands.map((command,index) => `<button type="button" data-command-index="${index}"><i>${escapeHTML(command.icon)}</i><span><b>${escapeHTML(command.label)}</b><small>${escapeHTML(command.meta)}</small></span><em>↵</em></button>`).join("")}</div><p data-command-empty hidden>No matching command.</p><footer><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span><span><kbd>Esc</kbd> close</span></footer></section></div>`;
+  layer.innerHTML = `<div class="workspace-modal-backdrop workspace-command-backdrop"><section class="workspace-command-menu" role="dialog" aria-modal="true" aria-label="Quick commands"><header><span>⌕</span><input type="search" data-command-search placeholder="Search projects, folders, files or feedback" aria-label="Search commands"><kbd>Esc</kbd></header><div data-command-list>${commands.map((command,index) => `<button type="button" data-command-index="${index}"><i>${escapeHTML(command.icon)}</i><span><b>${escapeHTML(command.label)}</b><small>${escapeHTML(command.meta)}</small></span><em>↵</em></button>`).join("")}</div><p data-command-empty hidden>No matching command.</p><footer><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span><span><kbd>Esc</kbd> close</span></footer></section></div>`;
   const backdrop = layer.querySelector(".workspace-command-backdrop");
   const input = layer.querySelector("[data-command-search]");
   const empty = layer.querySelector("[data-command-empty]");
@@ -278,13 +324,26 @@ function projectSurface(project, files, folders, canUpload, comments = [], canMa
   return `<section class="workspace-project-head"><div><p>PROJECT ${project.status === "archived" ? `<b class="workspace-status-badge">ARCHIVED</b>` : ""}</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
     ${openComments ? `<button class="workspace-review-attention" type="button" data-review-attention><span>${openComments}</span><div><b>Feedback needs attention</b><small>${openComments} open comment${openComments === 1 ? "" : "s"} waiting for a decision</small></div><em>Review now →</em></button>` : ""}
     <section class="workspace-browser"><div class="workspace-browser-head"><nav aria-label="Folder breadcrumb"><button class="active" type="button" data-folder-id="">${escapeHTML(project.name)}</button><span data-folder-crumbs></span></nav><div>${canManageFolders ? `<button type="button" data-folder-settings-current hidden>Folder options</button><button type="button" data-create-folder>＋ New folder</button>` : ""}</div></div><div class="workspace-folder-grid">${rootFolders.map(folder => folderCard(folder)).join("")}</div></section>
-    <section class="workspace-files" title="Executables, archives, scripts, HTML and SVG are blocked"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header>${files.length ? fileToolbar() : ""}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy)).join("") : `<button class="workspace-empty-files" type="button" ${canUpload ? "data-project-drop" : "disabled"}><span>↑</span><h3>${canUpload ? "Add your first file" : "No files shared yet"}</h3><p>${canUpload ? "Upload footage, references, or drag files here." : "Uploads are disabled for this project."}</p>${canUpload ? `<b>Choose files</b>` : ""}</button>`}</div></section>
+    <section class="workspace-files" title="Executables, archives, scripts, HTML and SVG are blocked"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header>${files.length ? `${fileToolbar()}${canManageFolders ? assetBulkBar(folders) : ""}` : ""}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy, canManageFolders)).join("") : `<button class="workspace-empty-files" type="button" ${canUpload ? "data-project-drop" : "disabled"}><span>↑</span><h3>${canUpload ? "Add your first file" : "No files shared yet"}</h3><p>${canUpload ? "Upload footage, references, or drag files here." : "Uploads are disabled for this project."}</p>${canUpload ? `<b>Choose files</b>` : ""}</button>`}</div></section>
     ${files.length ? commentsPanel(comments, canManageComments) : ""}
     <section class="workspace-queue" data-workspace-queue></section>`;
 }
 
 function folderCard(folder) {
   return `<article class="workspace-folder-card" draggable="true" data-folder-drag="${escapeHTML(folder.id)}"><button class="workspace-folder-open" type="button" data-folder-id="${escapeHTML(folder.id)}"><span class="workspace-folder-preview"><i></i><i></i><i></i></span><div><b>${escapeHTML(folder.name)}</b><small>${Number(folder.asset_count || 0)} item${Number(folder.asset_count || 0) === 1 ? "" : "s"}</small></div></button><button class="workspace-folder-more" type="button" data-folder-menu="${escapeHTML(folder.id)}" aria-label="Folder options">•••</button><div class="workspace-folder-menu" data-folder-menu-panel="${escapeHTML(folder.id)}" hidden><button type="button" data-folder-open-action="${escapeHTML(folder.id)}">Open folder</button><button type="button" data-folder-rename="${escapeHTML(folder.id)}">Rename</button><button type="button" data-folder-remove="${escapeHTML(folder.id)}">Remove folder</button></div></article>`;
+}
+
+function assetBulkBar(folders) {
+  const byParent = new Map();
+  folders.forEach(folder => { const parent = folder.parent_id || ""; byParent.set(parent, [...(byParent.get(parent) || []), folder]); });
+  const options = [], seen = new Set();
+  const visit = (parent = "", depth = 0) => (byParent.get(parent) || []).forEach(folder => {
+    if (seen.has(folder.id)) return; seen.add(folder.id);
+    options.push(`<option value="${escapeHTML(folder.id)}">${"— ".repeat(depth)}${escapeHTML(folder.name)}</option>`);
+    visit(folder.id, depth + 1);
+  });
+  visit();
+  return `<div class="workspace-bulk-bar" data-asset-bulk hidden><b><span data-selected-count>0</span> selected</b><label>Move to<select data-bulk-folder><option value="">Project root</option>${options.join("")}</select></label><button type="button" data-bulk-move>Move</button><button class="danger" type="button" data-bulk-delete>Recently delete</button><button type="button" data-bulk-clear>Clear</button></div>`;
 }
 
 function bindFolderBrowser(root, projectId, folders, actions) {
@@ -342,7 +401,7 @@ function bindFolderBrowser(root, projectId, folders, actions) {
   paintFolders();
 }
 
-function fileCard(file, canUpload, revisionPolicy = null) {
+function fileCard(file, canUpload, revisionPolicy = null, canManage = false) {
   const version = Number(file.version_number || 1);
   const count = Number(file.version_count || 1);
   const assetId = String(file.asset_id || file.id);
@@ -354,7 +413,30 @@ function fileCard(file, canUpload, revisionPolicy = null) {
   const revisionStatus = revisionPolicy && isVideo
     ? `<div class="workspace-revision-status ${exhausted ? "is-exhausted" : ""}"><span>${Math.min(used, allowed)} of ${allowed} revision round${allowed === 1 ? "" : "s"} used</span>${exhausted ? `<button type="button" data-buy-revision data-asset-id="${escapeHTML(assetId)}" data-file-name="${escapeHTML(file.original_name)}" data-revision-service="${revisionPolicy.service}">Buy another revision · ${revisionPolicy.service === "longform" ? "₹500" : "₹300"}</button>` : `<small>${allowed - used} round${allowed - used === 1 ? "" : "s"} remaining</small>`}</div>`
     : "";
-  return `<article class="workspace-file-card ${canUpload ? "" : "view-only"} ${isVideo ? "has-video-preview" : ""}" draggable="${canUpload}" data-file-card data-file-id="${escapeHTML(file.id)}" data-asset-id="${escapeHTML(assetId)}" data-folder-id="${escapeHTML(file.folder_id || "")}"><button class="workspace-file-preview" type="button" data-file-open aria-label="Open ${escapeHTML(file.original_name)}"><span class="workspace-file-glyph">${fileGlyph(file.content_type)}</span>${isVideo ? '<span class="workspace-video-preview" data-video-preview aria-hidden="true"></span><small class="workspace-video-hint"><b>▶</b> Hover to preview</small>' : ""}<em>v${version}</em>${canUpload ? "<i>Drop replacement here</i>" : ""}</button><div class="workspace-file-info"><div><strong title="${escapeHTML(file.original_name)}">${escapeHTML(file.original_name)}</strong><small><span data-card-field="size">${formatBytes(file.size_bytes)}</span><span data-card-field="date"> · ${formatDate(file.completed_at)}</span></small></div>${canUpload ? '<button type="button" data-new-version aria-label="Upload next version">＋</button>' : ""}</div><footer><span data-card-field="versions">${count} version${count === 1 ? "" : "s"}</span><b data-card-field="status">Ready</b></footer>${revisionStatus}</article>`;
+  return `<article class="workspace-file-card ${canUpload ? "" : "view-only"} ${isVideo ? "has-video-preview" : ""}" draggable="${canUpload}" data-file-card data-file-id="${escapeHTML(file.id)}" data-file-name="${escapeHTML(file.original_name)}" data-asset-id="${escapeHTML(assetId)}" data-folder-id="${escapeHTML(file.folder_id || "")}">${canManage ? `<label class="workspace-file-select" title="Select ${escapeHTML(file.original_name)}"><input type="checkbox" data-select-asset value="${escapeHTML(assetId)}" aria-label="Select ${escapeHTML(file.original_name)}"><span></span></label>` : ""}<button class="workspace-file-preview" type="button" data-file-open aria-label="Open ${escapeHTML(file.original_name)}"><span class="workspace-file-glyph">${fileGlyph(file.content_type)}</span>${isVideo ? '<span class="workspace-video-preview" data-video-preview aria-hidden="true"></span><small class="workspace-video-hint"><b>▶</b> Hover to preview</small>' : ""}<em>v${version}</em>${canUpload ? "<i>Drop replacement here</i>" : ""}</button><div class="workspace-file-info"><div><strong title="${escapeHTML(file.original_name)}">${escapeHTML(file.original_name)}</strong><small><span data-card-field="size">${formatBytes(file.size_bytes)}</span><span data-card-field="date"> · ${formatDate(file.completed_at)}</span></small></div>${canUpload ? `<div class="workspace-file-actions"><button type="button" data-new-version aria-label="Upload next version" title="Upload next version">＋</button>${canManage ? `<button type="button" data-delete-asset aria-label="Move to Recently deleted" title="Move to Recently deleted">${workspaceIcon("trash")}</button>` : ""}</div>` : ""}</div><footer><span data-card-field="versions">${count} version${count === 1 ? "" : "s"}</span><b data-card-field="status">Ready</b></footer>${revisionStatus}</article>`;
+}
+
+function bindAssetSelection(root, projectId, actions) {
+  const bar = root.querySelector("[data-asset-bulk]"), checks = [...root.querySelectorAll("[data-select-asset]")];
+  if (!bar || !checks.length) return;
+  const selected = () => checks.filter(input => input.checked).map(input => input.value);
+  const update = () => {
+    const ids = selected(); bar.hidden = ids.length === 0; bar.querySelector("[data-selected-count]").textContent = String(ids.length);
+    checks.forEach(input => input.closest("[data-file-card]").classList.toggle("is-selected", input.checked));
+  };
+  checks.forEach(input => { input.addEventListener("pointerdown", event => event.stopPropagation()); input.addEventListener("change", update); });
+  bar.querySelector("[data-bulk-clear]").addEventListener("click", () => { checks.forEach(input => { input.checked = false; }); update(); });
+  bar.querySelector("[data-bulk-move]").addEventListener("click", async event => {
+    const ids = selected(); if (!ids.length) return; const button = event.currentTarget; button.disabled = true; button.textContent = "Moving…";
+    try { await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify({ action:"move-assets", projectId, folderId:bar.querySelector("[data-bulk-folder]").value || null, assetIds:ids }) }); actions.refreshRoute(); }
+    catch (error) { button.disabled = false; button.textContent = "Move"; alert(error.message); }
+  });
+  bar.querySelector("[data-bulk-delete]").addEventListener("click", async event => {
+    const ids = selected(); if (!ids.length || !confirm(`Move ${ids.length} selected asset${ids.length === 1 ? "" : "s"} and every version to Recently deleted?`)) return;
+    const button = event.currentTarget; button.disabled = true; button.textContent = "Removing…";
+    try { await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify({ action:"project-files-delete", projectId, assetIds:ids }) }); actions.refreshRoute(); }
+    catch (error) { button.disabled = false; button.textContent = "Recently delete"; alert(error.message); }
+  });
 }
 
 function bindVideoHoverPreviews(root, projectId, token = "") {
@@ -426,6 +508,38 @@ function bindVideoHoverPreviews(root, projectId, token = "") {
 
 function emptyWorkspace() {
   return `<section class="workspace-zero"><span>◇</span><h1>Your free review workspace is ready.</h1><p>Create a project, upload files, then send a private review link to your client. Every free account starts with 50 GB storage.</p><button class="workspace-button primary" type="button" data-create-free-project>Create first project</button></section>`;
+}
+
+async function openRecycleBinModal(root, project, actions) {
+  const layer = root.querySelector("[data-workspace-layer]");
+  layer.innerHTML = `<div class="workspace-modal-backdrop"><section class="workspace-share-modal workspace-recycle-modal" aria-labelledby="recycle-title"><button type="button" data-close-recycle aria-label="Close">×</button><p class="workspace-kicker">RECENTLY DELETED</p><h2 id="recycle-title">Recover project files</h2><p>Deleted assets and every version inside them stay recoverable for 30 days.</p><div class="workspace-recycle-loading" role="status"><i></i><span>Checking deleted files…</span></div></section></div>`;
+  const close = () => { layer.innerHTML = ""; };
+  layer.querySelector("[data-close-recycle]").addEventListener("click", close);
+  layer.querySelector(".workspace-modal-backdrop").addEventListener("click", event => { if (event.target === event.currentTarget) close(); });
+  try {
+    const result = await api(`${UPLOAD_API}?action=deleted-files&projectId=${encodeURIComponent(project.id)}`, { cache:"no-store" });
+    const modal = layer.querySelector(".workspace-recycle-modal");
+    if (!modal) return;
+    const files = result.files || [];
+    modal.querySelector(".workspace-recycle-loading").outerHTML = files.length
+      ? `<div class="workspace-recycle-list">${files.map(file => `<article data-deleted-asset="${escapeHTML(file.asset_id)}"><span>${fileGlyph(file.content_type)}</span><div><b>${escapeHTML(file.original_name)}</b><small>${Number(file.version_count || 1)} version${Number(file.version_count || 1) === 1 ? "" : "s"} · ${formatBytes(file.size_bytes)} · deleted ${formatDate(file.deleted_at)}</small></div><button class="workspace-button" type="button" data-restore-asset>Restore</button></article>`).join("")}</div>`
+      : `<div class="workspace-recycle-empty"><span>✓</span><b>Nothing is waiting for recovery.</b><small>Files you remove from this project will appear here for ${Number(result.recycleBinDays || 30)} days.</small></div>`;
+    modal.querySelectorAll("[data-restore-asset]").forEach(button => button.addEventListener("click", async () => {
+      const row = button.closest("[data-deleted-asset]");
+      button.disabled = true; button.textContent = "Restoring…";
+      try {
+        await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify({ action:"project-file-restore", projectId:project.id, assetId:row.dataset.deletedAsset }) });
+        row.classList.add("is-restored");
+        button.textContent = "Restored ✓";
+        setTimeout(() => { if (layer.isConnected) { close(); actions.refreshRoute(); } }, 500);
+      } catch (error) {
+        button.disabled = false; button.textContent = "Restore"; alert(error.message);
+      }
+    }));
+  } catch (error) {
+    const loading = layer.querySelector(".workspace-recycle-loading");
+    if (loading) loading.outerHTML = `<div class="workspace-recycle-empty is-error"><span>!</span><b>Recently deleted could not open.</b><small>${escapeHTML(error.message)}</small></div>`;
+  }
 }
 
 async function openVersions(root, projectId, assetId, token, canManage = false, onChange = () => {}) {
@@ -662,15 +776,22 @@ async function uploadSelectedFiles(root, projectId, token, selected, replaceFile
   const queue = root.querySelector("[data-workspace-queue]");
   for (const file of files) {
     const row = document.createElement("article");
-    row.innerHTML = `<span>${fileGlyph(file.type)}</span><div><b>${escapeHTML(file.name)}</b><small>Preparing secure upload…</small><i><em></em></i></div><strong>0%</strong>`;
+    row.innerHTML = `<span>${fileGlyph(file.type)}</span><div><b>${escapeHTML(file.name)}</b><small>Preparing secure upload…</small><i><em></em></i><div class="workspace-upload-actions"><button type="button" data-upload-pause>Pause</button><button type="button" data-upload-cancel>Cancel</button></div></div><strong>0%</strong>`;
     queue.prepend(row);
+    const control = { paused:false, cancelled:false, resume:null };
+    row.querySelector("[data-upload-pause]").addEventListener("click", event => {
+      if (row.classList.contains("done") || row.classList.contains("error")) return;
+      control.paused = !control.paused; row.classList.toggle("paused", control.paused); event.currentTarget.textContent = control.paused ? "Resume" : "Pause";
+      if (!control.paused) { control.resume?.(); control.resume = null; }
+    });
+    row.querySelector("[data-upload-cancel]").addEventListener("click", event => { if (row.classList.contains("done") || row.classList.contains("error")) return; control.cancelled = true; control.paused = false; control.resume?.(); control.resume = null; event.currentTarget.disabled = true; row.querySelector("small").textContent = "Cancelling secure upload…"; });
     try {
       if (!fileLooksSafe(file)) throw new Error("This file type is blocked for safety. Use video, audio, image, PDF, text, CSV or subtitle files.");
       await verifyVideoDuration(file, Number(maxVideoSeconds || 0), row);
-      await uploadOne(file, row, projectId, token, replaceFileId);
+      await uploadOne(file, row, projectId, token, replaceFileId, control);
     } catch (error) {
       row.classList.add("error"); row.querySelector("small").textContent = error.message; row.querySelector("strong").textContent = "!";
-      throw error;
+      row.querySelectorAll(".workspace-upload-actions button").forEach(button => { button.disabled = true; });
     }
   }
 }
@@ -709,20 +830,50 @@ function formatDuration(seconds) {
   return `${minutes}:${rest}`;
 }
 
-async function uploadOne(file, row, projectId, token, replaceFileId) {
+function uploadPartCanRetry(error) {
+  const status = Number(error?.status || 0);
+  return !status || status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
+async function uploadPartWithRetry(url, options, row, partNumber, checkpoint) {
+  const maximumAttempts = 3;
+  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+    try { return await api(url, options); }
+    catch (error) {
+      if (attempt === maximumAttempts || !uploadPartCanRetry(error)) throw error;
+      row.querySelector("small").textContent = `Connection interrupted · retrying part ${partNumber} (${attempt}/${maximumAttempts - 1})…`;
+      await new Promise(resolve => setTimeout(resolve, attempt * 450));
+      await checkpoint();
+    }
+  }
+  throw new Error("This upload part could not be completed.");
+}
+
+async function uploadOne(file, row, projectId, token, replaceFileId, control = { paused:false, cancelled:false, resume:null }) {
   let session;
   const setProgress = (percent, label) => { row.querySelector("small").textContent = label; row.querySelector("em").style.width = `${percent}%`; row.querySelector("strong").textContent = percent >= 100 ? "✓" : `${percent}%`; };
+  const checkpoint = async () => {
+    if (control.cancelled) throw new Error("Upload cancelled. No partial file was kept.");
+    if (!control.paused) return;
+    row.querySelector("small").textContent = "Upload paused safely. Resume when ready.";
+    await new Promise(resolve => { control.resume = resolve; });
+    control.resume = null;
+    if (control.cancelled) throw new Error("Upload cancelled. No partial file was kept.");
+  };
   try {
+    await checkpoint();
     session = await api(UPLOAD_API, { method:"POST", headers:bearerHeaders(token, true), body:JSON.stringify({ action:"start-upload", projectId, fileName:file.name, fileSize:file.size, contentType:file.type, replaceFileId:replaceFileId || undefined }) });
     const parts = [];
     let sent = 0;
     for (let offset = 0, partNumber = 1; offset < file.size; offset += session.partSize, partNumber += 1) {
+      await checkpoint();
       const blob = file.slice(offset, Math.min(offset + session.partSize, file.size));
-      const part = await api(`${UPLOAD_API}?action=upload-part&projectId=${encodeURIComponent(projectId)}&fileId=${encodeURIComponent(session.fileId)}&uploadId=${encodeURIComponent(session.uploadId)}&partNumber=${partNumber}`, { method:"PUT", headers:bearerHeaders(token), body:blob });
+      const part = await uploadPartWithRetry(`${UPLOAD_API}?action=upload-part&projectId=${encodeURIComponent(projectId)}&fileId=${encodeURIComponent(session.fileId)}&uploadId=${encodeURIComponent(session.uploadId)}&partNumber=${partNumber}`, { method:"PUT", headers:bearerHeaders(token), body:blob }, row, partNumber, checkpoint);
       parts.push(part); sent += blob.size; setProgress(Math.min(98, Math.round(sent / file.size * 100)), `${replaceFileId ? `Uploading version ${session.versionNumber}` : "Uploading"} · ${formatBytes(sent)} of ${formatBytes(file.size)}`);
     }
+    await checkpoint();
     await api(UPLOAD_API, { method:"POST", headers:bearerHeaders(token, true), body:JSON.stringify({ action:"complete-upload", projectId, fileId:session.fileId, uploadId:session.uploadId, parts }) });
-    row.classList.add("done"); setProgress(100, replaceFileId ? `Version ${session.versionNumber} ready` : "Upload ready");
+    row.classList.add("done"); row.querySelectorAll(".workspace-upload-actions button").forEach(button => { button.disabled = true; }); setProgress(100, replaceFileId ? `Version ${session.versionNumber} ready` : "Upload ready");
   } catch (error) {
     if (session) await api(UPLOAD_API, { method:"POST", headers:bearerHeaders(token, true), body:JSON.stringify({ action:"abort-upload", projectId, fileId:session.fileId, uploadId:session.uploadId }) }).catch(() => undefined);
     row.classList.add("error"); row.querySelector("small").textContent = error.message; row.querySelector("strong").textContent = "!"; throw error;

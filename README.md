@@ -10,7 +10,7 @@ Live site:
 
 Current live release label:
 
-- `frame-native-14`
+- `frame-native-16`
 
 Important: do not write private passwords, OTPs, API keys, Razorpay secrets, Google client secrets, access codes or owner credentials in this file. Keep secrets in the proper environment variable system only.
 
@@ -18,7 +18,15 @@ Profile details are stored in D1 and profile-photo bytes are stored in the priva
 
 Reliability note for future changes: normal sign-in and workspace navigation must never wait on the external Supabase health endpoint. Provider availability on `/api/auth` is configuration-based; actual OTP requests perform their own provider validation. Runtime D1 schema guards use a fast read-only sentinel and fall back to the complete idempotent bootstrap only when a table or required column is missing. Route renders use a generation guard so an older response cannot overwrite a newer click. Password-reset requests return the same generic response whether or not an account exists, use an 8-second provider timeout, and show a 60-second resend control. Resend acceptance does not guarantee instant inbox delivery; mailbox providers can add several minutes of delay. Uploaded-video card previews must stay lazy and private: request an authenticated five-minute media link only after hover or keyboard focus, never place private object URLs or access tokens in static markup or browser storage, mute inline playback, and preserve reduced-motion behavior.
 
-Review reliability: keep global Home/Projects/Review/Search navigation wired on every nested screen. Voice notes require microphone permission, are limited to 60 seconds and 1.25 MB, and must be stored privately with short-lived authorized playback links. PDFs use page-number feedback; safe text/script formats support selected-text quoting. Never downgrade private file delivery to a public object URL.
+Review reliability: keep global Home/Projects/Review/Search navigation wired on every nested screen. Voice notes require microphone permission, are limited to 60 seconds and 1.25 MB, and must be stored privately with short-lived authorized playback links. The recorder must retain stable element references after asynchronous stop events, stop every microphone track when the review room closes, keep a local preview available after a failed send, and reuse the uploaded voice-note ID when only comment creation needs retrying. PDFs use page-number feedback; safe text/script formats support selected-text quoting. Never downgrade private file delivery to a public object URL.
+
+Deletion reliability: project-manager file removal is recoverable. Moving an asset to Recently deleted must hide every version from normal project/share queries without destroying its private R2 objects; restore every version together within 30 days. Shared-link visitors must never receive deleted items or deletion/restore controls. Permanent deletion remains handled by retention cleanup or the separately protected owner-admin flow.
+
+Bulk and approval reliability: manager multi-select changes are always scoped again on the server and capped at 100 asset or comment IDs. A version approval is an immutable decision record, not a comment-status shortcut, and must be rejected while visible feedback remains open. Browser frame capture is local-only and bounded to 1920 pixels wide.
+
+Workspace continuity: failed route refreshes must keep the last usable workspace visible and offer an inline Retry action. On mobile, keep Home, Projects, Search, Alerts and Account available in the bottom navigation. Multipart upload parts retry transient network, timeout, rate-limit and server failures at most twice with short backoff; validation and permission failures must surface immediately, and pause/cancel checkpoints must remain active between attempts.
+
+The accepted signed-in app scope and phased implementation status live in `docs/APP_WORKSPACE_ROADMAP.md`. Public marketing and conversion work are intentionally excluded from that ledger.
 
 Precision-review reliability: loop ranges are device-local per project and must be validated so Out is after In. Timeline pins seek only within the loaded media duration. Wipe comparison keeps both versions muted and synchronized; it is a visual inspection aid, not a render or pixel-difference engine. CSV exports must continue neutralizing formula-leading cells, and EDL export must remain limited to timecoded notes.
 

@@ -3,7 +3,7 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { filterFiles, filterComments, commentsForVersion, hasTimestamp, timecode, reviewSummary, workspacePulse, enhanceStudioDashboard } from "../public/site/src/studio-workspace.js";
-import { reviewCommentMarkup, exportReviewCsv, exportReviewEdl, exportReviewText } from "../public/site/src/review-room.js";
+import { reviewCommentMarkup, exportReviewCsv, exportReviewEdl, exportReviewText, chooseVoiceMimeType } from "../public/site/src/review-room.js";
 import { parseMediaRange } from "../lib/media-range.ts";
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const files = [
@@ -59,6 +59,48 @@ test("review notes escape content and expose completion only to project managers
   assert.match(exportReviewEdl("Cut",2,comments),/001  AX       V     C/);
   assert.match(exportReviewEdl("Cut",2,comments),/\* COMMENT: \[OPEN\] Client: Fix title/);
 });
+test("voice recorder chooses the safest supported format and exposes recovery controls", async () => {
+  assert.equal(chooseVoiceMimeType({ isTypeSupported:type => type === "audio/mp4" }),"audio/mp4");
+  assert.equal(chooseVoiceMimeType({ isTypeSupported:() => false }),"");
+  assert.equal(chooseVoiceMimeType(null),"");
+  const review = await read("public/site/src/review-room.js");
+  for (const pattern of [/data-test-mic/,/data-pause-voice/,/data-cancel-voice/,/data-mic-device/,/startVoiceMeter/,/microphoneError/,/uploadedVoiceNoteId/]) assert.match(review,pattern);
+  assert.doesNotMatch(review,/stopRecording\(\)/);
+  assert.doesNotMatch(review,/event\.currentTarget\.classList\.remove\("is-recording"\)/);
+});
+test("version decisions preserve approval history and block premature approval", async () => {
+  const [route, storage, schema, migration, review, styles] = await Promise.all([
+    read("app/api/uploads/route.ts"),
+    read("lib/uploads.ts"),
+    read("db/schema.ts"),
+    read("drizzle/0008_version_decisions.sql"),
+    read("public/site/src/review-room.js"),
+    read("public/site/src/studio-workspace.css"),
+  ]);
+  for (const source of [storage,schema,migration]) assert.match(source,/project_version_decisions/);
+  assert.match(route,/action === "version-decision"/);
+  assert.match(route,/function createVersionDecision/);
+  assert.match(route,/status NOT IN \('completed','resolved'\)/);
+  assert.match(route,/Complete the open feedback on this version before final approval/);
+  assert.match(route,/ORDER BY created_at DESC LIMIT 100/);
+  assert.match(review,/data-version-decision="approved"/);
+  assert.match(review,/data-version-decision="changes_requested"/);
+  assert.match(review,/newer feedback added/);
+  assert.match(review,/Decision history/);
+  assert.match(styles,/sx-version-decision/);
+});
+test("reviewers can capture frames and managers can update visible feedback in bulk", async () => {
+  const [route, review, styles] = await Promise.all([read("app/api/uploads/route.ts"),read("public/site/src/review-room.js"),read("public/site/src/studio-workspace.css")]);
+  assert.match(route,/bulk-comment-status/);
+  assert.match(route,/commentIds\.map/);
+  assert.match(route,/id IN \(\$\{placeholders\}\)/);
+  assert.match(review,/data-bulk-comments/);
+  assert.match(review,/visibleBulkIds/);
+  assert.match(review,/data-capture-frame/);
+  assert.match(review,/canvas\.toBlob/);
+  assert.match(review,/video\.videoWidth/);
+  assert.match(styles,/sx-bulk-comments/);
+});
 test("dashboard is optional on unrelated routes and metrics use project records", () => {
   assert.doesNotThrow(()=>enhanceStudioDashboard({querySelector:()=>null}));
   assert.match(workspacePulse(files,comments),/Open feedback/);
@@ -84,7 +126,8 @@ test("new review uses authorized APIs, scopes comments and keeps tokens out of b
   assert.match(review,/data-export-format/);
   assert.match(review,/exportReviewCsv/);
   assert.match(review,/exportReviewEdl/);
-  assert.doesNotMatch(review,/localStorage|sessionStorage|frame\.io/);
+  assert.doesNotMatch(review,/localStorage|access_token|refresh_token|frame\.io/);
+  assert.match(review,/sessionStorage\.setItem\(draftKey/);
   assert.match(route,/WHERE id = \? AND project_id = \? AND status = 'ready'/);
   assert.match(route,/requireProjectManager\(request, projectId\)/);
   assert.match(route,/import \{[^}]*requireSessionUser[^}]*\} from "\.\.\/\.\.\/\.\.\/lib\/auth"/);
@@ -95,8 +138,10 @@ test("new review uses authorized APIs, scopes comments and keeps tokens out of b
 });
 test("dashboard styles parse and include mobile, contrast and reduced-motion controls", async () => {
   const require = createRequire(import.meta.resolve("vite"));
-  const css = await read("public/site/src/studio-workspace.css");
+  const css = await read("public/site/src/studio-workspace.css"), frameCss = await read("public/site/src/frame-workspace.css");
   assert.doesNotThrow(()=>require("postcss").parse(css));
+  assert.doesNotThrow(()=>require("postcss").parse(frameCss));
   for(const pattern of [/prefers-reduced-motion/,/max-width:560px/,/:focus-visible/,/\.sx-media-grid\.is-comparing/,/\.sx-list/,/\.sx-review-room::backdrop/]) assert.match(css,pattern);
-  assert.match(await read("public/site/index.html"),/studio-workspace\.css\?v=frame-native-14/);
+  for(const pattern of [/\.sx-voice-composer/,/\.sx-voice-wave/,/data-state="recording"/,/data-state="error"/]) assert.match(frameCss,pattern);
+  assert.match(await read("public/site/index.html"),/studio-workspace\.css\?v=frame-native-16/);
 });

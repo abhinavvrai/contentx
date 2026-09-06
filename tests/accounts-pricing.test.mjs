@@ -82,14 +82,14 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/index.html"),
     load("public/site/src/main.js"),
   ]);
-  assert.match(page, /\/site\/index\.html\?v=frame-native-14/);
-  assert.match(html, /contentx-release" content="frame-native-14/);
-  assert.match(html, /main\.js\?v=frame-native-14/);
+  assert.match(page, /\/site\/index\.html\?v=frame-native-16/);
+  assert.match(html, /contentx-release" content="frame-native-16/);
+  assert.match(html, /main\.js\?v=frame-native-16/);
   assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
   assert.match(main, /features\.js\?v=auth-health-1/);
   assert.match(main, /uploads\.js\?v=frame-native-3/);
-  assert.match(main, /account\.js\?v=frame-native-14/);
-  assert.match(main, /ui\.js\?v=frame-native-14/);
+  assert.match(main, /account\.js\?v=frame-native-16/);
+  assert.match(main, /ui\.js\?v=frame-native-16/);
 });
 
 test("autoplays public preview videos without center overlay controls", async () => {
@@ -354,7 +354,7 @@ test("stores private profile details and avatar metadata with authenticated upda
 });
 
 test("adds server-backed notification preferences and comment email digesting", async () => {
-  const [notifications, route, account, uploads, features, ui, envExample, schema] = await Promise.all([
+  const [notifications, route, account, uploads, features, ui, envExample, schema, workspace] = await Promise.all([
     load("lib/notifications.ts"),
     load("app/api/notifications/route.ts"),
     load("public/site/src/account.js"),
@@ -363,6 +363,7 @@ test("adds server-backed notification preferences and comment email digesting", 
     load("public/site/src/ui.js"),
     load(".env.example"),
     load("db/schema.ts"),
+    load("public/site/src/workspace.js"),
   ]);
   assert.match(notifications, /notification_preferences/);
   assert.match(notifications, /account_notifications/);
@@ -375,11 +376,15 @@ test("adds server-backed notification preferences and comment email digesting", 
   assert.match(route, /test_notification/);
   assert.match(route, /record_event/);
   assert.match(route, /mark_read/);
+  assert.match(route, /mark_all_read/);
   assert.match(route, /requireSessionUser/);
   assert.match(account, /NOTIFICATION_API/);
   assert.match(account, /notificationSettingsPanel/);
   assert.match(account, /Digest at 9\+/);
   assert.match(account, /data-account-notification="emailEnabled"/);
+  assert.match(account, /data-mark-all-notifications/);
+  assert.match(workspace, /data-notification-badge/);
+  assert.match(workspace, /hydrateUnreadNotificationBadge/);
   assert.match(uploads, /notifyOwner/);
   assert.match(uploads, /publishNotification/);
   assert.match(features, /pushServerNotification/);

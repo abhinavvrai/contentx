@@ -24,6 +24,12 @@ export async function POST(request: Request) {
       await markNotificationRead(user, cleanText(input.id, 120));
       return response({ ok: true });
     }
+    if (action === "mark_all_read") {
+      const user = await requireSessionUser(request);
+      const result = await getAccountDatabase().prepare("UPDATE account_notifications SET read_at = ? WHERE user_id = ? AND read_at IS NULL")
+        .bind(Date.now(), user.id).run();
+      return response({ ok: true, updated: Number(result.meta.changes || 0) });
+    }
     if (action === "test_notification") {
       const user = await requireSessionUser(request);
       const result = await publishNotification({

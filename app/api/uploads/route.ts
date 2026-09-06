@@ -48,6 +48,7 @@ export async function GET(request: Request) {
     if (action === "shares") return getProjectShares(request, url.searchParams.get("projectId") || "");
     if (action === "account-projects") return getAccountProjects(request);
     if (action === "comments") return getProjectComments(request, url.searchParams);
+    if (action === "deleted-files") return getDeletedProjectFiles(request, url.searchParams.get("projectId") || "");
     if (action === "download") return downloadAdminFile(request, url.searchParams);
     throw new ClientError("Unknown file action.", 404);
   });
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
     if (action === "create-comment") return createProjectComment(request, input);
     if (action === "create-comment-voice") return createCommentVoiceNote(request, input);
     if (action === "comment-voice-link") return createCommentVoiceLink(request, input);
+    if (action === "version-decision") return createVersionDecision(request, input);
     if (action === "start-upload") return startUpload(request, input);
     if (action === "complete-upload") return completeUpload(request, input);
     if (action === "abort-upload") return abortUpload(request, input);
@@ -91,10 +93,14 @@ export async function PATCH(request: Request) {
     const action = cleanText(input.action, 40);
     if (action === "share-link") return updateProjectShareLink(request, input);
     if (action === "comment-status") return updateProjectCommentStatus(request, input);
+    if (action === "bulk-comment-status") return updateProjectCommentsStatus(request, input);
+    if (action === "comment-workflow") return updateProjectCommentWorkflow(request, input);
     if (action === "move-assets") return moveProjectAssets(request, input);
     if (action === "move-folder") return moveProjectFolder(request, input);
     if (action === "rename-folder") return renameProjectFolder(request, input);
     if (action === "project-settings") return updateProjectSettings(request, input);
+    if (action === "project-files-delete") return deleteProjectFiles(request, input);
+    if (action === "project-file-restore") return restoreProjectFile(request, input);
     if (action === "admin-file-restore") return restoreAdminFile(request, input);
     if (action !== "admin-project-status") throw new ClientError("Unknown file action.", 404);
     await requireOwner(request);
@@ -116,6 +122,7 @@ export async function DELETE(request: Request) {
     const action = url.searchParams.get("action");
     if (action === "account-project") return deleteAccountProject(request, url.searchParams.get("projectId") || "");
     if (action === "project-folder") return deleteProjectFolder(request, url.searchParams);
+    if (action === "project-file") return deleteProjectFile(request, url.searchParams);
     await requireOwner(request);
     if (action !== "admin-file" && action !== "admin-file-purge") throw new ClientError("Unknown file action.", 404);
     const fileId = url.searchParams.get("fileId") || "";
@@ -171,6 +178,7 @@ async function deleteAccountProject(request: Request, rawProjectId: string): Pro
     db.prepare("UPDATE order_selections SET project_id = NULL, asset_id = NULL WHERE project_id = ?").bind(projectId),
     db.prepare("DELETE FROM project_review_comments WHERE project_id = ?").bind(projectId),
     db.prepare("DELETE FROM project_comment_voice_notes WHERE project_id = ?").bind(projectId),
+    db.prepare("DELETE FROM project_version_decisions WHERE project_id = ?").bind(projectId),
     db.prepare("DELETE FROM project_share_links WHERE project_id = ?").bind(projectId),
     db.prepare("DELETE FROM project_folders WHERE project_id = ?").bind(projectId),
     db.prepare("DELETE FROM upload_files WHERE project_id = ?").bind(projectId),
@@ -480,7 +488,55 @@ async function getAssetVersions(request: Request, params: URLSearchParams): Prom
     ORDER BY COALESCE(version_number, 1) DESC LIMIT 100`)
     .bind(projectId, assetId).all();
   if (!versions.results.length) throw new ClientError("File versions were not found.", 404);
-  return json({ versions: versions.results });
+  const decisions = await db.prepare(`SELECT id, project_id, asset_id, file_id, decision, note, actor_name, actor_email, created_at
+    FROM project_version_decisions WHERE project_id = ? AND asset_id = ? ORDER BY created_at DESC LIMIT 100`)
+    .bind(projectId, assetId).all();
+  return json({ versions: versions.results, decisions: decisions.results });
+}
+
+async function createVersionDecision(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80), assetId = cleanText(input.assetId, 80), fileId = cleanText(input.fileId, 80);
+  const decision = cleanText(input.decision, 30), note = cleanText(input.note, 500) || null;
+  if (!projectId || !assetId || !fileId || !["approved", "changes_requested"].includes(decision)) throw new ClientError("Choose a valid version decision.");
+  const access = await authorizeProject(request, projectId, "view");
+  const sessionUser = access.accessType === "account" ? await getSessionUser(request) : null;
+  const actorName = cleanText(input.actorName, 100) || sessionUser?.name || "";
+  const actorEmail = input.actorEmail ? cleanEmail(input.actorEmail) : sessionUser?.email || "";
+  if (actorName.length < 2) throw new ClientError("Enter your name before recording a decision.");
+  if (input.actorEmail && !actorEmail) throw new ClientError("Enter a valid email address.");
+  const { db } = getUploadBindings();
+  const file = await db.prepare("SELECT id FROM upload_files WHERE id = ? AND project_id = ? AND COALESCE(asset_id,id) = ? AND status = 'ready' LIMIT 1")
+    .bind(fileId, projectId, assetId).first<{ id:string }>();
+  if (!file) throw new ClientError("Choose an available version from this project.", 404);
+  if (decision === "approved") {
+    const open = await db.prepare(`SELECT COUNT(*) AS count FROM project_review_comments WHERE project_id = ? AND file_id = ?
+      AND deleted_at IS NULL AND status NOT IN ('completed','resolved') ${access.accessType === "account" ? "" : "AND visibility = 'project'"}`)
+      .bind(projectId, fileId).first<{ count:number }>();
+    if (Number(open?.count || 0) > 0) throw new ClientError("Complete the open feedback on this version before final approval.", 409);
+  }
+  const id = randomId("dec"), now = Date.now();
+  await db.prepare(`INSERT INTO project_version_decisions
+    (id, project_id, asset_id, file_id, decision, note, actor_name, actor_email, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .bind(id, projectId, assetId, fileId, decision, note, actorName, actorEmail || null, now).run();
+  if (access.accessType !== "account") {
+    const owner = await db.prepare(`SELECT u.user_id, a.email FROM user_upload_projects u
+      JOIN account_users a ON a.id = u.user_id WHERE u.project_id = ? LIMIT 1`)
+      .bind(projectId).first<{ user_id:string; email:string }>();
+    await publishNotification({
+      recipientUserId:owner?.user_id || null,
+      recipientEmail:owner?.email || null,
+      eventType:"approval",
+      title:decision === "approved" ? "Version approved" : "Changes requested",
+      message:`${actorName} ${decision === "approved" ? "approved this version" : "requested another revision"}.`,
+      projectId,
+      actorName,
+      actorEmail:actorEmail || null,
+      actionUrl:new URL(`/site/index.html#workspace?project=${encodeURIComponent(projectId)}`, request.url).toString(),
+    }).catch(() => undefined);
+  }
+  return json({ decision:{ id, projectId, assetId, fileId, decision, note, actorName, actorEmail, createdAt:now } }, 201);
 }
 
 async function getProjectShares(request: Request, projectId: string): Promise<Response> {
@@ -496,14 +552,67 @@ async function getProjectShares(request: Request, projectId: string): Promise<Re
 async function getProjectComments(request: Request, params: URLSearchParams): Promise<Response> {
   const projectId = cleanText(params.get("projectId"), 80);
   if (!projectId) throw new ClientError("Choose a project.");
-  await requireProject(request, projectId, "view");
+  const access = await requireProject(request, projectId, "view");
   const { db } = getUploadBindings();
   const comments = await db.prepare(`SELECT id, project_id, file_id, asset_id, voice_note_id, author_name, author_email,
-    body, timestamp_seconds, status, created_at, updated_at
+    body, timestamp_seconds, range_end_seconds, priority, assignee, due_at, visibility, parent_comment_id,
+    status, created_at, updated_at
     FROM project_review_comments
-    WHERE project_id = ? AND deleted_at IS NULL
+    WHERE project_id = ? AND deleted_at IS NULL ${access.accessType === "account" ? "" : "AND visibility = 'project'"}
     ORDER BY created_at DESC LIMIT 300`).bind(projectId).all();
   return json({ comments: comments.results });
+}
+
+async function getDeletedProjectFiles(request: Request, projectId: string): Promise<Response> {
+  if (!projectId) throw new ClientError("Choose a project.");
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  const files = await db.prepare(`SELECT COALESCE(asset_id,id) AS asset_id, MAX(original_name) AS original_name,
+    MAX(content_type) AS content_type, SUM(size_bytes) AS size_bytes, MAX(COALESCE(version_number,1)) AS version_number,
+    COUNT(*) AS version_count, MAX(deleted_at) AS deleted_at FROM upload_files
+    WHERE project_id = ? AND status = 'deleted' AND deleted_at IS NOT NULL
+    GROUP BY COALESCE(asset_id,id) ORDER BY deleted_at DESC LIMIT 200`)
+    .bind(projectId).all();
+  return json({ files:files.results, recycleBinDays:RECYCLE_BIN_DAYS });
+}
+
+async function deleteProjectFile(request: Request, params: URLSearchParams): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(params.get("projectId"), 80), assetId = cleanText(params.get("assetId"), 80);
+  if (!projectId || !assetId) throw new ClientError("Choose a project asset.");
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  const result = await db.prepare("UPDATE upload_files SET status = 'deleted', deleted_at = ? WHERE project_id = ? AND COALESCE(asset_id,id) = ? AND status = 'ready'")
+    .bind(Date.now(), projectId, assetId).run();
+  if (!result.meta.changes) throw new ClientError("Asset not found.", 404);
+  return json({ ok:true, deletedVersions:Number(result.meta.changes), recycleBinDays:RECYCLE_BIN_DAYS });
+}
+
+async function deleteProjectFiles(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80);
+  const assetIds = [...new Set((Array.isArray(input.assetIds) ? input.assetIds : []).map(id => cleanText(id, 80)).filter(Boolean))].slice(0, 100);
+  if (!projectId || !assetIds.length) throw new ClientError("Choose project assets to remove.");
+  await requireProjectManager(request, projectId);
+  const placeholders = assetIds.map(() => "?").join(",");
+  const { db } = getUploadBindings();
+  const result = await db.prepare(`UPDATE upload_files SET status = 'deleted', deleted_at = ?
+    WHERE project_id = ? AND status = 'ready' AND COALESCE(asset_id,id) IN (${placeholders})`)
+    .bind(Date.now(), projectId, ...assetIds).run();
+  if (!result.meta.changes) throw new ClientError("No available assets were found.", 404);
+  return json({ ok:true, deletedAssets:assetIds.length, deletedVersions:Number(result.meta.changes), recycleBinDays:RECYCLE_BIN_DAYS });
+}
+
+async function restoreProjectFile(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80), assetId = cleanText(input.assetId, 80);
+  if (!projectId || !assetId) throw new ClientError("Choose a deleted asset.");
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  const result = await db.prepare("UPDATE upload_files SET status = 'ready', deleted_at = NULL WHERE project_id = ? AND COALESCE(asset_id,id) = ? AND status = 'deleted'")
+    .bind(projectId, assetId).run();
+  if (!result.meta.changes) throw new ClientError("Deleted asset not found.", 404);
+  return json({ ok:true, restoredVersions:Number(result.meta.changes) });
 }
 
 async function createProjectComment(request: Request, input: JsonInput): Promise<Response> {
@@ -511,7 +620,7 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
   requireSameOrigin(request);
   const projectId = cleanText(input.projectId, 80);
   if (!projectId) throw new ClientError("Choose a project.");
-  await requireProject(request, projectId, "view");
+  const access = await requireProject(request, projectId, "view");
   const body = cleanText(input.body, 2000);
   const authorName = cleanText(input.authorName, 100);
   const authorEmail = input.authorEmail ? cleanEmail(input.authorEmail) : "";
@@ -519,15 +628,29 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
   const assetId = cleanText(input.assetId, 80) || null;
   const voiceNoteId = cleanText(input.voiceNoteId, 80) || null;
   const timestamp = input.timestampSeconds === "" || input.timestampSeconds == null ? null : Number(input.timestampSeconds);
+  const rangeEnd = input.rangeEndSeconds === "" || input.rangeEndSeconds == null ? null : Number(input.rangeEndSeconds);
+  const requestedPriority = cleanText(input.priority, 20);
+  const priority = access.accessType === "account" && ["low", "normal", "high", "urgent"].includes(requestedPriority) ? requestedPriority : "normal";
+  const assignee = access.accessType === "account" ? cleanText(input.assignee, 100) || null : null;
+  const dueAt = access.accessType === "account" && input.dueAt !== "" && input.dueAt != null ? Number(input.dueAt) : null;
+  const visibility = access.accessType === "account" && input.visibility === "internal" ? "internal" : "project";
+  const parentCommentId = cleanText(input.parentCommentId, 80) || null;
   if (!body && !voiceNoteId) throw new ClientError("Write a comment or record a voice note before sending.");
   if (authorName.length < 2) throw new ClientError("Enter your name before commenting.");
   if (input.authorEmail && !authorEmail) throw new ClientError("Enter a valid email address.");
   if (timestamp !== null && (!Number.isInteger(timestamp) || timestamp < 0 || timestamp > 24 * 60 * 60)) throw new ClientError("Choose a valid timestamp.");
+  if (rangeEnd !== null && (timestamp === null || !Number.isInteger(rangeEnd) || rangeEnd <= timestamp || rangeEnd > 24 * 60 * 60)) throw new ClientError("The comment range must end after its start time.");
+  if (dueAt !== null && (!Number.isInteger(dueAt) || dueAt < 0 || dueAt > 8_640_000_000_000_000)) throw new ClientError("Choose a valid due date.");
   const { db } = getUploadBindings();
   const id = randomId("com");
   if (voiceNoteId) {
     const voice = await db.prepare("SELECT id FROM project_comment_voice_notes WHERE id = ? AND project_id = ? LIMIT 1").bind(voiceNoteId, projectId).first();
     if (!voice) throw new ClientError("Choose a voice note from this project.", 400);
+  }
+  if (parentCommentId) {
+    const parent = await db.prepare(`SELECT id, file_id, visibility FROM project_review_comments WHERE id = ? AND project_id = ? AND deleted_at IS NULL ${access.accessType === "account" ? "" : "AND visibility = 'project'"} LIMIT 1`)
+      .bind(parentCommentId, projectId).first<{ id: string; file_id: string | null; visibility: string }>();
+    if (!parent || parent.file_id !== fileId) throw new ClientError("Choose a comment from this file before replying.", 400);
   }
   // A timestamp must refer to a ready file in this authorized project, never
   // to a caller-supplied file/asset from another client's workspace.
@@ -541,13 +664,13 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
   const now = Date.now();
   const commentBody = body || "Voice note";
   await db.prepare(`INSERT INTO project_review_comments
-    (id, project_id, file_id, asset_id, voice_note_id, author_name, author_email, body, timestamp_seconds, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`)
-    .bind(id, projectId, fileId, assetId, voiceNoteId, authorName, authorEmail || null, commentBody, timestamp, now, now).run();
+    (id, project_id, file_id, asset_id, voice_note_id, author_name, author_email, body, timestamp_seconds, range_end_seconds, priority, assignee, due_at, visibility, parent_comment_id, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`)
+    .bind(id, projectId, fileId, assetId, voiceNoteId, authorName, authorEmail || null, commentBody, timestamp, rangeEnd, priority, assignee, dueAt, visibility, parentCommentId, now, now).run();
   const owner = await db.prepare(`SELECT u.user_id, a.email
     FROM user_upload_projects u JOIN account_users a ON a.id = u.user_id
     WHERE u.project_id = ? LIMIT 1`).bind(projectId).first<{ user_id: string; email: string }>();
-  await publishNotification({
+  if (visibility === "project") await publishNotification({
     recipientUserId: owner?.user_id || null,
     recipientEmail: owner?.email || null,
     eventType: "comment",
@@ -558,7 +681,7 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
     actorEmail: authorEmail || null,
     actionUrl: new URL(`/site/index.html#workspace?project=${encodeURIComponent(projectId)}`, request.url).toString(),
   }).catch(() => undefined);
-  return json({ comment: { id, projectId, fileId, assetId, voiceNoteId, authorName, authorEmail, body:commentBody, timestampSeconds: timestamp, status: "open", createdAt: now, updatedAt: now } }, 201);
+  return json({ comment: { id, projectId, fileId, assetId, voiceNoteId, authorName, authorEmail, body:commentBody, timestampSeconds: timestamp, rangeEndSeconds: rangeEnd, priority, assignee, dueAt, visibility, parentCommentId, status: "open", createdAt: now, updatedAt: now } }, 201);
 }
 
 async function createCommentVoiceNote(request: Request, input: JsonInput): Promise<Response> {
@@ -599,6 +722,38 @@ async function updateProjectCommentStatus(request: Request, input: JsonInput): P
     .bind(status, Date.now(), commentId, projectId).run();
   if (!result.meta.changes) throw new ClientError("Comment not found.", 404);
   return json({ ok: true, status });
+}
+
+async function updateProjectCommentsStatus(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80), fileId = cleanText(input.fileId, 80), status = cleanText(input.status, 20);
+  const commentIds = [...new Set((Array.isArray(input.commentIds) ? input.commentIds : []).map(id => cleanText(id, 80)).filter(Boolean))].slice(0, 100);
+  if (!projectId || !fileId || !commentIds.length || !["open", "completed"].includes(status)) throw new ClientError("Choose valid feedback to update.");
+  await requireProjectManager(request, projectId);
+  const placeholders = commentIds.map(() => "?").join(",");
+  const { db } = getUploadBindings();
+  const result = await db.prepare(`UPDATE project_review_comments SET status = ?, updated_at = ?
+    WHERE project_id = ? AND file_id = ? AND deleted_at IS NULL AND id IN (${placeholders})`)
+    .bind(status, Date.now(), projectId, fileId, ...commentIds).run();
+  return json({ ok:true, status, changed:Number(result.meta.changes || 0), commentIds });
+}
+
+async function updateProjectCommentWorkflow(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80), commentId = cleanText(input.commentId, 80);
+  const status = cleanText(input.status, 20), priority = cleanText(input.priority, 20);
+  const assignee = cleanText(input.assignee, 100) || null;
+  const dueAt = input.dueAt === "" || input.dueAt == null ? null : Number(input.dueAt);
+  const visibility = input.visibility === "internal" ? "internal" : "project";
+  if (!projectId || !commentId || !["open", "in_progress", "completed"].includes(status)) throw new ClientError("Choose a valid comment status.");
+  if (!["low", "normal", "high", "urgent"].includes(priority)) throw new ClientError("Choose a valid comment priority.");
+  if (dueAt !== null && (!Number.isInteger(dueAt) || dueAt < 0 || dueAt > 8_640_000_000_000_000)) throw new ClientError("Choose a valid due date.");
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  const result = await db.prepare("UPDATE project_review_comments SET status = ?, priority = ?, assignee = ?, due_at = ?, visibility = ?, updated_at = ? WHERE id = ? AND project_id = ? AND deleted_at IS NULL")
+    .bind(status, priority, assignee, dueAt, visibility, Date.now(), commentId, projectId).run();
+  if (!result.meta.changes) throw new ClientError("Comment not found.", 404);
+  return json({ ok:true, status, priority, assignee, dueAt, visibility });
 }
 
 async function createProjectShareLink(request: Request, input: JsonInput): Promise<Response> {
