@@ -10,7 +10,7 @@ Live site:
 
 Current verified live release label:
 
-- `frame-native-18` (`af69782`, verified 8 September 2026)
+- `frame-native-19` (`05f60c2`, verified 8 September 2026)
 
 Important: do not write private passwords, OTPs, API keys, Razorpay secrets, Google client secrets, access codes or owner credentials in this file. Keep secrets in the proper environment variable system only.
 
@@ -42,7 +42,7 @@ Failures found and safeguards added:
 - Signed-in project filters consumed most of the first screen. Collection, stage, saved-view and template controls now use one swipeable rail, while appearance/field/sort controls wrap compactly above a full-width asset search.
 - A running local Wrangler preview can hold generated `dist` files open and make the cleanup step fail with `EPERM`. Stop the local preview before the final clean build; do not broaden deletion paths or remove `.wrangler`, because it contains local D1/R2 fixtures.
 
-Local verification: all 98 tests pass; a clean production build passes. Browser checks covered all twelve routes at 320×740, 360×800 and 412×915 portrait sizes, plus 740×360 landscape, with no document-level horizontal overflow. The real signed-in workspace was also checked against isolated local D1/R2 fixture data. Desktop regression checks at 1280×820 reported no horizontal overflow. Production evidence is recorded only after deployment.
+Verification: all 98 tests pass; a clean production build passes. Browser checks covered all twelve routes at 320×740, 360×800 and 412×915 portrait sizes, plus 740×360 landscape, with no document-level horizontal overflow. The real signed-in workspace was also checked against isolated local D1/R2 fixture data. Desktop regression checks at 1280×820 reported no horizontal overflow. Production now serves release 19 from both the root shell and `/site/`; the apex returns 200, `www` returns 308 to the apex, payment configuration returns 200, anonymous `/api/workspace` remains protected with 401, and `/api/auth` reports Google, email OTP, password reset and D1 available.
 
 For future mobile changes, always test the route matrix `home`, `workspace`, `project`, `review`, `access`, `brief`, `checkout`, `marketplace`, `talent`, `offer-services`, `provider-workspace`, and `owner`. Check both numeric overflow and screenshots: zero `scrollWidth` overflow does not catch crowded or illegible layouts. Keep wide data tables inside their own horizontal scroller; the page itself must never scroll sideways.
 
