@@ -8,9 +8,9 @@ Live site:
 - Direct app route: https://contentx.co.in/site/
 - Owner workspace route: https://contentx.co.in/site/#owner
 
-Last verified live release label (release 18 is being prepared):
+Current verified live release label:
 
-- `frame-native-17`
+- `frame-native-18` (`af69782`, verified 8 September 2026)
 
 Important: do not write private passwords, OTPs, API keys, Razorpay secrets, Google client secrets, access codes or owner credentials in this file. Keep secrets in the proper environment variable system only.
 
@@ -45,7 +45,7 @@ Failures found and safeguards added:
 - A local media test followed a generated production-host URL because Wrangler emulates the configured domain. QA now pins media requests to loopback; this was a test-origin mismatch, not a production object-storage failure.
 - Renew publishing OAuth independently from application credentials. A placeholder local Cloudflare token may shadow OAuth; run the documented parent-directory CLI flow without changing saved app secrets.
 
-Pre-publish evidence: 95 tests pass; clean production build passes; an isolated workerd test passes login, multipart R2 upload, private retrieval, metadata, collections, password-protected sharing and search. Two-account SQLite integration checks cover ownership, exports, sessions, rate limits, forged origins and restricted versions. The default `npm test` now builds and runs the complete suite, not only rendered-HTML checks. Local browser checks are recorded in the checklist.
+Verification evidence: 95 tests pass; clean production build passes; an isolated workerd test passes login, multipart R2 upload, private retrieval, metadata, collections, password-protected sharing and search. Two-account SQLite integration checks cover ownership, exports, sessions, rate limits, forged origins and restricted versions. The default `npm test` now builds and runs the complete suite, not only rendered-HTML checks. Local browser checks are recorded in the checklist. Production deployment `5812b8fa-087e-4093-bfcd-285f596d4e99` serves release 18 from both the root shell and `/site/`; the apex returns 200, `www` returns 308 to the apex, payment configuration returns 200, and `/api/auth` reports Google, email OTP, password reset and D1 available. The production policy is `microphone=(self)` while camera and geolocation remain disabled.
 
 These checks do **not** certify inbox arrival, actual microphone hardware, Safari/iPhone recording, a real payment, full WCAG conformance, or every item in the backlog. Do not log private email contents, credentials or signed media URLs to prove a test. Record the deployed version and domain checks after publishing, not before.
 
