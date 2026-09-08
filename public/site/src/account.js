@@ -1,4 +1,4 @@
-import { renderAccountSecurity } from "./account-security.js?v=frame-native-18";
+import { renderAccountSecurity } from "./account-security.js?v=frame-native-19";
 const AUTH_API = "/api/auth";
 const BRIEF_API = "/api/briefs";
 const NOTIFICATION_API = "/api/notifications";

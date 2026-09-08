@@ -30,6 +30,22 @@ Share-link reliability: each link may have its own exact expiry, password, selec
 
 The complete accepted signed-in scope is tracked item-by-item in [APP_IMPROVEMENT_CHECKLIST.md](docs/APP_IMPROVEMENT_CHECKLIST.md), with the release history in [APP_WORKSPACE_ROADMAP.md](docs/APP_WORKSPACE_ROADMAP.md). There are 186 in-scope improvements, excluding all 15 public marketing/conversion items. The whole backlog is **not complete**: never turn a partial implementation or an unavailable provider into a completion claim.
 
+## Release 19 mobile-fit verification and incident record — 8 September 2026
+
+`frame-native-19` adds `public/site/src/mobile.css` as the final, mobile-only layout layer. It preserves the desktop design while giving the public pages, demo project browser, real signed-in workspace, account/settings screens, marketplace/provider tools, checkout and review room explicit small-screen behavior. It includes safe-area spacing, 44 px primary touch targets, 16 px form controls, off-canvas workspace navigation, single-column cards/files/folders, compact horizontally scrollable filters and a portrait/landscape review-room switch.
+
+Failures found and safeguards added:
+
+- A legacy `.dashboard-shell{min-width:360px}` rule forced horizontal scrolling on Android screens narrower than 360 CSS pixels. The final mobile layer now overrides that minimum with `min-width:0!important`; a regression test protects the override.
+- The later Frame workspace stylesheet restored a desktop two-column review grid after an older mobile rule had collapsed it. The final layer now sets both review columns and rows explicitly: one column in portrait and two columns only on short landscape screens.
+- The demo dashboard sidebar compressed into a crowded text strip on phones even though the document itself did not overflow. It is removed on mobile and replaced by a compact branded search header; project back navigation and the signed-in bottom navigation remain available.
+- Signed-in project filters consumed most of the first screen. Collection, stage, saved-view and template controls now use one swipeable rail, while appearance/field/sort controls wrap compactly above a full-width asset search.
+- A running local Wrangler preview can hold generated `dist` files open and make the cleanup step fail with `EPERM`. Stop the local preview before the final clean build; do not broaden deletion paths or remove `.wrangler`, because it contains local D1/R2 fixtures.
+
+Local verification: all 98 tests pass; a clean production build passes. Browser checks covered all twelve routes at 320×740, 360×800 and 412×915 portrait sizes, plus 740×360 landscape, with no document-level horizontal overflow. The real signed-in workspace was also checked against isolated local D1/R2 fixture data. Desktop regression checks at 1280×820 reported no horizontal overflow. Production evidence is recorded only after deployment.
+
+For future mobile changes, always test the route matrix `home`, `workspace`, `project`, `review`, `access`, `brief`, `checkout`, `marketplace`, `talent`, `offer-services`, `provider-workspace`, and `owner`. Check both numeric overflow and screenshots: zero `scrollWidth` overflow does not catch crowded or illegible layouts. Keep wide data tables inside their own horizontal scroller; the page itself must never scroll sideways.
+
 ## Release 18 verification and incident record — 7 September 2026
 
 This release adds account-owned collections, saved views/searches, project/folder/file favourites, metadata and review stages, project folder templates, an attention queue, unified search and session revocation/data export. Database migration `0010_workspace_records.sql` was checked as missing and applied to production on 7 September. It adds one table/index; it does not replace customer data or credentials.
