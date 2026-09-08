@@ -76,7 +76,7 @@ function withSecurityHeaders(request: Request, response: Response): Response {
   headers.set("Origin-Agent-Cluster", "?1");
   headers.set("X-Permitted-Cross-Domain-Policies", "none");
   if (url.protocol === "https:") headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self)");
+  headers.set("Permissions-Policy", "camera=(), microphone=(self), geolocation=(), payment=(self)");
   headers.set(
     "Content-Security-Policy",
     [

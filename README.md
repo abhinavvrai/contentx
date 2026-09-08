@@ -8,7 +8,7 @@ Live site:
 - Direct app route: https://contentx.co.in/site/
 - Owner workspace route: https://contentx.co.in/site/#owner
 
-Current live release label:
+Last verified live release label (release 18 is being prepared):
 
 - `frame-native-17`
 
@@ -28,7 +28,26 @@ Workspace continuity: failed route refreshes must keep the last usable workspace
 
 Share-link reliability: each link may have its own exact expiry, password, selected-file scope and independent upload, original-download, comment, approval and previous-version permissions. Share passwords are derived with a unique salt and PBKDF2-SHA-256 and must never be stored in readable form, placed in URLs or persisted in browser storage. Inline preview signatures and original-download signatures are deliberately different; never remove that distinction. Every share-scoped file, version, comment, decision, preview, download and replacement request must be re-authorized on the server. Apply `drizzle/0009_share_permissions.sql` before deploying `frame-native-17`.
 
-The accepted signed-in app scope and phased implementation status live in `docs/APP_WORKSPACE_ROADMAP.md`. Public marketing and conversion work are intentionally excluded from that ledger.
+The complete accepted signed-in scope is tracked item-by-item in [APP_IMPROVEMENT_CHECKLIST.md](docs/APP_IMPROVEMENT_CHECKLIST.md), with the release history in [APP_WORKSPACE_ROADMAP.md](docs/APP_WORKSPACE_ROADMAP.md). There are 186 in-scope improvements, excluding all 15 public marketing/conversion items. The whole backlog is **not complete**: never turn a partial implementation or an unavailable provider into a completion claim.
+
+## Release 18 verification and incident record — 7 September 2026
+
+This release adds account-owned collections, saved views/searches, project/folder/file favourites, metadata and review stages, project folder templates, an attention queue, unified search and session revocation/data export. Database migration `0010_workspace_records.sql` was checked as missing and applied to production on 7 September. It adds one table/index; it does not replace customer data or credentials.
+
+Failures found and safeguards added:
+
+- Empty projects had no search/filter controls, but the library enhancer still attached listeners to them, causing a null-element error. The enhancer now exits safely for the empty state.
+- Folder click handling also matched asset cards with a folder attribute. It now binds only actual folder buttons; saved-view restoration follows the same rule.
+- `Permissions-Policy: microphone=()` denied voice recording even when the recorder UI was correct. The Worker now allows the microphone only to its own origin, and the same-origin app iframe delegates that permission. Users still control the browser permission prompt; camera and location remain disabled.
+- Share passwords used a PBKDF2 iteration count above workerd's supported limit. Actual local workerd tests caught it; the compatible 100,000-iteration derivation is now covered by a protected-share test. Keep unique salts, hashing and request limits; never replace this with plaintext storage.
+- Share visitors could target an old file directly when history was disabled. Preview, comments, decisions, replacement uploads and associated voice playback now enforce the version/scope permission on every request.
+- Build cleanup used to erase the entire `.wrangler` directory, including isolated local QA storage. It now cleans only anchored generated output/cache paths. Only synthetic local QA data was affected; production D1/R2 data was not deleted. A regression test protects this rule.
+- A local media test followed a generated production-host URL because Wrangler emulates the configured domain. QA now pins media requests to loopback; this was a test-origin mismatch, not a production object-storage failure.
+- Renew publishing OAuth independently from application credentials. A placeholder local Cloudflare token may shadow OAuth; run the documented parent-directory CLI flow without changing saved app secrets.
+
+Pre-publish evidence: 95 tests pass; clean production build passes; an isolated workerd test passes login, multipart R2 upload, private retrieval, metadata, collections, password-protected sharing and search. Two-account SQLite integration checks cover ownership, exports, sessions, rate limits, forged origins and restricted versions. The default `npm test` now builds and runs the complete suite, not only rendered-HTML checks. Local browser checks are recorded in the checklist.
+
+These checks do **not** certify inbox arrival, actual microphone hardware, Safari/iPhone recording, a real payment, full WCAG conformance, or every item in the backlog. Do not log private email contents, credentials or signed media URLs to prove a test. Record the deployed version and domain checks after publishing, not before.
 
 Precision-review reliability: loop ranges are device-local per project and must be validated so Out is after In. Timeline pins seek only within the loaded media duration. Wipe comparison keeps both versions muted and synchronized; it is a visual inspection aid, not a render or pixel-difference engine. CSV exports must continue neutralizing formula-leading cells, and EDL export must remain limited to timecoded notes.
 

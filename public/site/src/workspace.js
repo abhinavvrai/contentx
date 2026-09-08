@@ -1,6 +1,7 @@
-import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-9";
-import { openReviewRoom } from "./review-room.js?v=frame-native-17";
-import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-17";
+import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-18";
+import { bindWorkspaceOrganizer, openUnifiedSearch } from "./workspace-organizer.js?v=frame-native-18";
+import { openReviewRoom } from "./review-room.js?v=frame-native-18";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-18";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -169,6 +170,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   });
   bindWorkspaceShortcuts(root, projects, project, actions, files, folders, comments);
   bindWorkspaceOverview(root, projects, actions);
+  if (!accountPanel) bindWorkspaceOrganizer({ root, api, project, projects, files, folders, actions, openFile:(assetId,commentId)=>openVersions(root, project.id, assetId, "", true, actions.refreshRoute,commentId) }).catch(error=>console.warn("Workspace organization unavailable",error.message));
   if (accountPanel || !project) return;
   enhanceFileLibrary(root, files, comments);
   bindVideoHoverPreviews(root, project.id, "");
@@ -252,7 +254,7 @@ function bindWorkspaceOverview(root, projects, actions) {
   let filter = "active";
   const update = () => {
     let visible = 0; const query = search.value.trim().toLowerCase();
-    root.querySelectorAll("[data-overview-card]").forEach(card => { card.hidden = (filter === "active" && card.dataset.projectStatus === "archived") || (query && !card.textContent.toLowerCase().includes(query)); if (!card.hidden) visible++; });
+    root.querySelectorAll("[data-overview-card]").forEach(card => { card.hidden = (filter === "active" && card.dataset.projectStatus === "archived") || (grid.dataset.onlyFavorites === "true" && card.dataset.favoriteProject !== "true") || (query && !card.textContent.toLowerCase().includes(query)); if (!card.hidden) visible++; });
     root.querySelector("[data-overview-empty]").hidden = visible > 0;
   };
   search.addEventListener("input", update);
@@ -269,6 +271,7 @@ function bindWorkspaceShortcuts(root, projects, project, actions, files = [], fo
     else location.hash = route;
   };
   const commands = [
+    { label:"Search across the workspace", meta:"Files, folders, feedback and metadata", icon:"⌕", run:()=>openUnifiedSearch({root,api,navigate}) },
     { label:"View all projects", meta:"Navigation", icon:"▱", run:() => navigate("workspace") },
     { label:"Create a new project", meta:"Action", icon:"＋", run:() => root.querySelector("[data-create-free-project]")?.click() },
     { label:"Account and notifications", meta:"Navigation", icon:"◎", run:() => navigate("workspace?panel=account") },
@@ -364,7 +367,8 @@ function bindFolderBrowser(root, projectId, folders, actions) {
   const folderGrid = root.querySelector(".workspace-folder-grid");
   if (!grid || !folderGrid) return;
   const byId = new Map(folders.map(folder => [folder.id, folder]));
-  let activeFolder = sessionStorage.getItem(`cx_active_folder_${projectId}`) || "";
+  let activeFolder = "";
+  try { activeFolder = sessionStorage.getItem(`cx_active_folder_${projectId}`) || ""; } catch {}
   if (activeFolder && !byId.has(activeFolder)) activeFolder = "";
   const signalLibrary = () => (root.querySelector("[data-file-search]") || grid).dispatchEvent(new Event("input", { bubbles:true }));
   const paintFolders = () => {
@@ -379,8 +383,9 @@ function bindFolderBrowser(root, projectId, folders, actions) {
     const manage = root.querySelector("[data-folder-settings-current]"); if (manage) { manage.hidden = !activeFolder; manage.dataset.folderSettingsCurrent = activeFolder; }
     grid.dataset.activeFolder = activeFolder;
     grid.dataset.folderAssetCount = String(rootCount);
-    sessionStorage.setItem(`cx_active_folder_${projectId}`, activeFolder);
+    try { sessionStorage.setItem(`cx_active_folder_${projectId}`, activeFolder); } catch {}
     bindFolderControls(); signalLibrary();
+    root.dispatchEvent(new CustomEvent("workspace-folder-change",{detail:activeFolder}));
   };
   const setActive = folderId => { activeFolder = folderId || ""; paintFolders(); };
   const move = async (payload, targetId) => {
@@ -394,7 +399,7 @@ function bindFolderBrowser(root, projectId, folders, actions) {
     return asset ? { type:"asset", id:asset } : folder ? { type:"folder", id:folder } : null;
   };
   function bindFolderControls() {
-    root.querySelectorAll("[data-folder-id]").forEach(button => {
+    root.querySelectorAll("button[data-folder-id]").forEach(button => {
       if (button.dataset.folderBound) return; button.dataset.folderBound = "true";
       button.addEventListener("click", event => { if (!event.defaultPrevented) setActive(button.dataset.folderId); });
       button.addEventListener("dragover", event => { if (![...event.dataTransfer.types].some(type => type.includes("contentx"))) return; event.preventDefault(); button.classList.add("is-drop-target"); });
@@ -437,7 +442,15 @@ function bindAssetSelection(root, projectId, actions) {
     const ids = selected(); bar.hidden = ids.length === 0; bar.querySelector("[data-selected-count]").textContent = String(ids.length);
     checks.forEach(input => input.closest("[data-file-card]").classList.toggle("is-selected", input.checked));
   };
-  checks.forEach(input => { input.addEventListener("pointerdown", event => event.stopPropagation()); input.addEventListener("change", update); });
+  let lastSelected = null;
+  checks.forEach(input => { input.addEventListener("pointerdown", event => event.stopPropagation()); input.addEventListener("click", event => {
+    const visible = checks.filter(item=>!item.closest("[data-file-card]").hidden);
+    if(event.shiftKey && lastSelected && visible.includes(lastSelected)) {
+      const start=visible.indexOf(lastSelected), end=visible.indexOf(input);
+      visible.slice(Math.min(start,end),Math.max(start,end)+1).forEach(item=>{item.checked=input.checked;});
+    }
+    lastSelected=input;update();
+  }); input.addEventListener("change", update); });
   bar.querySelector("[data-bulk-clear]").addEventListener("click", () => { checks.forEach(input => { input.checked = false; }); update(); });
   bar.querySelector("[data-bulk-move]").addEventListener("click", async event => {
     const ids = selected(); if (!ids.length) return; const button = event.currentTarget; button.disabled = true; button.textContent = "Moving…";
@@ -555,8 +568,8 @@ async function openRecycleBinModal(root, project, actions) {
   }
 }
 
-async function openVersions(root, projectId, assetId, token, canManage = false, onChange = () => {}) {
-  return openReviewRoom({ layer:root.querySelector("[data-workspace-layer]"), api, headers:json => bearerHeaders(token, json), projectId, assetId, canManage, onChange });
+async function openVersions(root, projectId, assetId, token, canManage = false, onChange = () => {}, initialCommentId = "") {
+  return openReviewRoom({ layer:root.querySelector("[data-workspace-layer]"), api, headers:json => bearerHeaders(token, json), projectId, assetId, canManage, onChange, initialCommentId });
 }
 
 async function openSharePanel(root, project, shares, files = []) {

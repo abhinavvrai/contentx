@@ -1,3 +1,4 @@
+import { renderAccountSecurity } from "./account-security.js?v=frame-native-18";
 const AUTH_API = "/api/auth";
 const BRIEF_API = "/api/briefs";
 const NOTIFICATION_API = "/api/notifications";
@@ -429,8 +430,9 @@ export async function renderWorkspaceAccountPanel(container, actions, initialVie
     const activeRefunds = orders.filter(order => ["requested", "processing"].includes(order.refund_status)).length;
     const refundUpdates = orders.filter(order => order.refund_status && order.refund_status !== "none").length;
     container.innerHTML = `<div class="workspace-account-head"><div>${avatarMarkup(data.user)}<p><small>ACCOUNT</small><strong data-account-name>${escapeHTML(data.user.name)}</strong><em data-account-email>${escapeHTML(data.user.email)}</em></p></div><button class="workspace-button" type="button" data-account-logout>Sign out</button></div>
-      <nav class="workspace-account-tabs" aria-label="Account sections"><button type="button" data-account-view="profile">Profile</button><button type="button" data-account-view="notifications">Notifications</button><button type="button" data-account-view="billing">Orders & billing</button></nav>
+      <nav class="workspace-account-tabs" aria-label="Account sections"><button type="button" data-account-view="profile">Profile</button><button type="button" data-account-view="notifications">Notifications</button><button type="button" data-account-view="billing">Orders & billing</button><button type="button" data-account-view="security">Security & data</button></nav>
       <div class="account-settings-content workspace-account-content">
+        <section class="account-settings-panel" data-account-panel="security" hidden></section>
         <section class="account-settings-panel" data-account-panel="profile">
           ${profilePanel(data.user, activeRefunds, "View projects")}
         </section>
@@ -442,7 +444,9 @@ export async function renderWorkspaceAccountPanel(container, actions, initialVie
         </section>
       </div>`;
     const openView = view => {
-      const selected = ["profile", "notifications", "billing"].includes(view) ? view : "profile";
+      const selected = ["profile", "notifications", "billing", "security"].includes(view) ? view : "profile";
+      const securityPanel=container.querySelector('[data-account-panel="security"]');
+      if(selected==="security"&&!securityPanel.dataset.loaded){securityPanel.dataset.loaded="true";renderAccountSecurity(securityPanel,api);}
       container.querySelectorAll("[data-account-view]").forEach(button => button.classList.toggle("active", button.dataset.accountView === selected));
       container.querySelectorAll("[data-account-panel]").forEach(panel => { const active = panel.dataset.accountPanel === selected; panel.hidden = !active; panel.classList.toggle("active", active); });
       history.replaceState(null, "", `${location.pathname}${location.search}#workspace?panel=account&view=${selected}`);

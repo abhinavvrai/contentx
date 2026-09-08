@@ -19,10 +19,13 @@ import {
   updateAccountProfile,
   uploadAccountAvatar,
   deleteAccountAvatar,
+  listAccountSessions,
+  revokeAccountSessions,
 } from "../../../lib/auth";
 
 export async function GET(request: Request) {
   return handle(async () => {
+    if (new URL(request.url).searchParams.get("action") === "sessions") return response({sessions:await listAccountSessions(request)});
     if (new URL(request.url).searchParams.get("avatar") === "1") return accountAvatarResponse(request);
     const [user, providers, databaseAvailable] = await Promise.all([
       getSessionUser(request),
@@ -84,6 +87,7 @@ export async function POST(request: Request) {
       return response({ ok: true }, 200, { "Set-Cookie": expiredSessionCookie(request) });
     }
     if (action === "update_profile") return response({ user: await updateAccountProfile(request, input) });
+    if (action === "revoke_sessions") { await revokeAccountSessions(request,input); return response({ok:true}); }
     if (action === "delete_avatar") return response({ user: await deleteAccountAvatar(request) });
     throw new AccountError("Choose a valid account action.", 404);
   });

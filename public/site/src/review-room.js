@@ -49,7 +49,7 @@ export function chooseVoiceMimeType(recorder = globalThis.MediaRecorder) {
 const voiceClock = seconds => `${String(Math.floor(seconds / 60)).padStart(2,"0")}:${String(Math.floor(seconds % 60)).padStart(2,"0")}`;
 const voiceSize = bytes => bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(bytes < 10240 ? 1 : 0)} KB`;
 
-export async function openReviewRoom({ layer, api, headers, projectId, assetId, canManage = false, onChange = () => {} }) {
+export async function openReviewRoom({ layer, api, headers, projectId, assetId, canManage = false, onChange = () => {}, initialCommentId = "" }) {
   const dialog = document.createElement("dialog"); dialog.className = "sx-review-room";
   dialog.setAttribute("aria-label", "File review room");
   dialog.innerHTML = '<header class="sx-room-header"><span class="sx-overline">CONTENT X / REVIEW ROOM</span><button type="button" data-room-close aria-label="Close review">×</button></header><p class="sx-room-loading" role="status">Opening versions and feedback…</p>';
@@ -74,6 +74,9 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
     const canComment = canManage || permissions.canComment !== false;
     const canApprove = canManage || permissions.canApprove !== false;
     let comments = feedback.comments || [], decisions = history.decisions || [], selected = versions[0], comparison = false, pinnedTime = 0, openNoteIndex = -1;
+    const initialNote=comments.find(note=>note.id===initialCommentId);
+    if(initialNote)selected=versions.find(version=>version.id===initialNote.file_id)||selected;
+    let pendingNote=initialNote;
     dialog.innerHTML = `<header class="sx-room-header"><div><span class="sx-overline">CONTENT X / REVIEW ROOM</span><h2>${esc(selected.original_name)}</h2></div><button type="button" data-room-close aria-label="Close review">×</button></header><div class="sx-room-body"><section class="sx-room-stage"><div class="sx-room-toolbar"><label>Review version<select data-review-version>${versions.map(version => `<option value="${esc(version.id)}">V${Number(version.version_number)} · ${esc(version.original_name)}</option>`).join("")}</select></label><button type="button" data-compare aria-pressed="false" ${versions.length < 2 ? "disabled title=\"Upload another version to compare\"" : ""}>Compare versions</button><button type="button" data-version-download>Download</button></div><div class="sx-compare-choice" hidden><label>Compare against<select data-compare-version></select></label><p>Playback follows the review version. Comparison audio is muted.</p></div><div class="sx-media-grid"><figure><figcaption data-primary-caption></figcaption><div data-primary-media class="sx-media-slot" tabindex="0"></div></figure><figure data-comparison hidden><figcaption data-compare-caption></figcaption><div data-compare-media class="sx-media-slot"></div></figure></div><p class="sx-player-help">Click video to pause or resume. For scripts, select text and add it as a quote. PDF notes can include a page number.</p><div class="sx-document-tools" data-document-tools hidden><label>PDF page <input type="number" min="1" max="9999" value="1" data-document-page></label><button type="button" data-quote-selection>Quote selected text</button></div><p data-room-error role="alert" hidden></p><section class="sx-version-strip" aria-label="Version history">${versions.map(version => `<button type="button" data-pick-version="${esc(version.id)}"><span>V${Number(version.version_number)}</span><small>${Number(version.version_number) === Number(versions[0].version_number) ? "Latest cut" : "Earlier cut"}</small></button>`).join("")}</section><div class="sx-review-progress"><span data-feedback-progress></span><progress max="100" value="0" aria-label="Feedback completion"></progress><small>Completed feedback is not a final approval.</small></div></section><aside class="sx-room-feedback"><header><h3>Feedback <span data-note-count></span></h3><div class="sx-export-notes"><select data-export-format aria-label="Export format"><option value="text">TXT</option><option value="csv">CSV</option><option value="edl">EDL</option></select><button type="button" data-export-notes>Export</button></div></header><div class="sx-note-filters"><input type="search" data-note-search aria-label="Search review comments" placeholder="Search feedback…"><select data-note-status aria-label="Filter review comments"><option value="all">All notes</option><option value="open">Open</option><option value="complete">Completed</option></select><select data-note-sort aria-label="Sort review comments"><option value="time">Timecode</option><option value="newest">Newest</option></select></div><div class="sx-room-notes" data-room-notes></div><form class="sx-note-form"><label>Your name<input name="authorName" required minlength="2" maxlength="100" autocomplete="name"></label><label>Email (optional)<input name="authorEmail" type="email" maxlength="254" autocomplete="email"></label><label>Feedback<textarea name="body" required maxlength="2000" rows="3" placeholder="What should change in this file?"></textarea></label><div class="sx-capture-row"><label><input type="checkbox" data-attach-time checked>At <output data-pinned-time>00:00</output></label><button type="button" data-capture-time>Use playhead</button></div><button class="workspace-button primary" type="submit">Send feedback ↗</button><p role="alert" hidden></p></form></aside></div>`;
     const roomToolbar = dialog.querySelector(".sx-room-toolbar");
     roomToolbar.querySelector("[data-version-download]").insertAdjacentHTML("beforebegin", `<label class="sx-playback-rate">Speed<select data-playback-rate aria-label="Playback speed"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label><button type="button" data-capture-frame>Capture frame</button><button type="button" data-pip>Picture in picture</button><button type="button" data-fullscreen>Fullscreen</button><button type="button" data-review-help aria-expanded="false">Shortcuts</button>`);
@@ -236,6 +239,15 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
           tasks.push(mountMedia(compareSlot, other, true, ticket));
         } else compareSlot.replaceChildren();
         await Promise.all(tasks);
+        if(pendingNote && ticket===request){
+          const note=pendingNote;pendingNote=null;
+          const card=dialog.querySelector(`[data-note-id="${CSS.escape(String(note.id))}"]`);
+          card?.scrollIntoView({block:"center"});card?.classList.add("is-current");
+          if(card){card.tabIndex=-1;card.focus({preventScroll:true});}
+          const media=primarySlot.querySelector("video,audio");
+          const seek=()=>{if(hasTimestamp(note.timestamp_seconds)&&Number.isFinite(media?.duration)){media.pause();media.currentTime=Math.min(Number(note.timestamp_seconds),Math.max(0,media.duration-.01));}};
+          if(media){media.readyState?seek():media.addEventListener("loadedmetadata",seek,{once:true,signal:lifecycle.signal});}
+        }
       } catch (error) { if (ticket === request) fail(error); }
     };
     const choose = () => {
@@ -369,6 +381,7 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
       else if (key === "m" && media) { event.preventDefault(); media.muted = !media.muted; }
       else if (key === "f") { event.preventDefault(); dialog.querySelector("[data-fullscreen]").click(); }
     });
+    versionSelect.value=selected.id;
     choose();
     lifecycle.signal.addEventListener("abort", () => { voiceCancelled = true; finishRecording(); stopTracks(); clearVoiceUrl(); }, { once:true });
   } catch (error) { if (active && dialog.isConnected) { const target = dialog.querySelector(".sx-room-loading") || dialog.querySelector("[data-room-error]"); if (target) { target.textContent = error.message; target.hidden = false; } } }

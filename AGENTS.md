@@ -41,10 +41,10 @@ Never hardcode or commit real credentials. Razorpay secrets and the OpenAI key m
 
 ## Data Reality
 
-- D1 currently stores payment records.
-- R2 is not connected to website uploads yet.
-- Most workspace, marketplace, owner, share, comment, and upload behavior is a browser-local prototype using `localStorage`.
-- Do not describe these prototype flows as secure, persistent, multi-user production features until server-side storage and authorization are implemented.
+- D1 stores accounts/sessions, payments, real upload projects, folders, share permissions, feedback, version decisions and workspace records. Private file and voice bytes use the `UPLOADS` R2 binding.
+- The signed-in `workspace.js` / `review-room.js` API-backed flows are separate from legacy browser-local marketplace, provider and demo experiences. Do not use a demo screen as evidence that the real feature works.
+- Server-backed does not mean the entire product is complete. Read `docs/APP_IMPROVEMENT_CHECKLIST.md` for all 186 agreed app items and their explicit gaps; public website/conversion items remain excluded.
+- Never claim provider delivery, malware scanning, transcoding, full team roles or device compatibility without the corresponding implementation and verification.
 
 ## Safe Workflow
 
@@ -59,4 +59,3 @@ Never hardcode or commit real credentials. Razorpay secrets and the OpenAI key m
 9. Verify the real production domain after deployment.
 
 Do not use destructive Git commands, remove deployment safeguards, edit DNS records, rotate credentials, or submit a real payment unless the user explicitly requests that exact action.
-

@@ -29,7 +29,7 @@ import {
   type UploadFile,
   type UploadProject,
 } from "../../../lib/uploads";
-import { AccountError, ensureAccountSchema, getAccountDatabase, getSessionUser, requireSameOrigin, requireSessionUser } from "../../../lib/auth";
+import { AccountError, ensureAccountSchema, getAccountDatabase, getSessionUser, requireSameOrigin, requireSessionUser, consumeRequestLimit } from "../../../lib/auth";
 import { notifyOwner, publishNotification } from "../../../lib/notifications";
 import { ensurePaymentSchema, revisionPolicyForPlan } from "../../../lib/razorpay";
 
@@ -177,6 +177,7 @@ async function deleteAccountProject(request: Request, rawProjectId: string): Pro
   }
   await db.batch([
     db.prepare("UPDATE payment_orders SET project_id = NULL WHERE project_id = ?").bind(projectId),
+    db.prepare("DELETE FROM workspace_records WHERE project_id = ?").bind(projectId),
     db.prepare("UPDATE order_selections SET project_id = NULL, asset_id = NULL WHERE project_id = ?").bind(projectId),
     db.prepare("DELETE FROM project_review_comments WHERE project_id = ?").bind(projectId),
     db.prepare("DELETE FROM project_comment_voice_notes WHERE project_id = ?").bind(projectId),
@@ -507,7 +508,7 @@ async function getAssetVersions(request: Request, params: URLSearchParams): Prom
     .bind(projectId, assetId).all();
   return json({
     versions: access.canViewPrevious ? versions.results : versions.results.slice(0,1),
-    decisions: decisions.results,
+    decisions: access.canViewPrevious ? decisions.results : decisions.results.filter((row:any)=>row.file_id === (versions.results[0] as any).id),
     permissions:{ canDownload:access.canDownload, canComment:access.canComment, canApprove:access.canApprove, canViewPrevious:access.canViewPrevious },
   });
 }
@@ -529,6 +530,9 @@ async function createVersionDecision(request: Request, input: JsonInput): Promis
   const file = await db.prepare("SELECT id FROM upload_files WHERE id = ? AND project_id = ? AND COALESCE(asset_id,id) = ? AND status = 'ready' LIMIT 1")
     .bind(fileId, projectId, assetId).first<{ id:string }>();
   if (!file) throw new ClientError("Choose an available version from this project.", 404);
+  await requireVisibleVersion(db, access, fileId, assetId);
+  const lastDecision = await db.prepare("SELECT decision FROM project_version_decisions WHERE project_id=? AND file_id=? ORDER BY created_at DESC LIMIT 1").bind(projectId,fileId).first<{decision:string}>();
+  if (lastDecision?.decision === "approved" && decision === "changes_requested" && !note) throw new ClientError("Explain why this approved version needs to be reopened.");
   if (decision === "approved") {
     const open = await db.prepare(`SELECT COUNT(*) AS count FROM project_review_comments WHERE project_id = ? AND file_id = ?
       AND deleted_at IS NULL AND status NOT IN ('completed','resolved') ${access.accessType === "account" ? "" : "AND visibility = 'project'"}`)
@@ -604,6 +608,7 @@ async function getProjectComments(request: Request, params: URLSearchParams): Pr
     status, created_at, updated_at
     FROM project_review_comments
     WHERE project_id = ? AND deleted_at IS NULL ${access.accessType === "account" ? "" : "AND visibility = 'project'"} ${scopeClause}
+    ${access.canViewPrevious ? "" : "AND (file_id IS NULL OR file_id IN (SELECT f.id FROM upload_files f WHERE f.project_id = project_review_comments.project_id AND f.status='ready' AND NOT EXISTS (SELECT 1 FROM upload_files newer WHERE newer.project_id=f.project_id AND COALESCE(newer.asset_id,newer.id)=COALESCE(f.asset_id,f.id) AND newer.status='ready' AND newer.version_number>f.version_number)))"}
     ORDER BY created_at DESC LIMIT 300`).bind(projectId, ...access.assetScope).all();
   return json({ comments: comments.results, permissions:{ canComment:access.canComment, canApprove:access.canApprove } });
 }
@@ -667,6 +672,7 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
   if (!projectId) throw new ClientError("Choose a project.");
   const access = await authorizeProject(request, projectId, "view");
   if (!access.canComment) throw new ClientError("Comments are disabled for this share link.", 403);
+  await consumeRequestLimit(request,`comments:${projectId}`,30,60_000);
   const body = cleanText(input.body, 2000);
   const authorName = cleanText(input.authorName, 100);
   const authorEmail = input.authorEmail ? cleanEmail(input.authorEmail) : "";
@@ -706,6 +712,7 @@ async function createProjectComment(request: Request, input: JsonInput): Promise
       .bind(fileId, projectId).first<{ id: string; asset_id: string | null }>();
     if (!file || (assetId && assetId !== (file.asset_id || file.id))) throw new ClientError("Choose a file from this project.", 400);
     if (!shareAssetAllowed(access, String(file.asset_id || file.id))) throw new ClientError("This file is not included in the share link.", 403);
+    await requireVisibleVersion(db, access, fileId, String(file.asset_id || file.id));
   } else if (assetId || timestamp !== null) {
     throw new ClientError("Choose a file before adding a timestamp or asset comment.", 400);
   }
@@ -737,6 +744,7 @@ async function createCommentVoiceNote(request: Request, input: JsonInput): Promi
   requireSameOrigin(request);
   const projectId = cleanText(input.projectId, 80); const access = await authorizeProject(request, projectId, "view");
   if (!access.canComment) throw new ClientError("Comments are disabled for this share link.", 403);
+  await consumeRequestLimit(request,`voice:${projectId}`,10,60_000);
   const dataUrl = cleanText(input.dataUrl, 1_800_000), duration = Number(input.durationSeconds);
   const match = /^data:(audio\/(?:webm|ogg|mp4|mpeg));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
   if (!match) throw new ClientError("Use a supported voice-note format.", 400);
@@ -753,9 +761,14 @@ async function createCommentVoiceNote(request: Request, input: JsonInput): Promi
 
 async function createCommentVoiceLink(request: Request, input: JsonInput): Promise<Response> {
   requireSameOrigin(request);
-  const projectId = cleanText(input.projectId, 80), voiceNoteId = cleanText(input.voiceNoteId, 80); await requireProject(request, projectId, "view");
+  const projectId = cleanText(input.projectId, 80), voiceNoteId = cleanText(input.voiceNoteId, 80); const access = await authorizeProject(request, projectId, "view");
   const { db } = getUploadBindings(); const voice = await db.prepare("SELECT id FROM project_comment_voice_notes WHERE id = ? AND project_id = ? LIMIT 1").bind(voiceNoteId, projectId).first();
   if (!voice) throw new ClientError("Voice note not found.", 404);
+  if (access.accessType !== "account") {
+    const note=await db.prepare("SELECT file_id, asset_id FROM project_review_comments WHERE voice_note_id=? AND project_id=? AND deleted_at IS NULL AND visibility='project' LIMIT 1").bind(voiceNoteId,projectId).first<{file_id:string|null;asset_id:string|null}>();
+    if (!note || (access.assetScope.length && (!note.asset_id || !shareAssetAllowed(access,note.asset_id)))) throw new ClientError("Voice note not found.",404);
+    if (note.file_id) await requireVisibleVersion(db,access,note.file_id,note.asset_id||note.file_id);
+  }
   const expires = Date.now() + 5 * 60 * 1000, signature = await createDownloadSignature(voiceNoteId, expires, true), url = new URL(request.url);
   return json({ downloadUrl:`${url.origin}${url.pathname}?action=download&fileId=${encodeURIComponent(voiceNoteId)}&expires=${expires}&signature=${signature}&inline=1&inlineOnly=1`, expires });
 }
@@ -887,6 +900,7 @@ async function createProjectDownloadLink(request: Request, input: JsonInput): Pr
     .bind(fileId, projectId).first<{ id: string; asset_id:string }>();
   if (!file) throw new ClientError("File not found.", 404);
   if (!shareAssetAllowed(access, file.asset_id)) throw new ClientError("This file is not included in the share link.", 403);
+  await requireVisibleVersion(db,access,fileId,file.asset_id);
   const expires = Date.now() + 5 * 60 * 1000;
   const signature = await createDownloadSignature(file.id, expires, inlineOnly);
   if (!inlineOnly && access.shareId) await incrementShareMetric(db, access.shareId, "download_count");
@@ -910,6 +924,12 @@ async function requireProjectManager(request: Request, projectId: string) {
 
 function shareAssetAllowed(access: Awaited<ReturnType<typeof authorizeProject>>, assetId: string): boolean {
   return access.accessType !== "share-link" || access.assetScope.length === 0 || access.assetScope.includes(assetId);
+}
+
+async function requireVisibleVersion(db:D1Database, access:Awaited<ReturnType<typeof authorizeProject>>, fileId:string, assetId:string) {
+  if (access.canViewPrevious) return;
+  const latest=await db.prepare("SELECT id FROM upload_files WHERE project_id=? AND COALESCE(asset_id,id)=? AND status='ready' ORDER BY version_number DESC LIMIT 1").bind(access.project.id,assetId).first<{id:string}>();
+  if (latest?.id!==fileId) throw new ClientError("Previous versions are disabled for this share link.",403);
 }
 
 function safeAssetScope(value: string | null | undefined): string[] {
@@ -1054,6 +1074,9 @@ async function startUpload(request: Request, input: JsonInput): Promise<Response
     if (!previous) throw new ClientError("Choose an existing project file for the new version.", 404);
     assetId = previous.asset_id;
     if (!shareAssetAllowed(access, assetId)) throw new ClientError("This file is not included in the share link.", 403);
+    await requireVisibleVersion(db,access,previous.id,assetId);
+    const approval=await db.prepare("SELECT decision FROM project_version_decisions WHERE project_id=? AND asset_id=? ORDER BY created_at DESC LIMIT 1").bind(project.id,assetId).first<{decision:string}>();
+    if (approval?.decision==="approved") throw new ClientError("This version is approved. Reopen it with a reason in the review room before uploading another cut.",409);
     parentFileId = previous.id;
     const latest = await db.prepare(`SELECT MAX(COALESCE(version_number, 1)) AS latest
       FROM upload_files WHERE project_id = ? AND COALESCE(asset_id, id) = ?`)

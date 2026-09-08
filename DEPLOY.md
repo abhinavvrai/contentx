@@ -54,4 +54,14 @@ Client accounts, sessions, paid-order links, and project briefs use the same D1 
 
 `frame-native-17` requires `drizzle/0009_share_permissions.sql` before the application commit is deployed. This adds password, exact permission, selected-file scope and link-activity columns to existing share links without exposing any secret values.
 
-Passwords are never encrypted and stored for later recovery. They are salted and irreversibly hashed with PBKDF2-SHA-256 at 310,000 iterations. Session cookies are HTTP-only, secure on HTTPS, and mapped to token hashes stored in D1.
+Passwords are never encrypted and stored for later recovery. They are salted and irreversibly hashed with PBKDF2-SHA-256 at 100,000 iterations (the current workerd runtime limit). Session cookies are HTTP-only, secure on HTTPS, and mapped to token hashes stored in D1. Do not raise the iteration count without testing the actual Cloudflare runtime; Node-only tests do not validate that limit.
+
+## Release 18: organization and reliability
+
+Apply only the verified-missing `drizzle/0010_workspace_records.sql` before publishing release 18. Releases 16–17 also require voice-note, workflow, decision and share-permission schema updates (0006 comment voice notes, 0007, 0008, 0009). Inspect the live schema first; historical ALTER migrations are not safe to replay blindly. Runtime bootstrap creates some legacy tables, so the numbered SQL files alone are not a complete fresh-database setup.
+
+If publishing OAuth has expired, renew it with the owner. Never replace app API secrets to repair CLI login. The repo's local environment can contain placeholder Cloudflare tokens: for OAuth CLI operations, run from the parent folder with an explicit project config path, and remove only the current process's `CLOUDFLARE_API_TOKEN`. Do not edit the user's stored environment or print credentials.
+
+Build cleanup preserves `.wrangler` database/R2 state. Only generated `.wrangler/deploy` metadata, `dist` output and Vite cache are disposable. A local test may use `.wrangler/qa-release18`; local requests must never follow generated custom-domain URLs to production. The QA script deliberately replaces their origin with loopback.
+
+Regression checks: `node --test tests/*.test.mjs`, production build, then the documented local workerd smoke and browser checks. No API-capability response proves actual inbox delivery or charges a payment method.

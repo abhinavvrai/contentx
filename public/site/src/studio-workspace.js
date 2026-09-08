@@ -14,7 +14,8 @@ export function filterFiles(files, { query = "", type = "all", sort = "newest" }
   const openAssets = new Set(comments.filter(comment => !isComplete(comment)).flatMap(comment => [comment.asset_id, comment.file_id]).filter(Boolean));
   const result = files.filter(file => {
     const matchesType = type === "all" || (type === "feedback" ? openAssets.has(file.asset_id || file.id) || openAssets.has(file.id) : type === "versions" ? Number(file.version_count) > 1 : String(file.content_type).startsWith(`${type}/`));
-    return matchesType && String(file.original_name || "").toLowerCase().includes(term);
+    const details=file.workspaceDetails||{};
+    return matchesType && `${file.original_name||""} ${details.platform||""} ${details.campaign||""} ${details.editor||""} ${(details.tags||[]).join(" ")} ${Object.values(details.custom||{}).join(" ")}`.toLowerCase().includes(term);
   });
   return result.sort((a, b) => sort === "name" ? String(a.original_name).localeCompare(String(b.original_name)) : sort === "size" ? Number(b.size_bytes) - Number(a.size_bytes) : Number(b.completed_at || 0) - Number(a.completed_at || 0));
 }
@@ -38,9 +39,15 @@ export function enhanceFileLibrary(root, files, comments) {
   if (!grid) return;
   const cards = new Map([...grid.querySelectorAll("[data-file-card]")].map(card => [card.dataset.fileId, card]));
   const search = root.querySelector("[data-file-search]"), type = root.querySelector("[data-file-type]"), sort = root.querySelector("[data-file-sort]");
+  // Empty projects deliberately omit file controls. Keep the upload action usable.
+  if (!search || !type || !sort) return;
   const update = () => {
     const activeFolder = grid.dataset.activeFolder || "";
-    const selected = filterFiles(files, { query:search.value, type:type.value, sort:sort.value }, comments).filter(file => String(file.folder_id || "") === activeFolder);
+    let collection = null;
+    try { collection=grid.dataset.collectionAssets ? new Set(JSON.parse(grid.dataset.collectionAssets)) : null; } catch {}
+    const selected = filterFiles(files, { query:search.value, type:type.value, sort:sort.value }, comments)
+      .filter(file => collection ? collection.has(file.asset_id||file.id) : String(file.folder_id || "") === activeFolder)
+      .filter(file=>!grid.dataset.stage || grid.dataset.stage==="all" || (file.workspaceDetails?.status||"draft")===grid.dataset.stage);
     cards.forEach(card => { card.hidden = true; });
     selected.forEach(file => { const card = cards.get(file.id); if (card) { card.hidden = false; grid.append(card); } });
     root.querySelector("[data-file-results]").textContent = `${selected.length} of ${files.length} files`;
@@ -69,7 +76,7 @@ export function enhanceFileLibrary(root, files, comments) {
     root.querySelectorAll("[data-card-field-toggle]").forEach(input => { input.checked = preferences.fields[input.dataset.cardFieldToggle] !== false; });
     const count = Object.values(preferences.fields).filter(Boolean).length;
     const countLabel = root.querySelector("[data-field-count]"); if (countLabel) countLabel.textContent = `${count} visible`;
-    localStorage.setItem(preferenceKey, JSON.stringify(preferences));
+    try { localStorage.setItem(preferenceKey, JSON.stringify(preferences)); } catch { /* Storage restrictions must not break navigation. */ }
   };
   const closePopovers = except => root.querySelectorAll(".sx-control-popover").forEach(panel => { if (panel !== except) panel.hidden = true; });
   [["[data-appearance-button]","[data-appearance-panel]"],["[data-fields-button]","[data-fields-panel]"]].forEach(([buttonSelector,panelSelector]) => root.querySelector(buttonSelector)?.addEventListener("click", event => { event.stopPropagation(); const panel = root.querySelector(panelSelector); const opening = panel.hidden; closePopovers(panel); panel.hidden = !opening; }));

@@ -1,10 +1,12 @@
 # Content X Project Guide
 
-Last updated: 28 August 2026
+Last updated: 7 September 2026
 Production URL: https://contentx.co.in/  
 GitHub repository: https://github.com/abhinavvrai/contentx  
 Production branch: `main`  
-Last verified feature checkpoint: `9b77b93`
+Last verified feature checkpoint: see the live release and evidence in `README.md`; older checkpoints below are historical.
+
+Current continuation rule: use `docs/APP_IMPROVEMENT_CHECKLIST.md` as the complete 186-item app backlog. Public marketing/conversion is excluded. Release 18 adds organization and reliability work but does not complete the entire list. Historical prototype descriptions below must not override newer server-backed implementation notes.
 
 ## 1. What This Project Is
 
@@ -357,3 +359,11 @@ Preview signatures are now cryptographically bound to inline viewing or original
 The share manager shows per-link views, comments, decisions and downloads, plus last-use and expiry context. A manager-only project activity panel combines uploads, feedback, immutable decisions and share creation in chronological order. Shared review pages explain their available capabilities, hide unavailable actions and refresh an expired private media/voice URL once automatically. Leaving the page during a live multipart upload triggers the browser's native unsaved-work warning.
 
 Apply `drizzle/0009_share_permissions.sql` to the production D1 database before deploying this release. Production schema is migration-owned; do not add runtime `ALTER TABLE` statements for these columns.
+
+## 21. Workspace Organization and Security — Release 18
+
+`workspace_records` stores account-owned collections, metadata, saved views/searches and favourites. Collections reference existing assets rather than duplicating media. Folder templates and structure duplication create folders only. Search covers owned projects, folders, files, comments and metadata; it is not a transcript/PDF indexing or AI-search service. Approved metadata is checked against the latest ready version, its actual decision and unresolved feedback.
+
+Account Security & data lists the user's own active sessions, supports scoped revocation and exports safe JSON metadata. It never returns stored credential hashes, R2 keys or share tokens, and export is not a backup archive of all media. Team/member roles and account-erasure policy remain separate backlog items.
+
+Migration `0010_workspace_records.sql` was applied to production on 7 September 2026 after checking the live schema. Preserve all application secrets and bindings during publishing. Build cleanup must never remove `.wrangler` local database/storage state. README documents the microphone policy, workerd hashing limit, empty-project control failure and restricted-version fixes, with test evidence and remaining verification boundaries.

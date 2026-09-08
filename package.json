@@ -10,7 +10,9 @@
     "dev": "vinext dev",
     "build": "node scripts/clean-build.mjs && vinext build && node scripts/copy-site.mjs",
     "start": "vinext start",
-    "test": "vinext build && node --test tests/rendered-html.test.mjs",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "test:unit": "node --test tests/*.test.mjs",
+    "test:local-workspace": "node scripts/qa-local-workspace.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "deploy:cloudflare": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-cloudflare.ps1",
     "db:generate": "drizzle-kit generate"

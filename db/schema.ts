@@ -153,6 +153,17 @@ export const accountSessions = sqliteTable(
   table => [index("idx_account_sessions_user_expires").on(table.userId, table.expiresAt)],
 );
 
+export const workspaceRecords = sqliteTable("workspace_records", {
+  id:text("id").primaryKey(),
+  userId:text("user_id").notNull().references(()=>accountUsers.id),
+  projectId:text("project_id").references(()=>uploadProjects.id),
+  kind:text("kind").notNull(),
+  name:text("name").notNull(),
+  payloadJson:text("payload_json").notNull().default("{}"),
+  createdAt:integer("created_at").notNull(),
+  updatedAt:integer("updated_at").notNull(),
+}, table=>[index("idx_workspace_records_user_project").on(table.userId,table.projectId,table.kind)]);
+
 export const authLoginAttempts = sqliteTable("auth_login_attempts", {
   attemptKey: text("attempt_key").primaryKey(),
   attempts: integer("attempts").notNull(),

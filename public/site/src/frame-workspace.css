@@ -505,7 +505,7 @@ html[data-theme="dark"] #app.review-app .comment:focus-within .comment-tools :is
   #app .workspace-account-content.account-settings-content { width:calc(100% - 28px); }
 }
 
-/* frame-native-17: precise share access, audit activity, and calm protected-link states. */
+/* frame-native-18: precise share access, audit activity, and calm protected-link states. */
 #app .workspace-share-control { width:min(820px,100%); }
 #app .workspace-share-control>form { gap:14px; }
 #app .workspace-share-control label { font-size:13px; }

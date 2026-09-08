@@ -143,5 +143,5 @@ test("dashboard styles parse and include mobile, contrast and reduced-motion con
   assert.doesNotThrow(()=>require("postcss").parse(frameCss));
   for(const pattern of [/prefers-reduced-motion/,/max-width:560px/,/:focus-visible/,/\.sx-media-grid\.is-comparing/,/\.sx-list/,/\.sx-review-room::backdrop/]) assert.match(css,pattern);
   for(const pattern of [/\.sx-voice-composer/,/\.sx-voice-wave/,/data-state="recording"/,/data-state="error"/]) assert.match(frameCss,pattern);
-  assert.match(await read("public/site/index.html"),/studio-workspace\.css\?v=frame-native-17/);
+  assert.match(await read("public/site/index.html"),/studio-workspace\.css\?v=frame-native-18/);
 });

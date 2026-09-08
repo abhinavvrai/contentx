@@ -374,7 +374,7 @@ test("ships password-protected, file-scoped share permissions with audit metrics
     assert.match(schema, pattern); assert.match(migration, pattern); assert.match(route, pattern);
   }
   assert.match(storage, /PBKDF2/);
-  assert.match(storage, /iterations:210_000/);
+  assert.match(storage, /iterations:100_000/);
   assert.match(storage, /x-contentx-share-password/);
   assert.match(storage, /inlineOnly \? "inline" : "download"/);
   assert.match(route, /shareAssetAllowed/);

@@ -2,6 +2,10 @@
 
 This ledger is the accepted product scope for the signed-in app, private review links, uploads, account area, notifications, pricing clarity inside the app, reliability and security. The public marketing website and conversion experiments are intentionally out of scope.
 
+The authoritative per-item status is now [APP_IMPROVEMENT_CHECKLIST.md](APP_IMPROVEMENT_CHECKLIST.md): all 186 accepted non-marketing IDs, including explicit partial/remaining/provider-dependent work. The complete backlog is not finished. This roadmap is a high-level historical plan, not proof that every bullet has shipped.
+
+Release 18 adds collections, saved views/searches, project/folder/file favourites, metadata/stages, folder templates, attention queue, scoped global search, device sessions and JSON data export. It also fixes empty-project navigation, direct hidden-version access, share-password runtime compatibility and the microphone permissions header. See README for the verified live release.
+
 ## Product rules
 
 - Build real workflows, not buttons that only look functional.

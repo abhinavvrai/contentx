@@ -142,6 +142,7 @@ export async function verifyEmailOtp(request: Request, input: Record<string, unk
   const email = cleanEmail(input.email);
   const otp = cleanText(input.otp, 12).replace(/\s+/g, "");
   if (!email || !/^\d{6,8}$/.test(otp)) throw new AccountError("Enter the verification code sent to your email.");
+  await consumeRequestLimit(request,`otp-verify:${email}`,10,15*60*1000);
   const { url, anonKey } = supabaseConfig();
   const response = await fetch(`${url}/auth/v1/verify`, {
     method: "POST",
@@ -380,6 +381,15 @@ export function requireSameOrigin(request: Request): void {
   if (request.headers.get("sec-fetch-site") === "cross-site") throw new AccountError("This request was not accepted.", 403);
 }
 
+export async function consumeRequestLimit(request:Request, scope:string, maximum:number, windowMs:number) {
+  await ensureAccountSchema();
+  const address=request.headers.get("cf-connecting-ip")||"local", key=await sha256(`limit:${scope}:${address}`), now=Date.now(), start=now-windowMs;
+  const row=await getAccountDatabase().prepare(`INSERT INTO auth_login_attempts (attempt_key,attempts,window_started_at,blocked_until) VALUES (?,1,?,0)
+    ON CONFLICT(attempt_key) DO UPDATE SET attempts=CASE WHEN window_started_at<=? THEN 1 ELSE attempts+1 END,
+    window_started_at=CASE WHEN window_started_at<=? THEN excluded.window_started_at ELSE window_started_at END RETURNING attempts`).bind(key,now,start,start).first<{attempts:number}>();
+  if((row?.attempts||0)>maximum)throw new AccountError("Too many requests. Please wait a few minutes and try again.",429);
+}
+
 export async function registerAccount(request: Request, input: Record<string, unknown>): Promise<{ user: AccountUser; token: string }> {
   requireSameOrigin(request);
   await ensureAccountSchema();
@@ -504,6 +514,23 @@ export async function logoutAccount(request: Request): Promise<void> {
   await ensureAccountSchema();
   const token = cookieValue(request, SESSION_COOKIE);
   if (token) await getAccountDatabase().prepare("DELETE FROM account_sessions WHERE token_hash = ?").bind(await sha256(token)).run();
+}
+
+export async function listAccountSessions(request:Request) {
+  const user=await requireSessionUser(request), db=getAccountDatabase();
+  const currentHash=await sha256(cookieValue(request,SESSION_COOKIE));
+  const rows=await db.prepare("SELECT token_hash,user_agent,created_at,last_seen_at,expires_at FROM account_sessions WHERE user_id=? AND expires_at>? ORDER BY last_seen_at DESC LIMIT 100").bind(user.id,Date.now()).all<{token_hash:string;user_agent:string;created_at:number;last_seen_at:number;expires_at:number}>();
+  return Promise.all(rows.results.map(async row=>({id:await sha256(`session-ref:${row.token_hash}`),device:row.user_agent||"Unknown browser",createdAt:row.created_at,lastSeenAt:row.last_seen_at,expiresAt:row.expires_at,current:row.token_hash===currentHash})));
+}
+
+export async function revokeAccountSessions(request:Request,input:Record<string,unknown>) {
+  requireSameOrigin(request);
+  const user=await requireSessionUser(request), db=getAccountDatabase(), currentHash=await sha256(cookieValue(request,SESSION_COOKIE));
+  if(input.allOthers===true){await db.prepare("DELETE FROM account_sessions WHERE user_id=? AND token_hash<>?").bind(user.id,currentHash).run();return;}
+  const id=cleanText(input.sessionId,100);
+  const rows=await db.prepare("SELECT token_hash FROM account_sessions WHERE user_id=? AND expires_at>?").bind(user.id,Date.now()).all<{token_hash:string}>();
+  for(const row of rows.results){if(await sha256(`session-ref:${row.token_hash}`)===id){if(row.token_hash===currentHash)throw new AccountError("Use Sign out to close this session.");await db.prepare("DELETE FROM account_sessions WHERE user_id=? AND token_hash=?").bind(user.id,row.token_hash).run();return;}}
+  throw new AccountError("That session has already ended.",404);
 }
 
 export async function getSessionUser(request: Request): Promise<AccountUser | null> {

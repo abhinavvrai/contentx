@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { getSessionUser } from "./auth";
+import { getSessionUser, consumeRequestLimit } from "./auth";
 
 export const DEFAULT_MAX_FILE_BYTES = 50 * 1024 * 1024 * 1024;
 export const DEFAULT_MAX_PROJECT_BYTES = 250 * 1024 * 1024 * 1024;
@@ -314,6 +314,7 @@ export async function authorizeProject(request: Request, projectId: string, purp
       if (share) {
         const protectedLink = Boolean((share as unknown as { password_hash?:string }).password_hash);
         const suppliedPassword = request.headers.get("x-contentx-share-password") || "";
+        if (protectedLink) await consumeRequestLimit(request,`share-password:${share.share_id}`,120,60_000);
         if (protectedLink && !(await verifySharePassword(suppliedPassword, String((share as unknown as { password_salt?:string }).password_salt || ""), String((share as unknown as { password_hash?:string }).password_hash || "")))) {
           throw new ClientError("This share link requires its password.", 401);
         }
@@ -325,8 +326,9 @@ export async function authorizeProject(request: Request, projectId: string, purp
         canViewPrevious = Boolean((share as unknown as { allow_previous_versions?:number }).allow_previous_versions);
         try {
           const parsed = JSON.parse(String((share as unknown as { asset_scope_json?:string }).asset_scope_json || "[]"));
-          assetScope = Array.isArray(parsed) ? parsed.map(value => cleanText(value,80)).filter(Boolean).slice(0,100) : [];
-        } catch { assetScope = []; }
+          if (!Array.isArray(parsed) || parsed.length>100 || parsed.some(value=>typeof value!=="string"||!value)) throw new Error("Invalid scope");
+          assetScope = parsed.map(value => cleanText(value,80));
+        } catch { throw new ClientError("This share link needs to be updated by its owner.",403); }
         shareId = share.share_id;
         accessType = "share-link";
         await db.prepare("UPDATE project_share_links SET last_used_at = ? WHERE id = ?").bind(Date.now(), share.share_id).run();
@@ -380,7 +382,9 @@ export async function verifyDownloadSignature(fileId: string, expires: number, s
 
 export async function deriveSharePasswordHash(password: string, salt: string): Promise<string> {
   const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name:"PBKDF2", hash:"SHA-256", salt:new TextEncoder().encode(salt), iterations:210_000 }, material, 256);
+  // workerd caps Web Crypto PBKDF2 at 100,000 iterations. Keep this aligned
+  // with the runtime and protect password attempts with the server rate limit.
+  const bits = await crypto.subtle.deriveBits({ name:"PBKDF2", hash:"SHA-256", salt:new TextEncoder().encode(salt), iterations:100_000 }, material, 256);
   return Array.from(new Uint8Array(bits), byte => byte.toString(16).padStart(2,"0")).join("");
 }
 
