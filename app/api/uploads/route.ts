@@ -98,6 +98,7 @@ export async function PATCH(request: Request) {
     if (action === "bulk-comment-status") return updateProjectCommentsStatus(request, input);
     if (action === "comment-workflow") return updateProjectCommentWorkflow(request, input);
     if (action === "move-assets") return moveProjectAssets(request, input);
+    if (action === "merge-video-version") return mergeProjectVideoVersion(request, input);
     if (action === "move-folder") return moveProjectFolder(request, input);
     if (action === "rename-folder") return renameProjectFolder(request, input);
     if (action === "project-settings") return updateProjectSettings(request, input);
@@ -289,6 +290,71 @@ async function moveProjectAssets(request: Request, input: JsonInput): Promise<Re
   }
   await db.batch(assetIds.map(assetId => db.prepare("UPDATE upload_files SET folder_id = ? WHERE project_id = ? AND COALESCE(asset_id,id) = ?").bind(folderId, projectId, assetId)));
   return json({ ok:true, moved:assetIds.length, folderId });
+}
+
+async function mergeProjectVideoVersion(request: Request, input: JsonInput): Promise<Response> {
+  requireSameOrigin(request);
+  const projectId = cleanText(input.projectId, 80);
+  const sourceFileId = cleanText(input.sourceFileId, 80);
+  const targetFileId = cleanText(input.targetFileId, 80);
+  if (!projectId || !sourceFileId || !targetFileId || sourceFileId === targetFileId) {
+    throw new ClientError("Choose two different videos.");
+  }
+  await requireProjectManager(request, projectId);
+  const { db } = getUploadBindings();
+  const [source, target] = await Promise.all([
+    db.prepare("SELECT id, COALESCE(asset_id,id) AS asset_id, content_type, folder_id FROM upload_files WHERE id = ? AND project_id = ? AND status = 'ready' LIMIT 1")
+      .bind(sourceFileId, projectId).first<{ id:string; asset_id:string; content_type:string; folder_id:string|null }>(),
+    db.prepare("SELECT id, COALESCE(asset_id,id) AS asset_id, content_type, folder_id FROM upload_files WHERE id = ? AND project_id = ? AND status = 'ready' LIMIT 1")
+      .bind(targetFileId, projectId).first<{ id:string; asset_id:string; content_type:string; folder_id:string|null }>(),
+  ]);
+  if (!source || !target) throw new ClientError("One of those videos is no longer available.", 404);
+  if (source.asset_id === target.asset_id) throw new ClientError("Those videos are already in the same version history.");
+  if (!source.content_type.startsWith("video/") || !target.content_type.startsWith("video/")) {
+    throw new ClientError("Only videos can be combined into a version history.");
+  }
+
+  const [latestSource, latestTarget, sourceDecision, targetDecision, scopedShare] = await Promise.all([
+    db.prepare("SELECT id FROM upload_files WHERE project_id = ? AND COALESCE(asset_id,id) = ? AND status = 'ready' ORDER BY COALESCE(version_number,1) DESC LIMIT 1")
+      .bind(projectId, source.asset_id).first<{ id:string }>(),
+    db.prepare("SELECT id FROM upload_files WHERE project_id = ? AND COALESCE(asset_id,id) = ? AND status = 'ready' ORDER BY COALESCE(version_number,1) DESC LIMIT 1")
+      .bind(projectId, target.asset_id).first<{ id:string }>(),
+    db.prepare("SELECT decision FROM project_version_decisions WHERE project_id = ? AND asset_id = ? ORDER BY created_at DESC LIMIT 1")
+      .bind(projectId, source.asset_id).first<{ decision:string }>(),
+    db.prepare("SELECT decision FROM project_version_decisions WHERE project_id = ? AND asset_id = ? ORDER BY created_at DESC LIMIT 1")
+      .bind(projectId, target.asset_id).first<{ decision:string }>(),
+    db.prepare("SELECT id FROM project_share_links WHERE project_id = ? AND (asset_scope_json LIKE ? OR asset_scope_json LIKE ?) LIMIT 1")
+      .bind(projectId, '%"' + source.asset_id + '"%', '%"' + target.asset_id + '"%').first<{ id:string }>(),
+  ]);
+  if (latestSource?.id !== source.id || latestTarget?.id !== target.id) {
+    throw new ClientError("Only the current video card can be dragged into another version history.");
+  }
+  if (sourceDecision?.decision === "approved" || targetDecision?.decision === "approved") {
+    throw new ClientError("Reopen the approved version in the review room before combining it.");
+  }
+  if (scopedShare) {
+    throw new ClientError("Update any file-scoped share links before combining these videos.");
+  }
+
+  const [sourceVersions, targetLatest] = await Promise.all([
+    db.prepare("SELECT id FROM upload_files WHERE project_id = ? AND COALESCE(asset_id,id) = ? AND status = 'ready' ORDER BY COALESCE(version_number,1), created_at")
+      .bind(projectId, source.asset_id).all<{ id:string }>(),
+    db.prepare("SELECT MAX(COALESCE(version_number,1)) AS latest FROM upload_files WHERE project_id = ? AND COALESCE(asset_id,id) = ? AND status = 'ready'")
+      .bind(projectId, target.asset_id).first<{ latest:number }>(),
+  ]);
+  if (!sourceVersions.results.length) throw new ClientError("The source video history is no longer available.", 404);
+  const now = Date.now();
+  await db.batch([
+    ...sourceVersions.results.map((version, index) => db.prepare(
+      "UPDATE upload_files SET asset_id = ?, version_number = ?, parent_file_id = ?, folder_id = ? WHERE id = ? AND project_id = ?"
+    ).bind(target.asset_id, Number(targetLatest?.latest || 1) + index + 1, index === 0 ? target.id : sourceVersions.results[index - 1].id, target.folder_id, version.id, projectId)),
+    db.prepare("UPDATE project_review_comments SET asset_id = ? WHERE project_id = ? AND asset_id = ?")
+      .bind(target.asset_id, projectId, source.asset_id),
+    db.prepare("UPDATE project_version_decisions SET asset_id = ? WHERE project_id = ? AND asset_id = ?")
+      .bind(target.asset_id, projectId, source.asset_id),
+    db.prepare("UPDATE upload_projects SET updated_at = ? WHERE id = ?").bind(now, projectId),
+  ]);
+  return json({ ok:true, merged:sourceVersions.results.length, assetId:target.asset_id });
 }
 
 async function moveProjectFolder(request: Request, input: JsonInput): Promise<Response> {

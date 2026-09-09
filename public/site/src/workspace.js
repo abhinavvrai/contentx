@@ -174,6 +174,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   if (accountPanel || !project) return;
   enhanceFileLibrary(root, files, comments);
   bindVideoHoverPreviews(root, project.id, "");
+  addWorkspaceOrganizationHint(root, projectData.permissions?.canUpload !== false, project.status === "active");
   bindFolderBrowser(root, project.id, folders, actions);
   bindAssetSelection(root, project.id, actions);
   const picker = root.querySelector("[data-workspace-picker]");
@@ -334,6 +335,25 @@ function folderTreeNodes(folders, parentId = null, depth = 0) {
   return folders.filter(folder => (folder.parent_id || null) === parentId).map(folder => `<div class="workspace-tree-node" style="--depth:${depth}"><button type="button" draggable="true" data-folder-id="${escapeHTML(folder.id)}" data-folder-drag="${escapeHTML(folder.id)}"><span>▸</span><b>${escapeHTML(folder.name)}</b><em>${Number(folder.asset_count || 0)}</em></button>${folderTreeNodes(folders, folder.id, depth + 1)}</div>`).join("");
 }
 
+function addWorkspaceOrganizationHint(root, canUpload, canManageFolders) {
+  const anchor = root.querySelector(".workspace-project-head");
+  if (!anchor || (!canUpload && !canManageFolders)) return;
+  const tip = document.createElement("aside");
+  tip.className = "workspace-organize-tip";
+  tip.setAttribute("role", "note");
+  const icon = document.createElement("span");
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = "↕";
+  const copy = document.createElement("div");
+  const title = document.createElement("b");
+  title.textContent = "Drag to organize";
+  const description = document.createElement("p");
+  description.textContent = [canUpload ? "Drop one video on another to make it the next version." : "", canManageFolders ? "Drop a file or folder on a folder to move it." : ""].filter(Boolean).join(" ");
+  copy.append(title, description);
+  tip.append(icon, copy);
+  anchor.after(tip);
+}
+
 function projectSurface(project, files, folders, canUpload, comments = [], canManageComments = false, revisionPolicy = null, canManageFolders = false, permissions = {}) {
   const rootFolders = folders.filter(folder => !folder.parent_id);
   const openComments = comments.filter(comment => !commentIsComplete(comment)).length;
@@ -412,7 +432,38 @@ function bindFolderBrowser(root, projectId, folders, actions) {
     root.querySelectorAll("[data-folder-rename],[data-folder-remove]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.folderRename || button.dataset.folderRemove; const folder = byId.get(id); if (folder) openFolderSettingsModal(root, projectId, folder, actions); }));
     folderGrid.addEventListener("click", () => root.querySelectorAll("[data-folder-menu-panel]").forEach(panel => { panel.hidden = true; }), { once:true });
   }
-  root.querySelectorAll("[data-file-card]").forEach(card => card.addEventListener("dragstart", event => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-contentx-asset", card.dataset.assetId); card.classList.add("is-moving"); }));
+  root.querySelectorAll("[data-file-card]").forEach(card => {
+    card.addEventListener("dragstart", event => {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("application/x-contentx-asset", card.dataset.assetId);
+      event.dataTransfer.setData("application/x-contentx-file", card.dataset.fileId);
+      card.classList.add("is-moving");
+    });
+    card.addEventListener("dragover", event => {
+      const sourceFileId = event.dataTransfer.getData("application/x-contentx-file");
+      if (!sourceFileId || sourceFileId === card.dataset.fileId || !card.classList.contains("has-video-preview")) return;
+      event.preventDefault();
+      card.classList.add("is-version-drop");
+    });
+    card.addEventListener("dragleave", () => card.classList.remove("is-version-drop"));
+    card.addEventListener("drop", async event => {
+      const sourceFileId = event.dataTransfer.getData("application/x-contentx-file");
+      if (!sourceFileId) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      card.classList.remove("is-version-drop");
+      if (sourceFileId === card.dataset.fileId || !card.classList.contains("has-video-preview")) return;
+      const source = [...root.querySelectorAll("[data-file-card]")].find(item => item.dataset.fileId === sourceFileId);
+      if (!source?.classList.contains("has-video-preview")) { alert("Only videos can be combined into a version history."); return; }
+      const sourceName = source.dataset.fileName || "this video";
+      const targetName = card.dataset.fileName || "this video";
+      if (!confirm("Make " + sourceName + " the next version of " + targetName + "? The source video and its history will be grouped with " + targetName + ".")) return;
+      try {
+        await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify({ action:"merge-video-version", projectId, sourceFileId, targetFileId:card.dataset.fileId }) });
+        actions.refreshRoute();
+      } catch (error) { alert(error.message); }
+    });
+  });
   root.querySelectorAll("[data-file-card]").forEach(card => card.addEventListener("dragend", () => card.classList.remove("is-moving")));
   root.querySelectorAll("[data-create-folder]").forEach(button => button.addEventListener("click", async () => { const name = prompt("Folder name"); if (!name?.trim()) return; try { await api(UPLOAD_API, { method:"POST", headers:bearerHeaders("", true), body:JSON.stringify({ action:"create-folder", projectId, parentId:activeFolder || null, name:name.trim() }) }); actions.refreshRoute(); } catch (error) { alert(error.message); } }));
   root.querySelector("[data-folder-settings-current]")?.addEventListener("click", buttonEvent => { const folder = byId.get(buttonEvent.currentTarget.dataset.folderSettingsCurrent); if (folder) openFolderSettingsModal(root, projectId, folder, actions); });
