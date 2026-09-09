@@ -148,8 +148,16 @@
   #app.review-app .player-controls { gap:4px; overflow:hidden; }
   #app.review-app .player-controls>button { min-width:38px; min-height:38px; }
   #app.review-app .player-controls>button small { display:none; }
+  #app.review-app .review-command-bar { top:8px; right:8px; gap:6px; }
+  #app.review-app .review-command-bar button { width:40px; min-width:40px; height:40px; min-height:40px; border-radius:10px; }
+  #app.review-app .review-timeline-pins button { width:22px; height:22px; }
   #app.review-app .comment-panel { min-width:0; }
   #app.review-app .comment-tabs button { min-height:44px; }
+  #app.review-app .comment-filter { min-height:50px; }
+  #app.review-app .comment-filter button { min-height:36px; }
+  #app.review-app .comment footer { display:flex; gap:4px; margin-top:8px; }
+  #app.review-app .comment footer button { min-height:34px; padding:6px 8px; }
+  #app.review-app .comment-tools button { min-height:34px; }
   #app.review-app .comment-form textarea { font-size:16px; }
   #app.review-app .frame-annotation-toolbar { max-height:calc(100dvh - 84px); }
 
