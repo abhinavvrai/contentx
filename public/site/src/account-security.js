@@ -1,4 +1,4 @@
-import { escapeText as esc } from "./studio-workspace.js?v=frame-native-19";
+import { escapeText as esc } from "./studio-workspace.js?v=frame-native-20";
 const date=value=>new Date(value).toLocaleString([], {dateStyle:"medium",timeStyle:"short"});
 const device=agent=>{const browser=/Edg\//.test(agent)?"Edge":/Firefox\//.test(agent)?"Firefox":/Chrome\//.test(agent)?"Chrome":/Safari\//.test(agent)?"Safari":"Browser";const os=/Android/.test(agent)?"Android":/iPhone|iPad/.test(agent)?"iOS":/Windows/.test(agent)?"Windows":/Macintosh/.test(agent)?"macOS":/Linux/.test(agent)?"Linux":"Unknown device";return `${browser} · ${os}`;};
 export async function renderAccountSecurity(container,api) {

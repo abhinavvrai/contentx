@@ -1,7 +1,7 @@
-import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-19";
-import { bindWorkspaceOrganizer, openUnifiedSearch } from "./workspace-organizer.js?v=frame-native-19";
-import { openReviewRoom } from "./review-room.js?v=frame-native-19";
-import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-19";
+import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-20";
+import { bindWorkspaceOrganizer, openUnifiedSearch } from "./workspace-organizer.js?v=frame-native-20";
+import { openReviewRoom } from "./review-room.js?v=frame-native-20";
+import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-20";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";

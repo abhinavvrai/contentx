@@ -6,6 +6,13 @@ function startMutedPreviewVideos(root) {
   root._previewObserver?.disconnect?.();
   const videos = [...root.querySelectorAll("[data-preview-autoplay]")];
   const start = video => {
+    const mediaFrame = video.closest(".video-preview,.work-media,.review-video");
+    const reveal = () => {
+      video.classList.add("is-ready");
+      mediaFrame?.classList.remove("video-fallback");
+    };
+    const showFallback = () => mediaFrame?.classList.add("video-fallback");
+
     video.muted = true;
     video.defaultMuted = true;
     video.loop = true;
@@ -16,11 +23,20 @@ function startMutedPreviewVideos(root) {
     video.setAttribute("autoplay", "");
     video.setAttribute("playsinline", "");
     video.removeAttribute("controls");
+    video.addEventListener("loadeddata", reveal, { once:true });
+    video.addEventListener("canplay", reveal, { once:true });
+    video.addEventListener("playing", reveal, { once:true });
+    video.addEventListener("error", showFallback, { once:true });
+
+    // Cached media can finish loading before an off-screen preview is observed.
+    // Reveal that existing frame immediately instead of waiting for an event
+    // which has already fired.
+    if (video.readyState >= 2) reveal();
+    else if (video.error) showFallback();
+
     const play = () => video.play?.().catch(() => {});
     if (video.readyState >= 2) play();
     else video.addEventListener("canplay", play, { once:true });
-    video.addEventListener("loadeddata", () => video.classList.add("is-ready"), { once:true });
-    video.addEventListener("error", () => video.closest(".video-preview,.work-media,.review-video")?.classList.add("video-fallback"), { once:true });
   };
   const priority = videos.find(video => video.closest(".hero-product"));
   if (priority) start(priority);

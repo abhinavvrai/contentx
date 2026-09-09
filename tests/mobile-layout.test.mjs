@@ -6,8 +6,8 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("Android layout layer is loaded last and cache-busted", async () => {
   const html = await read("public/site/index.html");
-  assert.match(html, /contentx-release" content="frame-native-19/);
-  assert.match(html, /mobile\.css\?v=frame-native-19/);
+  assert.match(html, /contentx-release" content="frame-native-20/);
+  assert.match(html, /mobile\.css\?v=frame-native-20/);
   assert.ok(html.indexOf("mobile.css") > html.indexOf("workspace-organizer.css"));
 });
 

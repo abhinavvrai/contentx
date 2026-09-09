@@ -1,4 +1,4 @@
-/* frame-native-19: Android-first fit, touch targets, and resilient single-column product layouts. */
+/* frame-native-20: Android-first fit, touch targets, and resilient single-column product layouts. */
 @media (max-width: 900px) {
   html, body { max-width:100%; overflow-x:clip; }
   body, #app, #app>main, #app>div { min-width:0; }

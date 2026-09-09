@@ -10,13 +10,15 @@ Live site:
 
 Current verified live release label:
 
-- `frame-native-19` (`05f60c2`, verified 8 September 2026)
+- `frame-native-20` (verified 9 September 2026)
 
 Important: do not write private passwords, OTPs, API keys, Razorpay secrets, Google client secrets, access codes or owner credentials in this file. Keep secrets in the proper environment variable system only.
 
 Profile details are stored in D1 and profile-photo bytes are stored in the private `UPLOADS` R2 binding. Mobile numbers are optional contact data; phone-number OTP login must not be shown as available until a verified SMS provider, abuse limits and delivery monitoring are configured. Google, email-code and password access remain the supported sign-in methods.
 
 Reliability note for future changes: normal sign-in and workspace navigation must never wait on the external Supabase health endpoint. Provider availability on `/api/auth` is configuration-based; actual OTP requests perform their own provider validation. Runtime D1 schema guards use a fast read-only sentinel and fall back to the complete idempotent bootstrap only when a table or required column is missing. Route renders use a generation guard so an older response cannot overwrite a newer click. Password-reset requests return the same generic response whether or not an account exists, use an 8-second provider timeout, and show a 60-second resend control. Resend acceptance does not guarantee instant inbox delivery; mailbox providers can add several minutes of delay. Uploaded-video card previews must stay lazy and private: request an authenticated five-minute media link only after hover or keyboard focus, never place private object URLs or access tokens in static markup or browser storage, mute inline playback, and preserve reduced-motion behavior.
+
+Public video reliability: deferred homepage videos can already have a decoded frame before their observer initializes, especially when the browser cache is warm. The initializer must synchronously reveal any video whose `readyState` already contains current data, while retaining `loadeddata`, `canplay`, `playing` and error listeners for slower connections. Never make visibility depend only on a future media event—the event may already have fired and leave a fully loaded video permanently transparent.
 
 Review reliability: keep global Home/Projects/Review/Search navigation wired on every nested screen. Voice notes require microphone permission, are limited to 60 seconds and 1.25 MB, and must be stored privately with short-lived authorized playback links. The recorder must retain stable element references after asynchronous stop events, stop every microphone track when the review room closes, keep a local preview available after a failed send, and reuse the uploaded voice-note ID when only comment creation needs retrying. PDFs use page-number feedback; safe text/script formats support selected-text quoting. Never downgrade private file delivery to a public object URL.
 
@@ -29,6 +31,12 @@ Workspace continuity: failed route refreshes must keep the last usable workspace
 Share-link reliability: each link may have its own exact expiry, password, selected-file scope and independent upload, original-download, comment, approval and previous-version permissions. Share passwords are derived with a unique salt and PBKDF2-SHA-256 and must never be stored in readable form, placed in URLs or persisted in browser storage. Inline preview signatures and original-download signatures are deliberately different; never remove that distinction. Every share-scoped file, version, comment, decision, preview, download and replacement request must be re-authorized on the server. Apply `drizzle/0009_share_permissions.sql` before deploying `frame-native-17`.
 
 The complete accepted signed-in scope is tracked item-by-item in [APP_IMPROVEMENT_CHECKLIST.md](docs/APP_IMPROVEMENT_CHECKLIST.md), with the release history in [APP_WORKSPACE_ROADMAP.md](docs/APP_WORKSPACE_ROADMAP.md). There are 186 in-scope improvements, excluding all 15 public marketing/conversion items. The whole backlog is **not complete**: never turn a partial implementation or an unavailable provider into a completion claim.
+
+## Release 20 public-video incident record — 9 September 2026
+
+The four Selected work videos were present, fully downloaded and decoded in production, but their CSS opacity stayed at zero. Their deferred initializer attached the reveal handler after `loadeddata` had already fired, so cached or quickly loaded media never received the `is-ready` class. `frame-native-20` now checks the current media state immediately, also reveals on `canplay` and `playing`, and clears the fallback state after recovery. A regression test protects the immediate-ready path. No video files, customer uploads or database records were changed.
+
+Verification: all 99 tests pass and the clean production build passes. Browser inspection confirmed all four portfolio videos transition to visible, continue muted playback and retain separate footage after entering the viewport.
 
 ## Release 19 mobile-fit verification and incident record — 8 September 2026
 

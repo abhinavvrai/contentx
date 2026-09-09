@@ -8,8 +8,8 @@ export default async function SharePage({ params }: SharePageProps) {
   const { token } = await params;
   const safeToken = /^[A-Za-z0-9_-]{20,200}$/.test(token) ? token : "";
   const source = safeToken
-    ? `/site/index.html?v=frame-native-19#share?token=${encodeURIComponent(safeToken)}`
-    : "/site/index.html?v=frame-native-19#share";
+    ? `/site/index.html?v=frame-native-20#share?token=${encodeURIComponent(safeToken)}`
+    : "/site/index.html?v=frame-native-20#share";
 
   return (
     <main className="site-frame-shell">
