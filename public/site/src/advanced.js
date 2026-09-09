@@ -255,16 +255,46 @@ function openClientManagedReview(client, project, actions) {
 }
 
 function openComparison(versions) {
-  const { layer } = openLayer(`<p class="eyebrow"><span></span>Version comparison</p><h2>Compare every change precisely.</h2><p class="advanced-subcopy">Use side-by-side for timing or drag the wipe to inspect colour, graphics and framing.</p><div class="comparison-mode" role="group" aria-label="Comparison mode"><button class="active" data-compare-mode="side">Side by side</button><button data-compare-mode="wipe">Wipe</button></div><div class="comparison-selects"><label>Left version<select data-side="left">${Object.keys(versions).map(v => `<option ${v === "V2" ? "selected" : ""}>${v}</option>`).join("")}</select></label><label>Right version<select data-side="right">${Object.keys(versions).map(v => `<option ${v === "V3" ? "selected" : ""}>${v}</option>`).join("")}</select></label></div><div class="comparison-grid" style="--wipe:50%"><article><span data-left-label>V2</span><video src="${versions.V2.src}" muted playsinline></video></article><article><span data-right-label>V3</span><video src="${versions.V3.src}" muted playsinline></video></article><i class="comparison-wipe-line" aria-hidden="true"></i></div><label class="comparison-wipe" hidden><span>Reveal newer version</span><input type="range" min="0" max="100" value="50" aria-label="Version wipe position"><output>50%</output></label><div class="comparison-controls"><button data-sync-back>−5s</button><button class="pill pill-hot" data-sync-play>Play both</button><button data-sync-forward>+5s</button><span data-sync-time>00:00</span></div>`, "advanced-modal comparison-modal");
-  const videos = [...layer.querySelectorAll("video")];
+  const savedComments = local.get("cx_comments", null);
+  const currentVersionComments = (savedComments?.length ? savedComments : [{ initials: "MK", author: "Meera", time: 4.2, text: "Could we open with the product close-up? It feels like the strongest hook.", age: "12 min", resolved: false }, { initials: "AR", author: "Abhinav", time: 12.8, text: "Yes—I'll bring that shot forward and tighten this transition in V4.", age: "8 min", resolved: false }, { initials: "RS", author: "Rohan", time: 21.4, text: "Caption is approved. Please keep this styling across the remaining videos.", age: "3 min", resolved: true }]);
+  const commentsByVersion = { V1: [{ initials: "MK", author: "Meera", time: 6, text: "The first cut needs a stronger opening visual.", age: "Earlier review", resolved: true }], V2: [{ initials: "AR", author: "Abhinav", time: 5, text: "The opening has been tightened and the first caption is now on beat.", age: "Previous version", resolved: true }, { initials: "MK", author: "Meera", time: 18, text: "This transition works much better. Keep the energy through the CTA.", age: "Previous version", resolved: false }], V3: currentVersionComments };
+  const versionOptions = selected => Object.keys(versions).map(version => `<option ${version === selected ? "selected" : ""}>${version}</option>`).join("");
+  const { layer } = openLayer(`<p class="eyebrow"><span></span>Version comparison</p><h2>Compare every change precisely.</h2><p class="advanced-subcopy">Use side-by-side for timing or drag the wipe to inspect colour, graphics and framing.</p><div class="comparison-workspace"><section class="comparison-stage"><div class="comparison-mode" role="group" aria-label="Comparison mode"><button class="active" data-compare-mode="side">Side by side</button><button data-compare-mode="wipe">Wipe</button></div><div class="comparison-selects"><label>Left version<select data-side="left">${versionOptions("V2")}</select></label><label>Right version<select data-side="right">${versionOptions("V3")}</select></label></div><div class="comparison-grid" style="--wipe:50%"><article class="comparison-video-select" data-compare-video="left" role="button" tabindex="0" aria-label="Select V2 and play its sound"><span data-left-label>V2</span><video src="${versions.V2.src}" muted playsinline></video></article><article class="comparison-video-select active" data-compare-video="right" role="button" tabindex="0" aria-label="Select V3 and play its sound"><span data-right-label>V3</span><video src="${versions.V3.src}" muted playsinline></video></article><i class="comparison-wipe-line" aria-hidden="true"></i></div><label class="comparison-wipe" hidden><span>Reveal newer version</span><input type="range" min="0" max="100" value="50" aria-label="Version wipe position"><output>50%</output></label><div class="comparison-controls"><button data-sync-back>−5s</button><button class="pill pill-hot" data-sync-play>Play both</button><button data-sync-forward>+5s</button><span data-sync-time>00:00</span></div></section><aside class="comparison-feedback" aria-live="polite"><header><div><span>Version feedback</span><strong data-feedback-version>V3</strong></div><b data-sound-status>Select this version to hear its sound</b></header><p class="comparison-feedback-intro">Click a video to switch its comments and audio here.</p><div class="comparison-feedback-list" data-feedback-list></div></aside></div>`, "advanced-modal comparison-modal");
+  const videos = [...layer.querySelectorAll("video")], selects = [...layer.querySelectorAll("[data-side]")], videoCards = [...layer.querySelectorAll("[data-compare-video]")];
+  let activeIndex = 1;
   const sync = time => videos.forEach(video => video.currentTime = Math.max(0, Math.min(video.duration || 999, time)));
+  const selectedVersion = index => selects[index].value;
+  const renderFeedback = () => {
+    const version = selectedVersion(activeIndex), comments = commentsByVersion[version] || [];
+    layer.querySelector("[data-feedback-version]").textContent = version;
+    layer.querySelector("[data-feedback-list]").innerHTML = comments.length ? comments.map(comment => `<article><b>${safe(comment.initials || "CX")}</b><div><header><strong>${safe(comment.author || "Reviewer")}</strong><time>${safe(comment.age || "Just now")}</time></header><span>${fmt(comment.time)}</span><p>${safe(comment.text)}</p>${comment.resolved ? "<em>Resolved</em>" : ""}</div></article>`).join("") : `<p class="comparison-feedback-empty">No feedback has been left on ${safe(version)} yet.</p>`;
+  };
+  const selectVersion = (index, startPlayback = false) => {
+    activeIndex = index;
+    const version = selectedVersion(index);
+    videoCards.forEach((card, cardIndex) => {
+      const selected = cardIndex === index;
+      card.classList.toggle("active", selected);
+      card.setAttribute("aria-label", `${selectedVersion(cardIndex)}${selected ? " selected" : ""}. Click to hear this version.`);
+      videos[cardIndex].muted = !selected;
+    });
+    layer.querySelector("[data-sound-status]").textContent = startPlayback ? `Sound on · ${version}` : `Selected · ${version} sound ready`;
+    renderFeedback();
+    if (startPlayback) {
+      videos.forEach((video, videoIndex) => { if (videoIndex !== index) video.pause(); });
+      videos[index].play().catch(() => {});
+      layer.querySelector("[data-sync-play]").textContent = "Play both";
+    }
+  };
   layer.querySelectorAll("[data-compare-mode]").forEach(button => button.addEventListener("click", () => { const wipe = button.dataset.compareMode === "wipe"; layer.querySelectorAll("[data-compare-mode]").forEach(item => item.classList.toggle("active", item === button)); layer.querySelector(".comparison-grid").classList.toggle("wipe-mode", wipe); layer.querySelector(".comparison-wipe").hidden = !wipe; }));
   layer.querySelector(".comparison-wipe input").addEventListener("input", event => { layer.querySelector(".comparison-grid").style.setProperty("--wipe", `${event.target.value}%`); layer.querySelector(".comparison-wipe output").textContent = `${event.target.value}%`; });
-  layer.querySelectorAll("[data-side]").forEach(select => select.addEventListener("change", () => { const side = select.dataset.side, index = side === "left" ? 0 : 1; videos[index].src = versions[select.value].src; layer.querySelector(`[data-${side}-label]`).textContent = select.value; }));
-  layer.querySelector("[data-sync-play]").addEventListener("click", event => { if (videos[0].paused) { const time = Math.max(videos[0].currentTime, videos[1].currentTime); sync(time); videos.forEach(video => video.play().catch(() => {})); event.currentTarget.textContent = "Pause both"; } else { videos.forEach(video => video.pause()); event.currentTarget.textContent = "Play both"; } });
+  selects.forEach(select => select.addEventListener("change", () => { const side = select.dataset.side, index = side === "left" ? 0 : 1; videos[index].src = versions[select.value].src; layer.querySelector(`[data-${side}-label]`).textContent = select.value; selectVersion(index); }));
+  videoCards.forEach((card, index) => { card.addEventListener("click", () => selectVersion(index, true)); card.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); selectVersion(index, true); } }); });
+  layer.querySelector("[data-sync-play]").addEventListener("click", event => { if (videos[0].paused) { const time = Math.max(videos[0].currentTime, videos[1].currentTime); sync(time); videos.forEach(video => video.play().catch(() => {})); videos.forEach((video, index) => video.muted = index !== activeIndex); layer.querySelector("[data-sound-status]").textContent = `Sound on · ${selectedVersion(activeIndex)}`; event.currentTarget.textContent = "Pause both"; } else { videos.forEach(video => video.pause()); event.currentTarget.textContent = "Play both"; } });
   layer.querySelector("[data-sync-back]").addEventListener("click", () => sync(videos[0].currentTime - 5));
   layer.querySelector("[data-sync-forward]").addEventListener("click", () => sync(videos[0].currentTime + 5));
   videos[0].addEventListener("timeupdate", () => { if (!videos[0].paused && Math.abs(videos[1].currentTime - videos[0].currentTime) > .2) videos[1].currentTime = videos[0].currentTime; layer.querySelector("[data-sync-time]").textContent = fmt(videos[0].currentTime); });
+  selectVersion(activeIndex);
 }
 
 function updateChecklistChip(root) {
