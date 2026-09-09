@@ -1070,6 +1070,8 @@ html[data-theme="dark"] #app .project-card { min-height:268px; overflow:hidden; 
 html[data-theme="dark"] #app.review-app .review-stage { padding:12px 16px 10px; background:#131419; }
 #app.review-app .player-wrap { border:1px solid #292a31; border-radius:6px; background:#08090c; box-shadow:0 20px 60px #0005; }
 #app.review-app .version-bar { height:60px; }
+#app.review-app .review-head-actions .pill-green { border-color:#25cf83; background:#1bbd73; color:#fff; box-shadow:0 8px 20px rgba(27,189,115,.24); }
+#app.review-app .review-head-actions .pill-green:hover { border-color:#48d996; background:#16a965; }
 #app.review-app .comment-panel { max-width:none; border-left:1px solid #292a31; background:#15161c; color:#f4f1f3; }
 #app.review-app .comment.completed { border-color:#28634f!important; background:linear-gradient(180deg,#1c2d27,#171b1c)!important; box-shadow:0 12px 32px rgba(30,151,103,.12)!important; opacity:1; }
 #app.review-app .comment.completed .comment-avatar { background:#214b3e!important; color:#b9f3d9!important; }
