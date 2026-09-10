@@ -1,4 +1,4 @@
-import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=frame-native-20";
+import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=organize-access-2";
 import { bindWorkspaceOrganizer, openUnifiedSearch } from "./workspace-organizer.js?v=frame-native-20";
 import { openReviewRoom } from "./review-room.js?v=frame-native-20";
 import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-20";
@@ -348,7 +348,7 @@ function addWorkspaceOrganizationHint(root, canUpload, canManageFolders) {
   const title = document.createElement("b");
   title.textContent = "Drag to organize";
   const description = document.createElement("p");
-  description.textContent = [canUpload ? "Drop one video on another to make it the next version." : "", canManageFolders ? "Drop a file or folder on a folder to move it." : ""].filter(Boolean).join(" ");
+  description.textContent = [canUpload ? "Drop one video on another to make it the next version." : "", canManageFolders ? "Drag files and folders to move them, or use Folder options and the file selection controls." : ""].filter(Boolean).join(" ");
   copy.append(title, description);
   tip.append(icon, copy);
   anchor.after(tip);
@@ -440,8 +440,8 @@ function bindFolderBrowser(root, projectId, folders, actions) {
       card.classList.add("is-moving");
     });
     card.addEventListener("dragover", event => {
-      const sourceFileId = event.dataTransfer.getData("application/x-contentx-file");
-      if (!sourceFileId || sourceFileId === card.dataset.fileId || !card.classList.contains("has-video-preview")) return;
+      // Browsers hide payload values until drop; types remain readable during dragover.
+      if (![...event.dataTransfer.types].includes("application/x-contentx-file") || card.classList.contains("is-moving") || !card.classList.contains("has-video-preview")) return;
       event.preventDefault();
       card.classList.add("is-version-drop");
     });
@@ -732,7 +732,48 @@ function openFolderSettingsModal(root, projectId, folder, actions) {
   layer.innerHTML = `<div class="workspace-modal-backdrop"><form class="workspace-share-modal workspace-folder-modal"><button type="button" data-close-folder-settings aria-label="Close">×</button><p class="workspace-kicker">FOLDER OPTIONS</p><h2>${escapeHTML(folder.name)}</h2><label>Folder name<input name="name" required maxlength="80" value="${escapeHTML(folder.name)}"></label><p role="alert" data-folder-error hidden></p><button class="workspace-button primary" type="submit">Save folder name</button><aside><span>↖</span><div><b>Safe folder removal</b><small>Files and subfolders move up one level. No media is deleted.</small></div></aside><button class="workspace-button danger" type="button" data-remove-folder>Remove folder only</button></form></div>`;
   const form = layer.querySelector("form");
   const error = form.querySelector("[data-folder-error]");
-  const close = () => { layer.innerHTML = ""; };
+  const moveLabel = document.createElement("label");
+  moveLabel.textContent = "Move folder to";
+  const destination = document.createElement("select");
+  destination.setAttribute("aria-label", "Folder destination");
+  destination.add(new Option("Project root", ""));
+  const blocked = new Set([folder.id]);
+  const tree = root.querySelector(".workspace-tree");
+  const folderNode = [...(tree?.querySelectorAll("[data-folder-drag]") || [])].find(item => item.dataset.folderDrag === folder.id)?.closest(".workspace-tree-node");
+  folderNode?.querySelectorAll("[data-folder-drag]").forEach(item => blocked.add(item.dataset.folderDrag));
+  tree?.querySelectorAll("[data-folder-drag]").forEach(item => {
+    if (!blocked.has(item.dataset.folderDrag)) destination.add(new Option(item.querySelector("b")?.textContent || "Folder", item.dataset.folderDrag));
+  });
+  destination.value = folder.parent_id || "";
+  moveLabel.append(destination);
+  const moveButton = document.createElement("button");
+  moveButton.type = "button";
+  moveButton.className = "workspace-button";
+  moveButton.textContent = "Move folder";
+  moveButton.disabled = true;
+  destination.addEventListener("change", () => { moveButton.disabled = destination.value === (folder.parent_id || ""); });
+  error.before(moveLabel, moveButton);
+  moveButton.addEventListener("click", async () => {
+    moveButton.disabled = true; moveButton.textContent = "Moving…"; error.hidden = true;
+    try {
+      await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify({ action:"move-folder", projectId, folderId:folder.id, parentId:destination.value || null }) });
+      close(); actions.refreshRoute();
+    } catch (failure) { error.textContent = failure.message; error.hidden = false; moveButton.disabled = false; moveButton.textContent = "Move folder"; }
+  });
+  form.setAttribute("role", "dialog");
+  form.setAttribute("aria-modal", "true");
+  form.setAttribute("aria-label", "Folder options");
+  const previousFocus = document.activeElement;
+  const close = () => { layer.innerHTML = ""; previousFocus?.focus(); };
+  form.addEventListener("keydown", event => {
+    if (event.key === "Escape") { event.preventDefault(); close(); }
+    if (event.key !== "Tab") return;
+    const controls = [...form.querySelectorAll("button:not(:disabled), input, select")];
+    const first = controls[0], last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
+  form.elements.name.focus();
   layer.querySelector("[data-close-folder-settings]").addEventListener("click", close);
   layer.querySelector(".workspace-modal-backdrop").addEventListener("click", event => { if (event.target === event.currentTarget) close(); });
   form.addEventListener("submit", async event => {
@@ -1037,8 +1078,20 @@ async function downloadProjectFile(projectId, fileId, token, button) {
 }
 
 function bindDropTarget(element, handler, activeClass = "is-dragging") {
-  if (!element || element.classList.contains("disabled")) return;
-  ["dragenter","dragover"].forEach(type => element.addEventListener(type, event => { event.preventDefault(); element.classList.add(activeClass); }));
-  ["dragleave","drop"].forEach(type => element.addEventListener(type, event => { event.preventDefault(); element.classList.remove(activeClass); }));
-  element.addEventListener("drop", event => { event.stopPropagation(); handler([...event.dataTransfer.files]); });
+  if (!element || element.classList.contains("disabled") || element.classList.contains("view-only")) return;
+  const isFileDrop = event => [...(event.dataTransfer?.types || [])].includes("Files");
+  ["dragenter","dragover"].forEach(type => element.addEventListener(type, event => {
+    if (!isFileDrop(event)) return;
+    event.preventDefault(); event.stopPropagation(); element.classList.add(activeClass);
+  }));
+  element.addEventListener("dragleave", event => {
+    if (!element.contains(event.relatedTarget)) element.classList.remove(activeClass);
+  });
+  element.addEventListener("drop", event => {
+    element.classList.remove(activeClass);
+    if (!isFileDrop(event)) return;
+    event.preventDefault(); event.stopPropagation();
+    const files = [...event.dataTransfer.files];
+    if (files.length) handler(files);
+  });
 }

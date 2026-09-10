@@ -41,6 +41,20 @@ export function enhanceFileLibrary(root, files, comments) {
   const search = root.querySelector("[data-file-search]"), type = root.querySelector("[data-file-type]"), sort = root.querySelector("[data-file-sort]");
   // Empty projects deliberately omit file controls. Keep the upload action usable.
   if (!search || !type || !sort) return;
+  const empty = root.querySelector("[data-file-empty]");
+  const emptyText = document.createElement("span");
+  const clearFilters = document.createElement("button");
+  clearFilters.type = "button";
+  clearFilters.className = "workspace-button";
+  clearFilters.textContent = "Clear filters";
+  empty?.replaceChildren(emptyText, clearFilters);
+  clearFilters.addEventListener("click", () => {
+    search.value = ""; type.value = "all"; grid.dataset.stage = "all";
+    const globalSearch = root.querySelector("[data-global-file-search]");
+    if (globalSearch) globalSearch.value = "";
+    update();
+    search.focus();
+  });
   const update = () => {
     const activeFolder = grid.dataset.activeFolder || "";
     let collection = null;
@@ -52,6 +66,9 @@ export function enhanceFileLibrary(root, files, comments) {
     selected.forEach(file => { const card = cards.get(file.id); if (card) { card.hidden = false; grid.append(card); } });
     root.querySelector("[data-file-results]").textContent = `${selected.length} of ${files.length} files`;
     root.querySelector("[data-file-empty]").hidden = selected.length > 0 || !files.length;
+    const filtered = Boolean(search.value.trim() || type.value !== "all" || (grid.dataset.stage && grid.dataset.stage !== "all"));
+    emptyText.textContent = filtered ? "No files match these filters. " : "This folder has no files yet. Add files here or move them from another folder.";
+    clearFilters.hidden = !filtered;
   };
   [search, type, sort].forEach(control => control.addEventListener(control === search ? "input" : "change", update));
   root.querySelectorAll("[data-file-view]").forEach(button => button.addEventListener("click", () => {
