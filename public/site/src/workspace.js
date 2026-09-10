@@ -177,6 +177,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   addWorkspaceOrganizationHint(root, projectData.permissions?.canUpload !== false, project.status === "active");
   bindFolderBrowser(root, project.id, folders, actions);
   bindAssetSelection(root, project.id, actions);
+  bindVideoVersionPicker(root, project.id, actions, files, comments);
   const picker = root.querySelector("[data-workspace-picker]");
   root.querySelectorAll("[data-upload-files]").forEach(button => button.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); }));
   root.querySelector("[data-project-drop]")?.addEventListener("click", () => { picker.dataset.replaceFile = ""; picker.click(); });
@@ -335,6 +336,68 @@ function folderTreeNodes(folders, parentId = null, depth = 0) {
   return folders.filter(folder => (folder.parent_id || null) === parentId).map(folder => `<div class="workspace-tree-node" style="--depth:${depth}"><button type="button" draggable="true" data-folder-id="${escapeHTML(folder.id)}" data-folder-drag="${escapeHTML(folder.id)}"><span>▸</span><b>${escapeHTML(folder.name)}</b><em>${Number(folder.asset_count || 0)}</em></button>${folderTreeNodes(folders, folder.id, depth + 1)}</div>`).join("");
 }
 
+function bindVideoVersionPicker(root, projectId, actions, files, comments) {
+  const videos = files.filter(file => String(file.content_type).startsWith("video/"));
+  root.querySelectorAll("[data-file-card]").forEach(card => {
+    const file = files.find(item => item.id === card.dataset.fileId);
+    if (!file) return;
+    const open = comments.filter(note => !commentIsComplete(note) && (note.file_id === file.id || (!note.file_id && note.asset_id === (file.asset_id || file.id)))).length;
+    const badge = card.querySelector('[data-card-field="status"]');
+    if (badge) {
+      badge.textContent = open ? open + " open comment" + (open === 1 ? "" : "s") : file.review_decision === "approved" ? "Approved" : file.review_decision === "changes_requested" ? "Changes requested" : "Ready for review";
+      badge.dataset.reviewState = open ? "feedback" : file.review_decision || "ready";
+    }
+    if (!card.classList.contains("has-video-preview") || card.classList.contains("view-only") || videos.length < 2) return;
+    const button = document.createElement("button");
+    button.type = "button"; button.className = "workspace-version-picker-button";
+    button.textContent = "Make a version of…";
+    card.append(button);
+    button.addEventListener("click", () => {
+      const dialog = document.createElement("dialog");
+      dialog.className = "workspace-version-picker";
+      dialog.setAttribute("aria-label", "Make a version of another video");
+      const heading = document.createElement("h2"); heading.textContent = "Make a version of…";
+      const description = document.createElement("p"); description.textContent = file.original_name + " and its history will become the newest versions of the video you choose.";
+      const label = document.createElement("label"); label.textContent = "Choose the original video";
+      const select = document.createElement("select");
+      select.add(new Option("Choose a video", ""));
+      videos.filter(item => (item.asset_id || item.id) !== (file.asset_id || file.id)).forEach(item => select.add(new Option(item.original_name + " · v" + (item.version_number || 1), item.id)));
+      label.append(select);
+      const error = document.createElement("p"); error.setAttribute("role", "alert"); error.hidden = true;
+      const cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel";
+      const submit = document.createElement("button"); submit.type = "button"; submit.textContent = "Combine versions"; submit.disabled = true;
+      select.addEventListener("change", () => { submit.disabled = !select.value; });
+      cancel.addEventListener("click", () => dialog.close());
+      dialog.addEventListener("close", () => { dialog.remove(); button.focus(); });
+      submit.addEventListener("click", async () => {
+        submit.disabled = true; cancel.disabled = true; select.disabled = true; error.hidden = true; submit.textContent = "Combining…";
+        try {
+          await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify({ action:"merge-video-version", projectId, sourceFileId:file.id, targetFileId:select.value }) });
+          dialog.close(); actions.refreshRoute();
+        } catch (failure) { error.textContent = failure.message; error.hidden = false; submit.disabled = false; cancel.disabled = false; select.disabled = false; submit.textContent = "Combine versions"; }
+      });
+      dialog.addEventListener("cancel", event => { if (cancel.disabled) event.preventDefault(); });
+      dialog.append(heading, description, label, error, cancel, submit);
+      document.body.append(dialog); dialog.showModal();
+    });
+  });
+}
+
+function showMoveUndo(message, undo) {
+  document.querySelector(".workspace-undo-toast")?.remove();
+  const toast = document.createElement("aside"); toast.className = "workspace-undo-toast"; toast.setAttribute("role", "status");
+  const text = document.createElement("span"); text.textContent = message;
+  const button = document.createElement("button"); button.type = "button"; button.textContent = "Undo";
+  const dismiss = document.createElement("button"); dismiss.type = "button"; dismiss.textContent = "×"; dismiss.setAttribute("aria-label", "Dismiss move notification");
+  dismiss.onclick = () => toast.remove();
+  button.onclick = async () => {
+    button.disabled = true; dismiss.disabled = true;
+    try { await undo(); toast.remove(); }
+    catch (error) { text.textContent = error.message; button.disabled = false; dismiss.disabled = false; }
+  };
+  toast.append(text, button, dismiss); document.body.append(toast);
+}
+
 function addWorkspaceOrganizationHint(root, canUpload, canManageFolders) {
   const anchor = root.querySelector(".workspace-project-head");
   if (!anchor || (!canUpload && !canManageFolders)) return;
@@ -410,8 +473,13 @@ function bindFolderBrowser(root, projectId, folders, actions) {
   const setActive = folderId => { activeFolder = folderId || ""; paintFolders(); };
   const move = async (payload, targetId) => {
     const isAsset = payload.type === "asset";
+    const previousFolder = isAsset ? [...root.querySelectorAll("[data-file-card]")].find(card => card.dataset.assetId === payload.id)?.dataset.folderId : byId.get(payload.id)?.parent_id;
     await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify(isAsset ? { action:"move-assets", projectId, folderId:targetId || null, assetIds:[payload.id] } : { action:"move-folder", projectId, folderId:payload.id, parentId:targetId || null }) });
     actions.refreshRoute();
+    showMoveUndo(isAsset ? "File moved" : "Folder moved", async () => {
+      await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify(isAsset ? { action:"move-assets", projectId, folderId:previousFolder || null, assetIds:[payload.id], expectedFolderId:targetId || null } : { action:"move-folder", projectId, folderId:payload.id, parentId:previousFolder || null, expectedParentId:targetId || null }) });
+      actions.refreshRoute();
+    });
   };
   const payloadFrom = event => {
     const asset = event.dataTransfer.getData("application/x-contentx-asset");
@@ -758,6 +826,11 @@ function openFolderSettingsModal(root, projectId, folder, actions) {
     try {
       await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify({ action:"move-folder", projectId, folderId:folder.id, parentId:destination.value || null }) });
       close(); actions.refreshRoute();
+      const movedTo = destination.value || null;
+      showMoveUndo("Folder moved", async () => {
+        await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify({ action:"move-folder", projectId, folderId:folder.id, parentId:folder.parent_id || null, expectedParentId:movedTo }) });
+        actions.refreshRoute();
+      });
     } catch (failure) { error.textContent = failure.message; error.hidden = false; moveButton.disabled = false; moveButton.textContent = "Move folder"; }
   });
   form.setAttribute("role", "dialog");

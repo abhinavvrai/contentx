@@ -201,6 +201,7 @@ async function getClientProject(request: Request, projectId: string): Promise<Re
     `SELECT f.id, f.original_name, f.content_type, f.size_bytes, f.status, f.uploader_name,
       f.created_at, f.completed_at, f.folder_id, COALESCE(f.asset_id, f.id) AS asset_id,
       COALESCE(f.version_number, 1) AS version_number,
+      (SELECT d.decision FROM project_version_decisions d WHERE d.project_id=f.project_id AND d.file_id=f.id ORDER BY d.created_at DESC,d.id DESC LIMIT 1) AS review_decision,
       (SELECT COUNT(*) FROM upload_files v
         WHERE v.project_id = f.project_id AND v.status = 'ready'
           AND COALESCE(v.asset_id, v.id) = COALESCE(f.asset_id, f.id)) AS version_count
@@ -288,7 +289,10 @@ async function moveProjectAssets(request: Request, input: JsonInput): Promise<Re
     const folder = await db.prepare("SELECT id FROM project_folders WHERE id = ? AND project_id = ? LIMIT 1").bind(folderId, projectId).first();
     if (!folder) throw new ClientError("Choose a folder from this project.", 404);
   }
-  await db.batch(assetIds.map(assetId => db.prepare("UPDATE upload_files SET folder_id = ? WHERE project_id = ? AND COALESCE(asset_id,id) = ?").bind(folderId, projectId, assetId)));
+  const guarded = Object.hasOwn(input, "expectedFolderId");
+  const expectedFolderId = cleanText(input.expectedFolderId, 80) || null;
+  const results = await db.batch(assetIds.map(assetId => db.prepare("UPDATE upload_files SET folder_id = ? WHERE project_id = ? AND COALESCE(asset_id,id) = ? AND (? = 0 OR COALESCE(folder_id,'') = COALESCE(?,''))").bind(folderId, projectId, assetId, guarded ? 1 : 0, expectedFolderId)));
+  if (guarded && !results.some(result => result.meta.changes)) throw new ClientError("This file has moved again. Refresh to see its current folder.", 409);
   return json({ ok:true, moved:assetIds.length, folderId });
 }
 
@@ -376,7 +380,9 @@ async function moveProjectFolder(request: Request, input: JsonInput): Promise<Re
     ) SELECT id FROM descendants WHERE id = ? LIMIT 1`).bind(folderId, projectId, projectId, parentId).first();
     if (cycle) throw new ClientError("A folder cannot be moved inside one of its own subfolders.");
   }
-  await db.prepare("UPDATE project_folders SET parent_id = ?, updated_at = ? WHERE id = ? AND project_id = ?").bind(parentId, Date.now(), folderId, projectId).run();
+  const guarded = Object.hasOwn(input, "expectedParentId");
+  const result = await db.prepare("UPDATE project_folders SET parent_id = ?, updated_at = ? WHERE id = ? AND project_id = ? AND (? = 0 OR COALESCE(parent_id,'') = COALESCE(?,''))").bind(parentId, Date.now(), folderId, projectId, guarded ? 1 : 0, cleanText(input.expectedParentId, 80) || null).run();
+  if (!result.meta.changes) throw new ClientError("This folder has moved again. Refresh to see its current location.", 409);
   return json({ ok:true, folderId, parentId });
 }
 

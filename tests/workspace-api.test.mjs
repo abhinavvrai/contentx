@@ -106,3 +106,24 @@ test("empty-project file controls are a safe no-op",async()=>{
   const grid={querySelectorAll:()=>[]};
   assert.doesNotThrow(()=>enhanceFileLibrary({querySelector:selector=>selector===".workspace-file-grid"?grid:null},[],[]));
 });
+
+test("folder move undo persists and refuses to overwrite a later move",async()=>{
+  const a=await post(uploads,{action:"create-folder",projectId:"project_alice",name:"Undo A"});
+  const b=await post(uploads,{action:"create-folder",projectId:"project_alice",name:"Undo B"});
+  const folderId=a.body.folder.id,parentId=b.body.folder.id;
+  const move=body=>uploads.PATCH(request("/api/uploads",{method:"PATCH",body:{action:"move-folder",projectId:"project_alice",folderId,...body}}));
+  assert.equal((await move({parentId})).status,200);
+  assert.equal((await move({parentId:null,expectedParentId:parentId})).status,200);
+  assert.equal(sql.prepare("SELECT parent_id FROM project_folders WHERE id=?").get(folderId).parent_id,null);
+  assert.equal((await move({parentId:null,expectedParentId:parentId})).status,409);
+});
+
+test("file move undo is scoped to the expected destination",async()=>{
+  const folder=await post(uploads,{action:"create-folder",projectId:"project_alice",name:"Undo files"});
+  const folderId=folder.body.folder.id;
+  const move=body=>uploads.PATCH(request("/api/uploads",{method:"PATCH",body:{action:"move-assets",projectId:"project_alice",assetIds:["asset2"],...body}}));
+  assert.equal((await move({folderId})).status,200);
+  assert.equal((await move({folderId:null,expectedFolderId:folderId})).status,200);
+  assert.equal(sql.prepare("SELECT folder_id FROM upload_files WHERE id='file3'").get().folder_id,null);
+  assert.equal((await move({folderId:null,expectedFolderId:folderId})).status,409);
+});
