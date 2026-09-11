@@ -1,12 +1,12 @@
 import { studio } from "./data.js?v=revision-bands-1";
 import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=frame-native-20";
-import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=frame-native-20-admin-access-1";
+import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=frame-native-20-admin-access-2";
 import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=revision-bands-1";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js?v=comparison-feedback-1";
 import { initProductPolish, polishRoute } from "./polish.js?v=noir-studio-1";
 import { enhanceCreatorTools } from "./creator-tools.js?v=frame-native-3";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=frame-native-3";
-import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-native-20-auth-provider-1";
+import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-native-20-auth-provider-2";
 import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=client-flow-3";
 import { enhanceStudioDashboard } from "./studio-workspace.js?v=organize-access-2";
 
@@ -38,7 +38,7 @@ const actions = {
   openDashboard: () => go("workspace"),
   openProject: () => go("project"),
   openReview: () => go("review"),
-  openAccess: () => { rememberProtectedRoute("workspace"); go("access"); },
+  openAccess: route => { rememberProtectedRoute(route || "workspace"); go("access"); },
   openAccount: () => go("workspace?panel=account"),
   openBrief: orderId => go(`brief${orderId ? `?order=${encodeURIComponent(orderId)}` : ""}`),
   openAdmin: () => go("owner"),

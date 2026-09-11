@@ -85,10 +85,10 @@ test("keeps the live shell and site module versions in sync", async () => {
   assert.match(page, /\/site\/index\.html\?v=frame-native-20/);
   assert.match(html, /contentx-release" content="frame-native-20/);
   assert.match(html, /main\.js\?v=frame-native-20/);
-  assert.match(html, /commerce\.css\?v=frame-native-20-admin-access-1/);
-  assert.match(main, /features\.js\?v=frame-native-20-admin-access-1/);
+  assert.match(html, /commerce\.css\?v=frame-native-20-admin-access-2/);
+  assert.match(main, /features\.js\?v=frame-native-20-admin-access-2/);
   assert.match(main, /uploads\.js\?v=frame-native-3/);
-  assert.match(main, /account\.js\?v=frame-native-20-auth-provider-1/);
+  assert.match(main, /account\.js\?v=frame-native-20-auth-provider-2/);
   assert.match(main, /ui\.js\?v=frame-native-20/);
 });
 
@@ -255,9 +255,9 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   assert.match(route, /verify_otp/);
   assert.match(route, /request_password_reset/);
   assert.match(route, /reset_password/);
-  assert.match(account, /Continue with email code/);
-  assert.match(account, /account-provider-icon-gmail/);
-  assert.doesNotMatch(account, />✉ Continue with email code/);
+  assert.match(account, /Continue with Google/);
+  assert.match(account, /account-google-pending/);
+  assert.doesNotMatch(account, /Continue with email code/);
   assert.doesNotMatch(account, /if \(register && accountProviders\.emailOtp\?\.available\)/);
   assert.match(account, /action:register \? "register" : "login"/);
   assert.match(account, /host\.isConnected/);

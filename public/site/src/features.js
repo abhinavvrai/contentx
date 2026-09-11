@@ -886,17 +886,17 @@ function initFrameAnnotations(wrap, video, root) {
 
 function renderOwnerGate(root, actions) {
   root.className = "owner-access-app";
-  root.innerHTML = `<main class="owner-access-shell"><section><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><p class="eyebrow light"><span></span>Owner operations</p><h1>Private control room.<br><em>Authorized staff only.</em></h1><p>Client accounts, payments, projects and team permissions are protected by individual staff identities.</p><ul><li><b>✓</b> No shared admin password</li><li><b>✓</b> Server-enforced roles</li><li><b>✓</b> Administrative audit history</li></ul></section><section class="owner-access-card"><span>⌾</span><p class="eyebrow"><span></span>Secure administration</p><h2>Sign in with your authorized account.</h2><p>Use the owner email configured for Content X, or a staff account that the owner has approved. Client accounts cannot open this area.</p><button class="pill pill-hot" type="button" data-owner-sign-in>Go to secure sign in →</button><small>Every team member must use a separate account. Access can be revoked without affecting anyone else.</small><button type="button" data-owner-gate-back>← Back to website</button></section></main>`;
+  root.innerHTML = `<main class="owner-access-shell"><section><a class="brand" href="#home"><span class="brand-mark">CX</span><span>Content X</span></a><p class="eyebrow light"><span></span>Owner operations</p><h1>Private control room.<br><em>Authorized staff only.</em></h1><p>Client accounts, payments, projects and team permissions are protected by individual staff identities.</p><ul><li><b>✓</b> No shared admin password</li><li><b>✓</b> Server-enforced roles</li><li><b>✓</b> Administrative audit history</li></ul></section><section class="owner-access-card"><span>⌾</span><p class="eyebrow"><span></span>Secure administration</p><h2>Sign in with your authorized account.</h2><p>Use the owner email configured for Content X, or a staff account that the owner has approved. Client accounts cannot open this area.</p><button class="pill pill-hot" type="button" data-owner-sign-in>Go to secure sign in →</button><small>After sign-in, you will return here automatically. Every team member needs their own account.</small><button type="button" data-owner-gate-back>← Back to website</button></section></main>`;
   root.querySelector(".brand").addEventListener("click", event => { event.preventDefault(); actions.openMarketing(); });
   root.querySelector("[data-owner-gate-back]").addEventListener("click", actions.openMarketing);
-  root.querySelector("[data-owner-sign-in]").addEventListener("click", actions.openAccess);
+  root.querySelector("[data-owner-sign-in]").addEventListener("click", () => actions.openAccess("owner"));
 }
 
 export async function renderAdmin(root, actions) {
   root.className = "admin-app";
   root.innerHTML = `<main class="account-loading"><span></span><h1>Verifying staff access…</h1></main>`;
   try {
-    const accessResponse = await fetch(ADMIN_API, { cache:"no-store" });
+    const accessResponse = await fetch(ADMIN_API, { cache:"no-store", headers:ownerHeaders(false) });
     if (!accessResponse.ok) return renderOwnerGate(root, actions);
   } catch { return renderOwnerGate(root, actions); }
   root.className = "admin-app"; const leads = store.get("cx_leads", []), apps = store.get("cx_applications", []), payments = store.get("cx_payments", []), moderation = store.get("cx_moderation", []), settings = store.get("cx_review_settings", { watermark:true, download:false }), managedRequests = store.get("cx_managed_review_requests", []), managedSettings = { enabled:true, price:2500, turnaround:"Within 1 business day", ...store.get("cx_managed_review_settings", {}) };

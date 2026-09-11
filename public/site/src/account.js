@@ -12,7 +12,7 @@ const money = (value, currency = "INR") => currency === "USD" ? `$${Math.round(N
 const initialsFor = user => String(user?.name || "CX").split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "CX";
 const avatarContent = user => user?.avatarUrl ? `<img src="${escapeHTML(user.avatarUrl)}" alt="">` : escapeHTML(initialsFor(user));
 const avatarMarkup = (user, className = "account-profile-avatar") => `<span class="${className}${user?.avatarUrl ? " has-image" : ""}" data-account-avatar>${avatarContent(user)}</span>`;
-const gmailIcon = `<svg class="account-provider-icon account-provider-icon-gmail" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#4285F4" d="M2.5 6.6v11.1c0 .72.58 1.3 1.3 1.3h2.7V9.93L12 14l5.5-4.07V19h2.7c.72 0 1.3-.58 1.3-1.3V6.6L12 13.62 2.5 6.6Z"/><path fill="#34A853" d="M2.5 6.6v11.1c0 .72.58 1.3 1.3 1.3h2.7V9.93L2.5 6.6Z"/><path fill="#FBBC04" d="M17.5 9.93V19h2.7c.72 0 1.3-.58 1.3-1.3V6.6l-4 3.33Z"/><path fill="#EA4335" d="M20.2 5H19L12 10.18 5 5H3.8c-.72 0-1.3.58-1.3 1.3v.3l9.5 7.02 9.5-7.02v-.3c0-.72-.58-1.3-1.3-1.3Z"/></svg>`;
+const googleIcon = `<svg class="account-provider-icon account-provider-icon-google" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#4285F4" d="M21.35 12.23c0-.71-.06-1.2-.19-1.71H12v3.45h5.38c-.11.86-.72 2.16-2.08 3.03l-.02.12 3.02 2.34.21.02c1.92-1.77 2.84-4.37 2.84-7.25Z"/><path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.37l-3.07-2.38c-.82.57-1.92.97-3.38.97a5.86 5.86 0 0 1-5.54-4.04l-.11.01-3.14 2.43-.04.1A9.75 9.75 0 0 0 12 21.75Z"/><path fill="#FBBC05" d="M6.46 13.93A5.9 5.9 0 0 1 6.15 12c0-.67.12-1.31.3-1.93v-.13L3.28 7.48l-.1.05A9.75 9.75 0 0 0 2.25 12c0 1.61.39 3.13.93 4.47l3.28-2.54Z"/><path fill="#EA4335" d="M12 6.03c1.84 0 3.08.8 3.79 1.47l2.76-2.69C16.83 3.2 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.82 5.28l3.28 2.54A5.86 5.86 0 0 1 12 6.03Z"/></svg>`;
 
 async function api(url, options = {}) {
   const controller = new AbortController();
@@ -160,7 +160,7 @@ export function renderAccountAccess(root, actions) {
   function show(mode) {
     tabs.forEach(button => button.classList.toggle("active", button.dataset.accountTab === mode));
     const register = mode === "register";
-    panel.innerHTML = `<p class="eyebrow"><span></span>${register ? "New creator account" : "Welcome back"}</p><h2>${register ? "Create your account." : "Sign in to continue."}</h2><p>${register ? "Use Google, email code or a password to open your free review workspace." : "Open your workspace, project files, versions and private share links."}</p><div class="account-provider-actions" aria-label="Sign-in options">${accountProviders.google?.available ? `<div class="account-google-option"><span class="account-provider-label">Google account</span><div data-google-button></div></div>` : ""}${accountProviders.emailOtp?.available ? `<button type="button" data-account-otp>${gmailIcon}<span>Continue with email code</span></button>` : ""}</div>${(accountProviders.google?.available || accountProviders.emailOtp?.available) ? '<div class="account-divider"><span>or continue with password</span></div>' : ""}<form data-password-form>${register ? '<label>Full name<input name="name" autocomplete="name" required placeholder="Your full name"></label>' : ""}<label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><label>Password<input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="10" maxlength="128" required placeholder="10+ character passphrase"></label>${register ? '<small class="password-tip">A long phrase is better than a short complex password.</small>' : '<button class="account-text-link" type="button" data-forgot-password>Forgot password?</button>'}<p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Create account →" : "Sign in →"}</button></form>`;
+    panel.innerHTML = `<p class="eyebrow"><span></span>${register ? "New creator account" : "Welcome back"}</p><h2>${register ? "Create your account." : "Sign in to continue."}</h2><p>${register ? "Use your verified Google account or a password to open your free review workspace." : "Open your workspace, project files, versions and private share links."}</p><div class="account-provider-actions" aria-label="Sign-in options">${accountProviders.google?.available ? `<div class="account-google-option"><button type="button" class="account-google-pending" data-google-pending disabled>${googleIcon}<span>Continue with Google</span></button><div data-google-button hidden></div></div>` : ""}</div>${accountProviders.google?.available ? '<div class="account-divider"><span>or continue with password</span></div>' : ""}<form data-password-form>${register ? '<label>Full name<input name="name" autocomplete="name" required placeholder="Your full name"></label>' : ""}<label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><label>Password<input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="10" maxlength="128" required placeholder="10+ character passphrase"></label>${register ? '<small class="password-tip">A long phrase is better than a short complex password.</small>' : '<button class="account-text-link" type="button" data-forgot-password>Forgot password?</button>'}<p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Create account →" : "Sign in →"}</button></form>`;
     panel.querySelector("[data-password-form]").addEventListener("submit", async event => {
       event.preventDefault();
       const button = event.currentTarget.querySelector("button[type=submit]");
@@ -175,7 +175,6 @@ export function renderAccountAccess(root, actions) {
         button.disabled = false; button.textContent = register ? "Create account →" : "Sign in →";
       }
     });
-    panel.querySelector("[data-account-otp]")?.addEventListener("click", () => renderOtpAccess(panel, returningTo, register));
     panel.querySelector("[data-forgot-password]")?.addEventListener("click", () => renderPasswordResetRequest(panel, returningTo));
     if (accountProviders.google?.available) renderGoogleAccess(panel, returningTo);
   }
@@ -312,6 +311,7 @@ function bindOtpBoxes(form) {
 
 async function renderGoogleAccess(panel, returningTo) {
   const host = panel.querySelector("[data-google-button]");
+  const pending = panel.querySelector("[data-google-pending]");
   if (!host) return;
   host.setAttribute("aria-busy", "true");
   try {
@@ -328,9 +328,11 @@ async function renderGoogleAccess(panel, returningTo) {
         } catch (failure) { showProviderError(panel, failure.message); }
       },
     });
+    host.hidden = false;
     host.replaceChildren();
     const width = Math.max(240, Math.min(400, Math.floor(host.getBoundingClientRect().width || 400)));
     window.google.accounts.id.renderButton(host, { theme:"outline", size:"large", shape:"rectangular", text:"continue_with", logo_alignment:"left", width });
+    pending?.remove();
     host.setAttribute("aria-busy", "false");
   } catch (error) {
     host.setAttribute("aria-busy", "false");
