@@ -987,6 +987,11 @@ async function requireProjectManager(request: Request, projectId: string) {
     const owned = await db.prepare("SELECT project_id FROM user_upload_projects WHERE project_id = ? AND user_id = ? LIMIT 1")
       .bind(projectId, user.id).first();
     if (owned) return user;
+    const delegated = await db.prepare(`SELECT spa.staff_user_id FROM staff_project_access spa
+      JOIN staff_members sm ON sm.user_id = spa.staff_user_id
+      WHERE spa.project_id = ? AND spa.staff_user_id = ? AND spa.access_level = 'manager' AND sm.status = 'active' LIMIT 1`)
+      .bind(projectId, user.id).first();
+    if (delegated) return user;
   }
   await requireOwner(request);
   const project = await db.prepare("SELECT id FROM upload_projects WHERE id = ? LIMIT 1").bind(projectId).first();

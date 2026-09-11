@@ -85,10 +85,10 @@ test("keeps the live shell and site module versions in sync", async () => {
   assert.match(page, /\/site\/index\.html\?v=frame-native-20/);
   assert.match(html, /contentx-release" content="frame-native-20/);
   assert.match(html, /main\.js\?v=frame-native-20/);
-  assert.match(html, /commerce\.css\?v=free-workspace-foundation-1/);
-  assert.match(main, /features\.js\?v=auth-health-1/);
+  assert.match(html, /commerce\.css\?v=frame-native-20-admin-access-1/);
+  assert.match(main, /features\.js\?v=frame-native-20-admin-access-1/);
   assert.match(main, /uploads\.js\?v=frame-native-3/);
-  assert.match(main, /account\.js\?v=frame-native-20/);
+  assert.match(main, /account\.js\?v=frame-native-20-auth-provider-1/);
   assert.match(main, /ui\.js\?v=frame-native-20/);
 });
 
@@ -256,10 +256,12 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   assert.match(route, /request_password_reset/);
   assert.match(route, /reset_password/);
   assert.match(account, /Continue with email code/);
+  assert.match(account, /account-provider-icon-gmail/);
+  assert.doesNotMatch(account, />✉ Continue with email code/);
   assert.doesNotMatch(account, /if \(register && accountProviders\.emailOtp\?\.available\)/);
   assert.match(account, /action:register \? "register" : "login"/);
   assert.match(account, /host\.isConnected/);
-  assert.match(account, /theme:"filled_black"/);
+  assert.match(account, /theme:"outline"/);
   assert.match(auth, /Email-code sign-in is temporarily unavailable/);
   assert.match(account, /Forgot password/);
   assert.match(account, /request_password_reset/);
@@ -287,6 +289,31 @@ test("offers verified email OTP and Google identity sign-in", async () => {
   assert.match(auth, /const tokenHash = await sha256\(token\)/);
   assert.match(auth, /await db\.batch\(\[/);
   assert.match(auth, /return \{ user, token \}/);
+});
+
+test("uses separate server-authorized staff accounts and recoverable client administration", async () => {
+  const [schema, migration, access, admin, features, auth] = await Promise.all([
+    load("db/schema.ts"),
+    load("drizzle/0011_admin_access.sql"),
+    load("lib/admin-access.ts"),
+    load("app/api/admin/route.ts"),
+    load("public/site/src/features.js"),
+    load("lib/auth.ts"),
+  ]);
+  assert.match(schema, /staffMembers/);
+  assert.match(schema, /adminAuditLog/);
+  assert.match(migration, /CREATE TABLE staff_members/);
+  assert.match(migration, /CREATE TABLE admin_audit_log/);
+  assert.match(access, /CONTENTX_OWNER_EMAIL/);
+  assert.match(access, /rolePermissions/);
+  assert.match(admin, /update_user_email/);
+  assert.match(admin, /set_user_status/);
+  assert.match(admin, /offline_payment_approved/);
+  assert.match(admin, /30 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(features, /No shared admin password/);
+  assert.match(features, /data-user-action="delete"/);
+  assert.doesNotMatch(features, /e104f474b6f4ea826ad5236d83eeb6682df52f020a987cb8a5e5d9aa73e02084/);
+  assert.match(auth, /account_status/);
 });
 
 test("stores password hashes and server-side sessions instead of readable passwords", async () => {

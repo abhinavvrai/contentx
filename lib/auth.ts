@@ -53,6 +53,8 @@ type StoredUser = {
   role_title: string | null;
   avatar_key: string | null;
   avatar_content_type: string | null;
+  account_status?: string | null;
+  deletion_scheduled_at?: number | null;
   created_at: number;
   updated_at: number;
 };
@@ -438,6 +440,7 @@ export async function loginAccount(request: Request, input: Record<string, unkno
     await recordFailedLogin(db, attemptKey);
     throw new AccountError("Email or password is incorrect.", 401);
   }
+  if ((stored.account_status || "active") !== "active") throw new AccountError("This account is suspended. Contact Content X support.", 403);
   await db.prepare("DELETE FROM auth_login_attempts WHERE attempt_key = ?").bind(attemptKey).run();
   const user = accountUserFromRow(stored);
   return { user, token: await createSession(request, user.id) };
@@ -544,6 +547,10 @@ export async function getSessionUser(request: Request): Promise<AccountUser | nu
     WHERE s.token_hash = ? AND s.expires_at > ? LIMIT 1`)
     .bind(await sha256(token), now).first<StoredUser & { last_seen_at: number }>();
   if (!row) return null;
+  if ((row.account_status || "active") !== "active") {
+    await db.prepare("DELETE FROM account_sessions WHERE user_id = ?").bind(row.id).run();
+    return null;
+  }
   if (now - row.last_seen_at > 15 * 60 * 1000) {
     await db.prepare("UPDATE account_sessions SET last_seen_at = ? WHERE token_hash = ?").bind(now, await sha256(token)).run();
   }

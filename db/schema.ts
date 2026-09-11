@@ -136,9 +136,55 @@ export const accountUsers = sqliteTable("account_users", {
   roleTitle: text("role_title"),
   avatarKey: text("avatar_key"),
   avatarContentType: text("avatar_content_type"),
+  accountStatus: text("account_status").notNull().default("active"),
+  deletionScheduledAt: integer("deletion_scheduled_at"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
+
+export const staffMembers = sqliteTable(
+  "staff_members",
+  {
+    userId: text("user_id").primaryKey().references(() => accountUsers.id),
+    role: text("role").notNull(),
+    status: text("status").notNull().default("active"),
+    invitedByUserId: text("invited_by_user_id").references(() => accountUsers.id),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  table => [index("idx_staff_members_status_role").on(table.status, table.role)],
+);
+
+export const adminAuditLog = sqliteTable(
+  "admin_audit_log",
+  {
+    id: text("id").primaryKey(),
+    actorUserId: text("actor_user_id").references(() => accountUsers.id),
+    actorEmail: text("actor_email").notNull(),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    detailsJson: text("details_json").notNull().default("{}"),
+    createdAt: integer("created_at").notNull(),
+  },
+  table => [index("idx_admin_audit_log_created").on(table.createdAt)],
+);
+
+export const staffProjectAccess = sqliteTable(
+  "staff_project_access",
+  {
+    staffUserId: text("staff_user_id").notNull().references(() => accountUsers.id),
+    projectId: text("project_id").notNull().references(() => uploadProjects.id),
+    accessLevel: text("access_level").notNull().default("reviewer"),
+    grantedByUserId: text("granted_by_user_id").references(() => accountUsers.id),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  table => [
+    primaryKey({ columns: [table.staffUserId, table.projectId] }),
+    index("idx_staff_project_access_project").on(table.projectId, table.accessLevel),
+  ],
+);
 
 export const accountSessions = sqliteTable(
   "account_sessions",
