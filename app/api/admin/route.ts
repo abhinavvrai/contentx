@@ -10,8 +10,8 @@ export async function GET(request: Request) {
     const actor = await requireAdminAccess(request, "clients:manage");
     await Promise.all([ensureAccountSchema(), ensurePaymentSchema(), ensureUploadSchema()]);
     const db = getAccountDatabase();
-    const [users, payments, projects, projectAccess] = await Promise.all([
-      db.prepare(`SELECT u.id, u.name, u.email, u.account_status, u.deletion_scheduled_at, u.created_at, u.updated_at,
+    const [users, payments, projects, projectAccess, recentUploads, recentActivity] = await Promise.all([
+      db.prepare(`SELECT u.id, u.name, u.email, u.phone_number, u.company_name, u.role_title, u.account_status, u.deletion_scheduled_at, u.created_at, u.updated_at,
         sm.role AS staff_role, sm.status AS staff_status,
         COUNT(DISTINCT s.token_hash) AS active_sessions,
         COUNT(DISTINCT o.razorpay_order_id) AS orders,
@@ -25,10 +25,20 @@ export async function GET(request: Request) {
       db.prepare(`SELECT razorpay_order_id, plan_name, billing, quantity, amount_paise,
         currency, status, customer_name, customer_email, created_at
         FROM payment_orders ORDER BY created_at DESC LIMIT 250`).all<Record<string, unknown>>(),
-      db.prepare(`SELECT id, name, client_name, client_email, status, created_at, updated_at
-        FROM upload_projects ORDER BY updated_at DESC LIMIT 250`).all<Record<string, unknown>>(),
+      db.prepare(`SELECT p.id, p.name, p.client_name, p.client_email, p.status, p.created_at, p.updated_at,
+        COUNT(f.id) AS file_count, COALESCE(SUM(f.size_bytes),0) AS storage_bytes, MAX(f.completed_at) AS latest_upload_at
+        FROM upload_projects p LEFT JOIN upload_files f ON f.project_id=p.id AND f.status='ready'
+        GROUP BY p.id ORDER BY p.updated_at DESC LIMIT 250`).all<Record<string, unknown>>(),
       db.prepare(`SELECT staff_user_id, project_id, access_level, created_at, updated_at
         FROM staff_project_access ORDER BY updated_at DESC LIMIT 1000`).all<Record<string, unknown>>(),
+      db.prepare(`SELECT f.project_id, f.original_name, f.size_bytes, f.uploader_name, f.uploader_email, f.completed_at,
+        p.name AS project_name, p.client_name, p.client_email
+        FROM upload_files f JOIN upload_projects p ON p.id = f.project_id
+        WHERE f.status = 'ready' ORDER BY f.completed_at DESC LIMIT 100`).all<Record<string, unknown>>(),
+      db.prepare(`SELECT c.project_id, c.author_name, c.author_email, c.body, c.status, c.created_at,
+        p.name AS project_name, p.client_name, p.client_email
+        FROM project_review_comments c JOIN upload_projects p ON p.id = c.project_id
+        WHERE c.deleted_at IS NULL ORDER BY c.created_at DESC LIMIT 100`).all<Record<string, unknown>>(),
     ]);
     return json({
       admin: { email:actor.email, role:actor.role },
@@ -36,6 +46,8 @@ export async function GET(request: Request) {
       payments: payments.results,
       projects: projects.results,
       projectAccess: projectAccess.results,
+      recentUploads: recentUploads.results,
+      recentActivity: recentActivity.results,
       summary: {
         users: users.results.length,
         paidOrders: payments.results.filter(row => ["verified", "captured"].includes(String(row.status))).length,
@@ -131,6 +143,9 @@ function publicUser(row: Record<string, unknown>) {
     orders: Number(row.orders || 0),
     projects: Number(row.projects || 0),
     status: row.account_status || "active",
+    phone: row.phone_number || null,
+    company: row.company_name || null,
+    roleTitle: row.role_title || null,
     deletionScheduledAt: row.deletion_scheduled_at || null,
     staffRole: row.staff_role || null,
     staffStatus: row.staff_status || null,
@@ -164,6 +179,7 @@ async function setUserStatus(request: Request, input: Record<string, unknown>) {
   const userId = cleanText(input.userId, 100);
   const status = cleanText(input.status, 30);
   if (!userId || !["active", "suspended", "deletion_pending"].includes(status)) throw new AccountError("Choose a valid account status.");
+  if (status === "deletion_pending" && input.confirmation !== "DELETE") throw new AccountError("Type DELETE to confirm account deletion.", 400);
   if (actor.userId === userId) throw new AccountError("You cannot suspend or delete your own administrator account.", 409);
   const db = getAccountDatabase();
   const deletionAt = status === "deletion_pending" ? Date.now() + 30 * 24 * 60 * 60 * 1000 : null;

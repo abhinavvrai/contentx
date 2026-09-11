@@ -151,14 +151,15 @@ test("ships native reel ratios and isolated client workspaces", async () => {
   assert.match(advancedStyles, /aspect-ratio:9\/16/);
 });
 
-test("keeps permanent dark styling, video feedback and pricing selection first-class", async () => {
+test("keeps saved display preference, video feedback and pricing selection first-class", async () => {
   const [features, polishStyles] = await Promise.all([
     readFile(new URL("../public/site/src/features.js", import.meta.url), "utf8"),
     readFile(new URL("../public/site/src/polish.css", import.meta.url), "utf8"),
   ]);
 
-  assert.match(features, /document\.documentElement\.dataset\.theme = "dark"/);
-  assert.doesNotMatch(features, /data-theme-toggle|review-theme-button|toggleTheme|cx_theme/);
+  assert.match(features, /localStorage\.getItem\("cx_theme"\)/);
+  assert.match(features, /data-site-theme/);
+  assert.match(features, /data-owner-theme/);
   assert.match(features, /Try video feedback/);
   assert.match(features, /Frame annotations/);
   assert.match(features, /deliveryFormat/);

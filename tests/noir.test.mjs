@@ -17,16 +17,16 @@ const contrast = (a, b) => {
   return (light + .05) / (dark + .05);
 };
 
-test("dark styling is set before script execution and cannot be toggled to light", async () => {
+test("dark styling is set before script execution and visitors can save their display preference", async () => {
   const [index, features, marketplace, polish] = await Promise.all([
     read("public/site/index.html"), read("public/site/src/features.js"),
     read("public/site/src/marketplace.js"), read("public/site/src/polish.js"),
   ]);
   assert.match(index, /<html lang="en" data-theme="dark">/);
-  assert.match(features, /document\.documentElement\.dataset\.theme = "dark"/);
-  for (const source of [features, marketplace, polish]) {
-    assert.doesNotMatch(source, /data-theme-toggle|data-market-theme|toggleTheme|cx_theme/);
-  }
+  assert.match(features, /localStorage\.getItem\("cx_theme"\)/);
+  assert.match(features, /data-site-theme/);
+  assert.match(features, /data-owner-theme/);
+  for (const source of [marketplace, polish]) assert.doesNotMatch(source, /data-market-theme|toggleTheme/);
   assert.ok(index.indexOf("noir.css") > index.indexOf("cinematic.css"));
 });
 
