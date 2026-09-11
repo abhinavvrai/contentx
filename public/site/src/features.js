@@ -930,22 +930,20 @@ export async function renderAdmin(root, actions) {
     content.innerHTML = `<div class="dash-section-head"><div><h2>Finance & refunds</h2><p>Track client payments, see refund status, and control incomplete-order refund records.</p></div><span class="status briefing"><i></i>Loading live payments</span></div><div class="empty-state"><span>₹</span><h3>Opening finance records…</h3><p>Checking the protected payment database.</p></div>`;
     let liveRecords = [];
     let liveError = "";
-    if (token) {
-      try {
-        const response = await fetch(PAYMENT_HISTORY_API, { cache:"no-store", headers:ownerHeaders(false) });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || "Live payment history could not be opened.");
-        liveRecords = (payload.payments || []).map(item => ({ ...item, source:"server" }));
-      } catch (error) {
-        liveError = error.message || "Live payment history could not be opened.";
-      }
+    try {
+      const response = await fetch(PAYMENT_HISTORY_API, { cache:"no-store", headers:ownerHeaders(false) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Live payment history could not be opened.");
+      liveRecords = (payload.payments || []).map(item => ({ ...item, source:"server" }));
+    } catch (error) {
+      liveError = error.message || "Live payment history could not be opened.";
     }
     const liveIds = new Set(liveRecords.map(item => item.razorpay_order_id));
     const records = [...liveRecords, ...localRecords.filter(item => !liveIds.has(item.razorpay_order_id))];
     const paidTotal = records.filter(item => ["verified", "captured", "paid (test)", "verified"].includes(String(item.status).toLowerCase())).reduce((sum,item)=>sum+Number(item.amount_paise||0),0);
     const refundTotal = records.filter(item => item.refund_status === "refunded").reduce((sum,item)=>sum+Number(item.refund_amount_paise||0),0);
     const activeRefunds = records.filter(item => ["requested","processing"].includes(item.refund_status)).length;
-    content.innerHTML = `<div class="dash-section-head"><div><h2>Finance & refunds</h2><p>Payment records are private. Clients can see only their own history; owner can see all records.</p></div><span class="status ${token && !liveError ? "approved" : "briefing"}"><i></i>${token && !liveError ? "Live database connected" : "Owner token needed for live DB"}</span></div>${!token ? financeTokenCard() : liveError ? `<div class="finance-warning"><strong>Live payment database locked.</strong><span>${escapeHTML(liveError)}</span><form data-finance-token-form><input type="password" name="token" placeholder="Owner token"><button>Unlock live records</button></form></div>` : ""}<section class="finance-stats"><article><span>Paid</span><strong>${moneyMinor(paidTotal, records[0]?.currency || "INR")}</strong><small>Recorded in checkout history</small></article><article><span>Refund queue</span><strong>${activeRefunds}</strong><small>Requested or processing</small></article><article><span>Refunded</span><strong>${moneyMinor(refundTotal, records[0]?.currency || "INR")}</strong><small>Marked refunded by owner</small></article></section>${financeTable(records)}`;
+    content.innerHTML = `<div class="dash-section-head"><div><h2>Finance & refunds</h2><p>Payment records are private. Clients can see only their own history; owner can see all records.</p></div><span class="status ${!liveError ? "approved" : "briefing"}"><i></i>${!liveError ? "Live database connected" : "Live database unavailable"}</span></div>${liveError ? `<div class="finance-warning"><strong>Live payment database locked.</strong><span>${escapeHTML(liveError)}</span></div>` : ""}<section class="finance-stats"><article><span>Paid</span><strong>${moneyMinor(paidTotal, records[0]?.currency || "INR")}</strong><small>Recorded in checkout history</small></article><article><span>Refund queue</span><strong>${activeRefunds}</strong><small>Requested or processing</small></article><article><span>Refunded</span><strong>${moneyMinor(refundTotal, records[0]?.currency || "INR")}</strong><small>Marked refunded by owner</small></article></section>${financeTable(records)}`;
   };
   const financeTokenCard = () => `<div class="finance-warning"><strong>Unlock live finance records</strong><span>Enter the owner token to load protected D1 payment history. Without it, only local/test checkout records are shown.</span><form data-finance-token-form><input type="password" name="token" placeholder="Owner token"><button>Unlock live records</button></form></div>`;
   const financeTable = records => {
@@ -1037,8 +1035,7 @@ function ownerTokenCard(title = "Unlock live records") {
 }
 
 function openOfflinePaidClientModal(onComplete) {
-  const token = sessionStorage.getItem(OWNER_TOKEN_KEY) || "";
-  const { layer, close } = openLayer(`<p class="eyebrow"><span></span>Bank transfer / offline payment</p><h2>Add a paid client manually</h2><p class="advanced-subcopy">Use this when someone already paid you outside the website. The client will sign in with this same email and see the paid workspace.</p><form class="advanced-form offline-client-form">${!token ? '<label>Owner token<input name="ownerToken" type="password" required placeholder="Private owner token"></label>' : ""}<div class="field-pair"><label>Client name<input name="name" required autocomplete="name" placeholder="Client or business name"></label><label>Email<input name="email" type="email" required autocomplete="email" placeholder="client@company.com"></label></div><label>Project / workspace title<input name="projectTitle" required placeholder="e.g. Founder Reel Batch"></label><div class="field-pair"><label>Package<select name="planId"><option value="basic_reel">Basic reel · ₹1,500</option><option value="better_edit">Standard clean edit · ₹2,000</option><option value="growth_reel">Standard + motion · ₹2,500</option><option value="premium_motion">Premium motion · ₹3,500</option><option value="advanced_reel">Premium · ₹5,000</option><option value="long_basic">Long-form Basic · ₹5,000</option><option value="podcast_30">Podcast · ₹5,000</option></select></label><label>Billing<select name="billing"><option value="one_off">One-time / per project</option><option value="monthly">Monthly</option></select></label></div><div class="field-pair"><label>Quantity<input name="quantity" type="number" min="1" max="30" value="1"></label><label>Amount received (₹)<input name="amountRupees" type="number" min="1" value="1500"></label></div><label>Private payment note<textarea name="note" rows="3" placeholder="Bank transfer ref, date, or internal note. Not shown as password or public info."></textarea></label><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">Create paid client workspace →</button></form>`);
+  const { layer, close } = openLayer(`<p class="eyebrow"><span></span>Bank transfer / offline payment</p><h2>Add a paid client manually</h2><p class="advanced-subcopy">Use this when someone already paid you outside the website. The client will sign in with this same email and see the paid workspace.</p><form class="advanced-form offline-client-form"><div class="field-pair"><label>Client name<input name="name" required autocomplete="name" placeholder="Client or business name"></label><label>Email<input name="email" type="email" required autocomplete="email" placeholder="client@company.com"></label></div><label>Project / workspace title<input name="projectTitle" required placeholder="e.g. Founder Reel Batch"></label><div class="field-pair"><label>Package<select name="planId"><option value="basic_reel">Basic reel · ₹1,500</option><option value="better_edit">Standard clean edit · ₹2,000</option><option value="growth_reel">Standard + motion · ₹2,500</option><option value="premium_motion">Premium motion · ₹3,500</option><option value="advanced_reel">Premium · ₹5,000</option><option value="long_basic">Long-form Basic · ₹5,000</option><option value="podcast_30">Podcast · ₹5,000</option></select></label><label>Billing<select name="billing"><option value="one_off">One-time / per project</option><option value="monthly">Monthly</option></select></label></div><div class="field-pair"><label>Quantity<input name="quantity" type="number" min="1" max="30" value="1"></label><label>Amount received (₹)<input name="amountRupees" type="number" min="1" value="1500"></label></div><label>Private payment note<textarea name="note" rows="3" placeholder="Bank transfer ref, date, or internal note. Not shown as password or public info."></textarea></label><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">Create paid client workspace →</button></form>`);
   const form = layer.querySelector("form");
   form.querySelector('[name="planId"]').addEventListener("change", event => {
     const prices = { basic_reel:1500, better_edit:2000, growth_reel:2500, premium_motion:3500, advanced_reel:5000, long_basic:5000, podcast_30:5000 };
@@ -1049,8 +1046,6 @@ function openOfflinePaidClientModal(onComplete) {
     const button = form.querySelector("button[type=submit]");
     const error = form.querySelector("[role=alert]");
     const values = Object.fromEntries(new FormData(form));
-    const suppliedToken = String(values.ownerToken || "").trim();
-    if (suppliedToken) sessionStorage.setItem(OWNER_TOKEN_KEY, suppliedToken);
     button.disabled = true; button.textContent = "Creating workspace…"; error.hidden = true;
     try {
       const response = await fetch(ADMIN_API, { method:"POST", headers:ownerHeaders(), body:JSON.stringify({ action:"create_offline_client", ...values }) });
