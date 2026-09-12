@@ -83,12 +83,13 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/src/main.js"),
   ]);
   assert.match(page, /\/site\/index\.html\?v=frame-native-20/);
-  assert.match(html, /contentx-release" content="frame-native-20-owner-drilldown-2/);
-  assert.match(html, /main\.js\?v=frame-native-20-owner-drilldown-2/);
+  assert.match(html, /contentx-release" content="frame-native-20-production-ready-1/);
+  assert.match(html, /main\.js\?v=frame-native-20-production-ready-1/);
   assert.match(html, /commerce\.css\?v=frame-native-20-owner-drilldown-1/);
-  assert.match(html, /theme\.css\?v=unified-light-1/);
-  assert.match(main, /features\.js\?v=frame-native-20-owner-drilldown-2/);
-  assert.match(main, /uploads\.js\?v=frame-native-3/);
+  assert.match(html, /theme\.css\?v=complete-light-2/);
+  assert.match(main, /features\.js\?v=frame-native-20-production-ready-1/);
+  assert.match(main, /marketplace\.js\?v=client-path-1/);
+  assert.match(main, /uploads\.js\?v=owner-session-files-1/);
   assert.match(main, /account\.js\?v=frame-native-20-auth-provider-2/);
   assert.match(main, /ui\.js\?v=frame-native-20/);
 });
@@ -310,6 +311,8 @@ test("uses separate server-authorized staff accounts and recoverable client admi
   assert.match(admin, /update_user_email/);
   assert.match(admin, /set_user_status/);
   assert.match(admin, /offline_payment_approved/);
+  assert.match(admin, /recentAudit/);
+  assert.match(admin, /FROM admin_audit_log ORDER BY created_at DESC/);
   assert.match(admin, /searchParams\.get\("projectId"\)/);
   assert.match(admin, /FROM upload_files WHERE project_id = \? AND status != 'deleted'/);
   assert.match(admin, /30 \* 24 \* 60 \* 60 \* 1000/);
@@ -459,7 +462,9 @@ test("keeps payment history private and adds owner refund controls", async () =>
   assert.match(schema, /refundStatus/);
   assert.match(razorpay, /ensurePaymentSchemaColumns/);
   assert.match(historyRoute, /requireSessionUser/);
-  assert.match(historyRoute, /requireOwner/);
+  assert.match(historyRoute, /requireAdminAccess\(request, "payments:read"\)/);
+  assert.match(historyRoute, /requireAdminAccess\(request, "payments:manage"\)/);
+  assert.match(historyRoute, /recordAdminAudit/);
   assert.match(historyRoute, /request_refund/);
   assert.match(historyRoute, /mark_refunded/);
   assert.match(historyRoute, /completedProjectStatuses/);
@@ -469,6 +474,7 @@ test("keeps payment history private and adds owner refund controls", async () =>
   assert.match(account, /canStartBrief/);
   assert.match(features, /Finance & refunds/);
   assert.match(features, /OWNER_TOKEN_KEY/);
+  assert.doesNotMatch(features, /Enter the owner token/);
   assert.match(features, /Refund buttons update Content X records only/);
 });
 
@@ -514,7 +520,7 @@ test("shows owner permission controls and Frame-style review flow", async () => 
   ]);
   assert.match(data, /Managed content production · private review workspace/);
   assert.match(features, /teamPermissionsView/);
-  assert.match(features, /Owner can view every client/);
+  assert.match(features, /Administrators can view every client/);
   assert.match(features, /Create share links/);
   assert.match(features, /owner-review-flow/);
   assert.match(account, /account-review-panel/);

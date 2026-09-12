@@ -5,7 +5,8 @@ import {
   requireSameOrigin,
   requireSessionUser,
 } from "../../../../lib/auth";
-import { ClientError, requireOwner } from "../../../../lib/uploads";
+import { ClientError } from "../../../../lib/uploads";
+import { recordAdminAudit, requireAdminAccess } from "../../../../lib/admin-access";
 import { ensurePaymentSchema, json } from "../../../../lib/razorpay";
 
 type PaymentRow = Record<string, unknown> & {
@@ -18,31 +19,27 @@ const refundStatuses = new Set(["none", "requested", "processing", "refunded", "
 
 export async function GET(request: Request) {
   return handle(async () => {
-    const ownerToken = request.headers.get("x-contentx-owner-token")?.trim();
-    if (ownerToken) {
-      await requireOwner(request);
-      await Promise.all([ensureAccountSchema(), ensurePaymentSchema()]);
-      const db = getAccountDatabase();
-      const payments = await db.prepare(`${paymentSelectSql()}
-        ORDER BY p.created_at DESC LIMIT 200`).all<PaymentRow>();
-      return json({ scope: "owner", payments: payments.results.map(publicPayment) });
-    }
-
     await Promise.all([ensureAccountSchema(), ensurePaymentSchema()]);
-    const user = await requireSessionUser(request);
     const db = getAccountDatabase();
+    if (new URL(request.url).searchParams.get("scope") !== "admin") {
+      const user = await requireSessionUser(request);
+      const payments = await db.prepare(`${paymentSelectSql()}
+        WHERE s.user_id = ? ORDER BY p.created_at DESC LIMIT 100`)
+        .bind(user.id).all<PaymentRow>();
+      return json({ scope: "client", payments: payments.results.map(publicPayment) });
+    }
+    await requireAdminAccess(request, "payments:read");
     const payments = await db.prepare(`${paymentSelectSql()}
-      WHERE s.user_id = ? ORDER BY p.created_at DESC LIMIT 100`)
-      .bind(user.id).all<PaymentRow>();
-    return json({ scope: "client", payments: payments.results.map(publicPayment) });
+      ORDER BY p.created_at DESC LIMIT 200`).all<PaymentRow>();
+    return json({ scope: "admin", payments: payments.results.map(publicPayment) });
   });
 }
 
 export async function POST(request: Request) {
   return handle(async () => {
     requireSameOrigin(request);
-    await requireOwner(request);
     await Promise.all([ensureAccountSchema(), ensurePaymentSchema()]);
+    const actor = await requireAdminAccess(request, "payments:manage");
 
     const input = await request.json() as {
       action?: string;
@@ -100,6 +97,8 @@ export async function POST(request: Request) {
         now,
         orderId,
       ).run();
+
+    await recordAdminAudit(actor, `refund_${nextStatus}`, "payment_order", orderId, { refundAmount, reason });
 
     const updated = await db.prepare(`${paymentSelectSql()}
       WHERE p.razorpay_order_id = ? LIMIT 1`).bind(orderId).first<PaymentRow>();

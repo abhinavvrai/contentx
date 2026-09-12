@@ -68,6 +68,29 @@ html[data-theme="light"] .global-theme-toggle::before { content:"☾"; }
 .global-theme-toggle:hover { transform:translateY(-2px); border-color:#ff8a58; }
 .global-theme-toggle:focus-visible { outline:3px solid #ff8a5866; outline-offset:3px; }
 
+/* The homepage keeps appearance beside its primary navigation action. */
+.site-nav .nav-theme-toggle {
+  position:static;
+  z-index:auto;
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  border-radius:12px;
+  box-shadow:none;
+}
+/* Tutorial artwork must establish its own containing block in both themes.
+   Without this, its absolute layers escape into the light-theme hero. */
+html[data-theme="light"] #app .tutorial-video-grid .cx-tutorial-art {
+  position:relative;
+  height:300px;
+  padding:0;
+  overflow:hidden;
+  isolation:isolate;
+  perspective:900px;
+  border-bottom:1px solid #e2e4e9;
+  background:radial-gradient(ellipse at 70% 35%,#ff8a4930,transparent 68%),#17181f;
+}
+
 /* Shared light surfaces, fields and dialogs. */
 html[data-theme="light"] :is(input,textarea,select) { border-color:#d9dce2!important; background:#fff!important; color:#1b1d23!important; }
 html[data-theme="light"] :is(input,textarea)::placeholder { color:#8d929c; }
@@ -80,6 +103,27 @@ html[data-theme="light"] :is(.site-nav,.market-header,.account-head,.checkout-he
 html[data-theme="light"] :is(.site-nav nav a,.site-nav .text-button,.market-header nav a,.account-head a,.account-head nav button) { color:#565c68; }
 html[data-theme="light"] :is(.price-card,.lead-form,.talent-card,.provider-form-wrap,.profile-hero,.profile-packages,.market-provider-cta,.account-card,.account-order-card,.brief-card,.checkout-form) { border-color:#dfe2e7; background:#fff; color:#1b1d23; }
 html[data-theme="light"] :is(.account-provider-actions [data-account-otp],.account-provider-actions .account-google-pending) { border-color:#d9dce2!important; background:#fff!important; color:#1b1d23!important; }
+
+/* Outside the marketing homepage, light mode uses complete light page shells.
+   Brand atmosphere remains as subtle peach/violet accents rather than dark panels. */
+html[data-theme="light"] #app :is(.account-story,.brief-intro,.access-brand,.provider-intro,.provider-access-copy,.owner-access-shell>section:first-child,.market-hero,.market-how) {
+  border:1px solid #dfe2e7;
+  background:radial-gradient(circle at 90% 8%,#ff7a4522,transparent 34%),linear-gradient(145deg,#fff,#f5f6f9);
+  color:#17191f;
+  box-shadow:0 18px 55px #20232c12;
+}
+html[data-theme="light"] #app .account-story::after { opacity:.16; }
+html[data-theme="light"] #app :is(.account-story,.brief-intro,.access-brand,.provider-intro,.provider-access-copy,.owner-access-shell>section:first-child,.market-hero,.market-how) :is(.brand,h1,h2,h3,li) { color:#17191f; }
+html[data-theme="light"] #app :is(.account-story,.brief-intro,.access-brand,.provider-intro,.provider-access-copy,.owner-access-shell>section:first-child,.market-hero,.market-how) :is(p,small) { color:#646a76; }
+html[data-theme="light"] #app :is(.account-story,.brief-intro,.access-brand,.provider-intro,.provider-access-copy,.owner-access-shell>section:first-child,.market-hero,.market-how) .eyebrow.light { color:#6e7480; }
+html[data-theme="light"] #app :is(.market-hero aside,.market-how li,.commission-note,.brief-intro aside) { border-color:#e2d8d2; background:#fff8f4; color:#25272e; }
+html[data-theme="light"] #app :is(.market-hero aside,.market-how li,.commission-note,.brief-intro aside) :is(p,small,li) { color:#626873; }
+html[data-theme="light"] #app .market-hero :is(.pill-light,.pill-outline) { border-color:#d9dce2; background:#fff; color:#272b33; }
+html[data-theme="light"] #app .owner-access-app { background:#f4f5f7; color:#17191f; }
+html[data-theme="light"] #app :is(.owner-access-card,.provider-access-card,.provider-form-wrap,.provider-workspace-content,.private-provider-listing,.provider-stats article,.provider-order-list article) { border-color:#dfe2e7; background:#fff; color:#17191f; }
+html[data-theme="light"] #app .provider-dashboard-grid>aside { border-color:#dfe2e7; background:#f8f9fb; color:#17191f; }
+html[data-theme="light"] #app .provider-dashboard-grid>aside nav button { color:#5f6571; }
+html[data-theme="light"] #app .provider-dashboard-grid>aside nav button.active { background:#e8eaf0; color:#17191f; }
 
 /* Demo client dashboard: rail, sidebar and content all switch together. */
 html[data-theme="light"] #app .dashboard-shell { grid-template-columns:58px 218px minmax(0,1fr); min-height:100dvh; background:var(--fx-bg); }
@@ -165,6 +209,14 @@ html[data-theme="light"] #app.review-app :is(.player-controls,.version-bar) { co
 #app .owner-security-link { width:100%; margin-top:14px; border-color:#604335; background:#2a201c; color:#ffb18f; }
 #app .owner-project-empty { grid-template-columns:1fr!important; gap:5px; }
 #app .owner-overview-activity { margin-top:15px; }
+#app .owner-audit-list { overflow:hidden; margin-top:16px; border:1px solid #383940; border-radius:15px; background:#1d1e23; }
+#app .owner-audit-list article { display:grid; grid-template-columns:34px minmax(0,1fr) auto; gap:12px; align-items:center; padding:14px 16px; border-bottom:1px solid #34353a; }
+#app .owner-audit-list article:last-child { border-bottom:0; }
+#app .owner-audit-list article>span { width:34px; height:34px; display:grid; place-items:center; border-radius:10px; background:#2d241f; color:#ff986b; }
+#app .owner-audit-list strong,#app .owner-audit-list small { display:block; }
+#app .owner-audit-list strong { font-size:9px; }
+#app .owner-audit-list small { margin-top:4px; color:#888b95; font-size:7px; overflow-wrap:anywhere; }
+#app .owner-audit-list time { color:#777984; font-size:7px; }
 
 html[data-theme="light"] #app.admin-app { background:#f4f5f7; color:#17191f; }
 html[data-theme="light"] #app .admin-shell>.owner-sidebar { border-color:#dfe2e7; background:#f8f9fb; color:#17191f; }
@@ -187,6 +239,16 @@ html[data-theme="light"] #app .admin-user-actions button.danger { border-color:#
 html[data-theme="light"] #app .owner-overview-intro { border-color:#dfe2e7; background:#fff; }
 html[data-theme="light"] #app .owner-quick-actions button { border-color:#d9dce2; background:#f6f7f9; color:#3e444f; }
 html[data-theme="light"] #app .owner-security-link { border-color:#f0c9b5; background:#fff2ea; color:#a64f29; }
+html[data-theme="light"] #app .owner-audit-list { border-color:#dfe2e7; background:#fff; color:#17191f; }
+html[data-theme="light"] #app .owner-audit-list article { border-color:#e5e7ec; }
+html[data-theme="light"] #app .owner-audit-list article>span { background:#fff0e9; color:#b65025; }
+
+/* Give operational cards breathing room and a clearer visual rhythm. */
+#app.admin-app .admin-content { padding-bottom:40px; }
+#app.admin-app .admin-stats article { position:relative; overflow:hidden; }
+#app.admin-app .admin-stats article::after { content:""; position:absolute; inset:0 auto 0 0; width:3px; background:linear-gradient(#ff6b34,#ff9a6d); opacity:.8; }
+#app.admin-app :is(.admin-columns>section,.owner-activity-columns>article,.client-workspace-card,.owner-client-directory,.owner-project-detail-grid>section,.owner-project-detail-grid>aside) { box-shadow:0 12px 32px #08090d16; }
+html[data-theme="light"] #app.admin-app :is(.admin-columns>section,.owner-activity-columns>article,.client-workspace-card,.owner-client-directory,.owner-project-detail-grid>section,.owner-project-detail-grid>aside) { box-shadow:0 12px 30px #2528300d; }
 
 @media (max-width:900px) {
   .global-theme-toggle { right:14px; bottom:14px; }
@@ -204,6 +266,7 @@ html[data-theme="light"] #app .owner-security-link { border-color:#f0c9b5; backg
 
 @media (max-width:760px) {
   .global-theme-toggle { width:42px; height:42px; bottom:74px; }
+  .site-nav .nav-theme-toggle { width:39px; height:39px; flex-basis:39px; }
   html[data-theme="light"] #app .dashboard-shell { display:block; }
   html[data-theme="light"] #app .cx-app-rail { display:none; }
   html[data-theme="light"] #app .dash-sidebar { position:static; width:100%; }
@@ -213,6 +276,8 @@ html[data-theme="light"] #app .owner-security-link { border-color:#f0c9b5; backg
   html[data-theme="light"] #app .workspace-sidebar { left:0; }
   html[data-theme="light"] #app .workspace-main { grid-column:1; }
   #app .owner-quick-actions { display:grid; grid-template-columns:1fr 1fr; width:100%; }
+  #app .owner-audit-list article { grid-template-columns:34px 1fr; }
+  #app .owner-audit-list time { grid-column:2; }
 }
 
 @media (prefers-reduced-motion:reduce) {

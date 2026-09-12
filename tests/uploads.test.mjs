@@ -18,6 +18,7 @@ test("ships durable, private project uploads instead of browser-only metadata", 
   assert.match(route, /completeUpload/);
   assert.match(route, /downloadAdminFile/);
   assert.match(storage, /CONTENTX_OWNER_TOKEN/);
+  assert.match(route, /requireAdminFileAccess\(request, "clients:manage"\)/);
   assert.match(storage, /SHA-256/);
   assert.match(storage, /ALLOWED_UPLOAD_EXTENSIONS/);
   assert.match(storage, /BLOCKED_UPLOAD_EXTENSIONS/);

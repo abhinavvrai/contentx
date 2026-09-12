@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       if (!project) throw new AccountError("Project not found.", 404);
       return json({ admin:{ email:actor.email, role:actor.role }, project, files:files.results, activity:activity.results });
     }
-    const [users, payments, projects, projectAccess, recentUploads, recentActivity] = await Promise.all([
+    const [users, payments, projects, projectAccess, recentUploads, recentActivity, recentAudit] = await Promise.all([
       db.prepare(`SELECT u.id, u.name, u.email, u.phone_number, u.company_name, u.role_title, u.account_status, u.deletion_scheduled_at, u.created_at, u.updated_at,
         sm.role AS staff_role, sm.status AS staff_status,
         COUNT(DISTINCT s.token_hash) AS active_sessions,
@@ -57,6 +57,8 @@ export async function GET(request: Request) {
         p.name AS project_name, p.client_name, p.client_email
         FROM project_review_comments c JOIN upload_projects p ON p.id = c.project_id
         WHERE c.deleted_at IS NULL ORDER BY c.created_at DESC LIMIT 100`).all<Record<string, unknown>>(),
+      db.prepare(`SELECT actor_email, action, target_type, target_id, details_json, created_at
+        FROM admin_audit_log ORDER BY created_at DESC LIMIT 100`).all<Record<string, unknown>>(),
     ]);
     return json({
       admin: { email:actor.email, role:actor.role },
@@ -66,6 +68,7 @@ export async function GET(request: Request) {
       projectAccess: projectAccess.results,
       recentUploads: recentUploads.results,
       recentActivity: recentActivity.results,
+      recentAudit: recentAudit.results,
       summary: {
         users: users.results.length,
         paidOrders: payments.results.filter(row => ["verified", "captured"].includes(String(row.status))).length,

@@ -29,7 +29,7 @@ function clientHeaders(token, json = true) {
 
 function ownerHeaders(json = true) {
   const token = sessionStorage.getItem(OWNER_TOKEN_KEY) || "";
-  return { "X-ContentX-Owner-Token":token, ...(json ? { "Content-Type":"application/json" } : {}) };
+  return { ...(token ? { "X-ContentX-Owner-Token":token } : {}), ...(json ? { "Content-Type":"application/json" } : {}) };
 }
 
 export async function renderClientUpload(root, actions, route) {
@@ -172,33 +172,21 @@ export function enhanceUploadAdmin(root) {
 }
 
 async function renderOwnerFileHub(content) {
-  const token = sessionStorage.getItem(OWNER_TOKEN_KEY);
-  if (!token) return renderOwnerFileGate(content);
   content.innerHTML = `<section class="owner-files-loading"><span></span><h2>Opening private file storage…</h2></section>`;
   try {
     const data = await apiRequest(`${API_PATH}?action=admin-projects`, { headers:ownerHeaders(false) });
     renderOwnerProjects(content, data.projects);
   } catch (error) {
-    sessionStorage.removeItem(OWNER_TOKEN_KEY);
-    renderOwnerFileGate(content, error.message);
+    content.innerHTML = `<section class="upload-error"><span>!</span><h2>File access unavailable.</h2><p>${escapeHTML(error.message)}</p><button class="pill pill-dark" type="button">Try again</button></section>`;
+    content.querySelector("button").addEventListener("click", () => renderOwnerFileHub(content));
   }
-}
-
-function renderOwnerFileGate(content, message = "") {
-  content.innerHTML = `<section class="owner-files-gate"><span>⌾</span><p class="eyebrow"><i></i>Secure file storage</p><h2>Unlock project files.</h2><p>Enter the private owner key configured for Content X file storage. It stays only in this browser tab.</p>${message ? `<em>${escapeHTML(message)}</em>` : ""}<form><label>Owner file key<input name="token" type="password" required autocomplete="off" placeholder="Private owner key"></label><button class="pill pill-hot" type="submit">Open file storage →</button></form></section>`;
-  content.querySelector("form").addEventListener("submit", async event => {
-    event.preventDefault();
-    sessionStorage.setItem(OWNER_TOKEN_KEY, new FormData(event.currentTarget).get("token"));
-    await renderOwnerFileHub(content);
-  });
 }
 
 function renderOwnerProjects(content, projects = []) {
   const totalFiles = projects.reduce((sum, project) => sum + Number(project.file_count || 0), 0);
   const totalBytes = projects.reduce((sum, project) => sum + Number(project.total_bytes || 0), 0);
-  content.innerHTML = `<section class="owner-files-head"><div><p class="eyebrow"><span></span>Private R2 storage</p><h2>Project files</h2><p>Create a secure link for every client, then receive raw footage and working files directly into that project.</p></div><button class="pill pill-hot" type="button" data-new-upload-project>+ New upload project</button></section><div class="owner-files-stats"><article><span>▱</span><strong>${projects.length}</strong><small>Upload projects</small></article><article><span>↑</span><strong>${totalFiles}</strong><small>Delivered files</small></article><article><span>◇</span><strong>${formatBytes(totalBytes)}</strong><small>Private storage used</small></article></div><div class="owner-project-grid">${projects.length ? projects.map(project => `<article data-owner-project="${escapeHTML(project.id)}"><div><span>${project.status === "active" ? "LIVE" : "PAUSED"}</span><em>${Number(project.file_count || 0)} files</em></div><h3>${escapeHTML(project.name)}</h3><p>${escapeHTML(project.client_name || project.client_email || "Client upload project")}</p><small>${formatBytes(project.total_bytes)} · Updated ${formatDate(project.updated_at)}</small><div><button type="button" data-open-owner-project="${escapeHTML(project.id)}">Open files →</button><button type="button" data-rotate-owner-project="${escapeHTML(project.id)}">New link</button></div></article>`).join("") : `<div class="upload-empty owner-project-empty"><span>↑</span><h3>No upload projects yet</h3><p>Create one link and send it to your client.</p></div>`}</div><button class="owner-files-lock" type="button" data-owner-files-lock>⌾ Lock file storage</button>`;
+  content.innerHTML = `<section class="owner-files-head"><div><p class="eyebrow"><span></span>Private R2 storage</p><h2>Project files</h2><p>Create a secure link for every client, then receive raw footage and working files directly into that project.</p></div><button class="pill pill-hot" type="button" data-new-upload-project>+ New upload project</button></section><div class="owner-files-stats"><article><span>▱</span><strong>${projects.length}</strong><small>Upload projects</small></article><article><span>↑</span><strong>${totalFiles}</strong><small>Delivered files</small></article><article><span>◇</span><strong>${formatBytes(totalBytes)}</strong><small>Private storage used</small></article></div><div class="owner-project-grid">${projects.length ? projects.map(project => `<article data-owner-project="${escapeHTML(project.id)}"><div><span>${project.status === "active" ? "LIVE" : "PAUSED"}</span><em>${Number(project.file_count || 0)} files</em></div><h3>${escapeHTML(project.name)}</h3><p>${escapeHTML(project.client_name || project.client_email || "Client upload project")}</p><small>${formatBytes(project.total_bytes)} · Updated ${formatDate(project.updated_at)}</small><div><button type="button" data-open-owner-project="${escapeHTML(project.id)}">Open files →</button><button type="button" data-rotate-owner-project="${escapeHTML(project.id)}">New link</button></div></article>`).join("") : `<div class="upload-empty owner-project-empty"><span>↑</span><h3>No upload projects yet</h3><p>Create one link and send it to your client.</p></div>`}</div>`;
   content.querySelector("[data-new-upload-project]").addEventListener("click", () => openCreateProject(content));
-  content.querySelector("[data-owner-files-lock]").addEventListener("click", () => { sessionStorage.removeItem(OWNER_TOKEN_KEY); renderOwnerFileGate(content); });
   content.querySelectorAll("[data-open-owner-project]").forEach(button => button.addEventListener("click", () => renderOwnerProjectFiles(content, button.dataset.openOwnerProject)));
   content.querySelectorAll("[data-rotate-owner-project]").forEach(button => button.addEventListener("click", () => rotateProjectLink(content, button.dataset.rotateOwnerProject)));
 }

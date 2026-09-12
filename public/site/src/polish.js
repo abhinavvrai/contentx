@@ -6,7 +6,7 @@ const routeTitles = {
   "provider-workspace": "Provider Portal | Content X",
   access: "Client Access | Content X",
   checkout: "Complete Your Order | Content X",
-  owner: "Owner Operations | Content X",
+  owner: "Content X Admin | Content X",
   workspace: "Client Workspace | Content X",
   project: "Project Workspace | Content X",
   review: "Video Review | Content X"

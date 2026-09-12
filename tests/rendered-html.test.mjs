@@ -119,7 +119,8 @@ test("models owner gating, accessible route polish and social previews", async (
 
   assert.match(features, /renderOwnerGate/);
   assert.match(features, /cx_owner_access/);
-  assert.match(features, /Lock owner session/);
+  assert.match(features, /Sign out of admin/);
+  assert.match(features, /Security activity/);
   assert.match(polish, /aria-modal/);
   assert.match(polish, /event\.key === "Escape"/);
   assert.match(polish, /routeTitles/);

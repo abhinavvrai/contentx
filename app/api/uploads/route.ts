@@ -30,6 +30,7 @@ import {
   type UploadProject,
 } from "../../../lib/uploads";
 import { AccountError, ensureAccountSchema, getAccountDatabase, getSessionUser, requireSameOrigin, requireSessionUser, consumeRequestLimit } from "../../../lib/auth";
+import { requireAdminAccess } from "../../../lib/admin-access";
 import { notifyOwner, publishNotification } from "../../../lib/notifications";
 import { ensurePaymentSchema, revisionPolicyForPlan } from "../../../lib/razorpay";
 
@@ -106,7 +107,7 @@ export async function PATCH(request: Request) {
     if (action === "project-file-restore") return restoreProjectFile(request, input);
     if (action === "admin-file-restore") return restoreAdminFile(request, input);
     if (action !== "admin-project-status") throw new ClientError("Unknown file action.", 404);
-    await requireOwner(request);
+    await requireAdminFileAccess(request, "clients:manage");
     const projectId = cleanText(input.projectId, 80);
     const status = cleanText(input.status, 20);
     if (!projectId || !["active", "archived"].includes(status)) throw new ClientError("Choose a valid project status.");
@@ -126,7 +127,7 @@ export async function DELETE(request: Request) {
     if (action === "account-project") return deleteAccountProject(request, url.searchParams.get("projectId") || "");
     if (action === "project-folder") return deleteProjectFolder(request, url.searchParams);
     if (action === "project-file") return deleteProjectFile(request, url.searchParams);
-    await requireOwner(request);
+    await requireAdminFileAccess(request, "clients:manage");
     if (action !== "admin-file" && action !== "admin-file-purge") throw new ClientError("Unknown file action.", 404);
     const fileId = url.searchParams.get("fileId") || "";
     const { db, bucket } = getUploadBindings();
@@ -507,7 +508,7 @@ async function createAccountProject(request: Request, input: JsonInput): Promise
 }
 
 async function getAdminProjects(request: Request): Promise<Response> {
-  await requireOwner(request);
+  await requireAdminFileAccess(request, "clients:manage");
   const { db } = getUploadBindings();
   const projects = await db.prepare(
     `SELECT p.id, p.name, p.client_name, p.client_email, p.status, p.max_file_size, p.created_at, p.updated_at,
@@ -520,7 +521,7 @@ async function getAdminProjects(request: Request): Promise<Response> {
 }
 
 async function getAdminFiles(request: Request, params: URLSearchParams): Promise<Response> {
-  await requireOwner(request);
+  await requireAdminFileAccess(request, "clients:manage");
   const projectId = params.get("projectId") || "";
   const includeDeleted = params.get("deleted") === "1";
   const { db } = getUploadBindings();
@@ -539,7 +540,7 @@ async function getAdminFiles(request: Request, params: URLSearchParams): Promise
 
 async function restoreAdminFile(request: Request, input: JsonInput): Promise<Response> {
   requireSameOrigin(request);
-  await requireOwner(request);
+  await requireAdminFileAccess(request, "clients:manage");
   const fileId = cleanText(input.fileId, 80);
   const { db } = getUploadBindings();
   const file = await db.prepare("SELECT id FROM upload_files WHERE id = ? AND status = 'deleted' LIMIT 1")
@@ -993,7 +994,7 @@ async function requireProjectManager(request: Request, projectId: string) {
       .bind(projectId, user.id).first();
     if (delegated) return user;
   }
-  await requireOwner(request);
+  await requireAdminFileAccess(request, "clients:manage");
   const project = await db.prepare("SELECT id FROM upload_projects WHERE id = ? LIMIT 1").bind(projectId).first();
   if (!project) throw new ClientError("Project not found.", 404);
   return null;
@@ -1069,7 +1070,7 @@ async function enforceAccountStorageQuota(db: D1Database, projectId: string, inc
 }
 
 async function createAdminProject(request: Request, input: JsonInput): Promise<Response> {
-  await requireOwner(request);
+  await requireAdminFileAccess(request, "clients:manage");
   const name = cleanText(input.name, 120);
   if (!name) throw new ClientError("Enter a project name.");
   const clientName = cleanText(input.clientName, 120);
@@ -1092,7 +1093,7 @@ async function createAdminProject(request: Request, input: JsonInput): Promise<R
 }
 
 async function rotateAdminProjectLink(request: Request, input: JsonInput): Promise<Response> {
-  await requireOwner(request);
+  await requireAdminFileAccess(request, "clients:manage");
   const projectId = cleanText(input.projectId, 80);
   const token = randomToken();
   const tokenHash = await hashToken(token);
@@ -1111,7 +1112,7 @@ async function rotateAdminProjectLink(request: Request, input: JsonInput): Promi
 }
 
 async function createAdminDownloadLink(request: Request, input: JsonInput): Promise<Response> {
-  await requireOwner(request);
+  await requireAdminFileAccess(request, "clients:manage");
   const fileId = cleanText(input.fileId, 80);
   const { db } = getUploadBindings();
   const file = await db.prepare("SELECT id FROM upload_files WHERE id = ? AND status = 'ready' LIMIT 1")
@@ -1290,7 +1291,7 @@ async function downloadAdminFile(request: Request, params: URLSearchParams): Pro
   const expires = Number(params.get("expires"));
   const signature = params.get("signature") || "";
   const inlineOnly = params.get("inlineOnly") === "1";
-  if (!(await verifyDownloadSignature(fileId, expires, signature, inlineOnly))) await requireOwner(request);
+  if (!(await verifyDownloadSignature(fileId, expires, signature, inlineOnly))) await requireAdminFileAccess(request, "clients:manage");
   const { db, bucket } = getUploadBindings();
   const file = await db.prepare("SELECT * FROM upload_files WHERE id = ? AND status = 'ready' LIMIT 1")
     .bind(fileId).first<UploadFile>();
@@ -1316,6 +1317,11 @@ async function downloadAdminFile(request: Request, params: URLSearchParams): Pro
   headers.set("Cache-Control", "private, no-store");
   headers.set("X-Content-Type-Options", "nosniff");
   return new Response(object.body, { status:range ? 206 : 200, headers });
+}
+
+async function requireAdminFileAccess(request: Request, permission: "clients:manage") {
+  await ensureAccountSchema();
+  return requireAdminAccess(request, permission);
 }
 
 function publicProject(project: UploadProject) {

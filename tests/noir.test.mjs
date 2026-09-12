@@ -31,10 +31,14 @@ test("dark styling is set before script execution and visitors can save their di
   assert.ok(index.indexOf("noir.css") > index.indexOf("cinematic.css"));
   assert.ok(index.indexOf("theme.css") > index.indexOf("mobile.css"));
   assert.match(theme, /\.global-theme-toggle::before/);
+  assert.match(theme, /\.site-nav \.nav-theme-toggle/);
+  assert.match(theme, /tutorial-video-grid \.cx-tutorial-art/);
   assert.match(theme, /html\[data-theme="light"\] #app \.dashboard-shell/);
   assert.match(theme, /html\[data-theme="light"\] #app \.workspace-main/);
   assert.match(theme, /html\[data-theme="light"\] #app\.review-app \.comment-panel/);
   assert.match(theme, /html\[data-theme="light"\] #app \.admin-shell>main/);
+  assert.match(theme, /html\[data-theme="light"\] #app :is\(\.account-story/);
+  assert.match(theme, /\.provider-dashboard-grid>aside/);
 });
 
 test("the new stylesheet parses and key text/button palettes exceed 4.5:1", async () => {
