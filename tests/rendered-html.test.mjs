@@ -158,8 +158,8 @@ test("keeps saved display preference, video feedback and pricing selection first
   ]);
 
   assert.match(features, /localStorage\.getItem\("cx_theme"\)/);
-  assert.match(features, /data-site-theme/);
-  assert.match(features, /data-owner-theme/);
+  assert.match(features, /data-theme-control/);
+  assert.doesNotMatch(features, /data-site-theme|data-owner-theme|Light \/ dark/);
   assert.match(features, /Try video feedback/);
   assert.match(features, /Frame annotations/);
   assert.match(features, /deliveryFormat/);

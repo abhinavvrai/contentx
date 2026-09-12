@@ -163,8 +163,8 @@ export function enhanceUploadAdmin(root) {
   if (!nav || !content || nav.querySelector("[data-admin-files]")) return;
   const button = document.createElement("button");
   button.dataset.adminFiles = "";
-  button.innerHTML = "<span>↑</span><span>Project files</span><b>R2</b>";
-  nav.insertBefore(button, nav.querySelector('[data-admin="settings"]'));
+  button.innerHTML = "<span>↑</span>Project files";
+  nav.insertBefore(button, nav.querySelector('[data-owner-group="settings"]') || nav.querySelector('[data-admin="settings"]'));
   button.addEventListener("click", () => {
     root.querySelectorAll(".admin-shell>aside nav button").forEach(item => item.classList.toggle("active", item === button));
     renderOwnerFileHub(content);

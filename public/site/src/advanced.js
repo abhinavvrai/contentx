@@ -546,7 +546,7 @@ export function enhanceAdminSuite(root, actions) {
   root.dataset.advancedAdmin = "true";
   const nav = root.querySelector(".admin-shell>aside nav");
   const tasks = getTasks();
-  const workflow = document.createElement("button"); workflow.dataset.adminWorkflow = ""; workflow.innerHTML = `✓ Workflow & tasks <b>${tasks.filter(task => task.status !== "Done").length}</b>`; nav.append(workflow);
+  const workflow = document.createElement("button"); workflow.dataset.adminWorkflow = ""; workflow.setAttribute("aria-label", `Workflow and tasks, ${tasks.filter(task => task.status !== "Done").length} open`); workflow.innerHTML = `<span>✓</span>Workflow & tasks`; const settingsGroup = nav.querySelector('[data-owner-group="settings"]'); if (settingsGroup) settingsGroup.before(workflow); else nav.append(workflow);
   workflow.addEventListener("click", () => { nav.querySelectorAll("button").forEach(button => button.classList.toggle("active", button === workflow)); renderOwnerWorkflow(root.querySelector(".admin-content")); });
   nav.querySelector('[data-admin="clients"]')?.addEventListener("click", () => renderClientDirectory(root.querySelector(".admin-content"), actions));
   nav.querySelector('[data-admin="team"]')?.addEventListener("click", () => renderTeamAccess(root.querySelector(".admin-content")));

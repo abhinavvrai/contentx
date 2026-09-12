@@ -83,10 +83,11 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/src/main.js"),
   ]);
   assert.match(page, /\/site\/index\.html\?v=frame-native-20/);
-  assert.match(html, /contentx-release" content="frame-native-20/);
-  assert.match(html, /main\.js\?v=frame-native-20/);
-  assert.match(html, /commerce\.css\?v=frame-native-20-admin-access-3/);
-  assert.match(main, /features\.js\?v=frame-native-20-admin-access-2/);
+  assert.match(html, /contentx-release" content="frame-native-20-theme-1/);
+  assert.match(html, /main\.js\?v=frame-native-20-theme-1/);
+  assert.match(html, /commerce\.css\?v=frame-native-20-admin-access-4/);
+  assert.match(html, /theme\.css\?v=unified-light-1/);
+  assert.match(main, /features\.js\?v=frame-native-20-admin-access-3/);
   assert.match(main, /uploads\.js\?v=frame-native-3/);
   assert.match(main, /account\.js\?v=frame-native-20-auth-provider-2/);
   assert.match(main, /ui\.js\?v=frame-native-20/);

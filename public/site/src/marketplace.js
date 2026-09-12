@@ -537,7 +537,10 @@ export function enhanceMarketplaceAdmin(root) {
   const orders = marketStore.get("cx_market_orders", []);
   const briefs = marketStore.get("cx_market_briefs", []);
   const questions = marketStore.get("cx_market_questions", []);
-  nav.insertAdjacentHTML("beforeend", `<button data-market-admin="marketplace">✦ Managed network <b>${orders.length}</b></button><button data-market-admin="providers">✓ Private providers <b>${providers.length}</b></button>`);
+  const settingsGroup = nav.querySelector('[data-owner-group="settings"]');
+  const extraNavigation = `<button data-market-admin="marketplace" aria-label="Managed network, ${orders.length} orders"><span>✦</span>Managed network</button><button data-market-admin="providers" aria-label="Private providers, ${providers.length} providers"><span>✓</span>Private providers</button>`;
+  if (settingsGroup) settingsGroup.insertAdjacentHTML("beforebegin", extraNavigation);
+  else nav.insertAdjacentHTML("beforeend", extraNavigation);
   const setActive = button => root.querySelectorAll(".admin-shell>aside nav button").forEach(item => item.classList.toggle("active", item === button));
   nav.querySelector('[data-market-admin="marketplace"]').addEventListener("click", event => { setActive(event.currentTarget); renderAdminMarketplace(content, { orders, briefs, questions }); });
   nav.querySelector('[data-market-admin="providers"]').addEventListener("click", event => { setActive(event.currentTarget); renderProviderReview(content, providers); });

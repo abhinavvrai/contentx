@@ -18,20 +18,29 @@ const contrast = (a, b) => {
 };
 
 test("dark styling is set before script execution and visitors can save their display preference", async () => {
-  const [index, features, marketplace, polish] = await Promise.all([
+  const [index, features, marketplace, polish, theme] = await Promise.all([
     read("public/site/index.html"), read("public/site/src/features.js"),
-    read("public/site/src/marketplace.js"), read("public/site/src/polish.js"),
+    read("public/site/src/marketplace.js"), read("public/site/src/polish.js"), read("public/site/src/theme.css"),
   ]);
   assert.match(index, /<html lang="en" data-theme="dark">/);
+  assert.match(index, /document\.documentElement\.dataset\.theme=localStorage\.getItem\("cx_theme"\)/);
   assert.match(features, /localStorage\.getItem\("cx_theme"\)/);
-  assert.match(features, /data-site-theme/);
-  assert.match(features, /data-owner-theme/);
+  assert.match(features, /data-theme-control/);
+  assert.doesNotMatch(features, /data-site-theme|data-owner-theme|Light \/ dark/);
   for (const source of [marketplace, polish]) assert.doesNotMatch(source, /data-market-theme|toggleTheme/);
   assert.ok(index.indexOf("noir.css") > index.indexOf("cinematic.css"));
+  assert.ok(index.indexOf("theme.css") > index.indexOf("mobile.css"));
+  assert.match(theme, /\.global-theme-toggle::before/);
+  assert.match(theme, /html\[data-theme="light"\] #app \.dashboard-shell/);
+  assert.match(theme, /html\[data-theme="light"\] #app \.workspace-main/);
+  assert.match(theme, /html\[data-theme="light"\] #app\.review-app \.comment-panel/);
+  assert.match(theme, /html\[data-theme="light"\] #app \.admin-shell>main/);
 });
 
 test("the new stylesheet parses and key text/button palettes exceed 4.5:1", async () => {
-  const css = postcss.parse(await read("public/site/src/noir.css"));
+  const [noirSource, themeSource] = await Promise.all([read("public/site/src/noir.css"), read("public/site/src/theme.css")]);
+  const css = postcss.parse(noirSource);
+  assert.doesNotThrow(() => postcss.parse(themeSource));
   const variables = new Map();
   css.nodes[1].walkDecls?.(declaration => variables.set(declaration.prop, declaration.value));
   assert.ok(contrast(variables.get("--ink"), variables.get("--paper")) >= 4.5);
