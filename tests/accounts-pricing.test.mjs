@@ -83,11 +83,11 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/src/main.js"),
   ]);
   assert.match(page, /\/site\/index\.html\?v=frame-native-20/);
-  assert.match(html, /contentx-release" content="frame-native-20-theme-1/);
-  assert.match(html, /main\.js\?v=frame-native-20-theme-1/);
-  assert.match(html, /commerce\.css\?v=frame-native-20-admin-access-4/);
+  assert.match(html, /contentx-release" content="frame-native-20-owner-drilldown-1/);
+  assert.match(html, /main\.js\?v=frame-native-20-owner-drilldown-1/);
+  assert.match(html, /commerce\.css\?v=frame-native-20-owner-drilldown-1/);
   assert.match(html, /theme\.css\?v=unified-light-1/);
-  assert.match(main, /features\.js\?v=frame-native-20-admin-access-3/);
+  assert.match(main, /features\.js\?v=frame-native-20-owner-drilldown-1/);
   assert.match(main, /uploads\.js\?v=frame-native-3/);
   assert.match(main, /account\.js\?v=frame-native-20-auth-provider-2/);
   assert.match(main, /ui\.js\?v=frame-native-20/);
@@ -310,9 +310,14 @@ test("uses separate server-authorized staff accounts and recoverable client admi
   assert.match(admin, /update_user_email/);
   assert.match(admin, /set_user_status/);
   assert.match(admin, /offline_payment_approved/);
+  assert.match(admin, /searchParams\.get\("projectId"\)/);
+  assert.match(admin, /FROM upload_files WHERE project_id = \? AND status != 'deleted'/);
   assert.match(admin, /30 \* 24 \* 60 \* 60 \* 1000/);
   assert.match(features, /No shared admin password/);
   assert.match(features, /data-user-action="delete"/);
+  assert.match(features, /data-owner-user-search/);
+  assert.match(features, /data-owner-project-detail/);
+  assert.equal((features.match(/\+ Add offline-paid client/g) || []).length, 1);
   assert.doesNotMatch(features, /e104f474b6f4ea826ad5236d83eeb6682df52f020a987cb8a5e5d9aa73e02084/);
   assert.match(auth, /account_status/);
 });

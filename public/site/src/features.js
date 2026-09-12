@@ -15,6 +15,17 @@ function ownerHeaders(json = true) {
   return { "X-ContentX-Owner-Token":token, ...(json ? { "Content-Type":"application/json" } : {}) };
 }
 
+function openLayer(content, className = "advanced-modal") {
+  const layer = document.createElement("div");
+  layer.className = "modal-layer advanced-layer";
+  layer.innerHTML = `<section class="${className}"><button type="button" class="advanced-close" aria-label="Close">×</button>${content}</section>`;
+  document.body.append(layer);
+  const close = () => layer.remove();
+  layer.querySelector(".advanced-close").addEventListener("click", close);
+  layer.addEventListener("click", event => { if (event.target === layer) close(); });
+  return { layer, close };
+}
+
 function razorpayPlanId(plan) {
   const validPlans = new Set(["basic_reel", "better_edit", "growth_reel", "premium_motion", "advanced_reel", "long_basic", "long_standard", "long_premium", "saas_animation", "script_hook", "script_full", "script_research", "podcast_30", "podcast_45", "podcast_60", "revision_short", "revision_long"]);
   if (validPlans.has(plan.id)) return plan.id;
@@ -932,8 +943,20 @@ export async function renderAdmin(root, actions) {
   root.querySelector(".owner-sidebar-actions")?.insertAdjacentHTML("beforeend", '<button data-owner-lock>⌾ Lock owner session</button>');
   const content = root.querySelector(".admin-content");
   let adminDirectory = { projects:adminSnapshot.projects || [], projectAccess:adminSnapshot.projectAccess || [], recentUploads:adminSnapshot.recentUploads || [], recentActivity:adminSnapshot.recentActivity || [] };
+  let adminUsers = adminSnapshot.users || [];
   const formatBytes = value => { const bytes=Number(value||0); return bytes >= 1073741824 ? `${(bytes/1073741824).toFixed(1)} GB` : bytes >= 1048576 ? `${(bytes/1048576).toFixed(1)} MB` : bytes >= 1024 ? `${Math.ceil(bytes/1024)} KB` : `${bytes} B`; };
   const formatWhen = value => value ? new Date(Number(value)).toLocaleString([], { dateStyle:"medium", timeStyle:"short" }) : "No activity yet";
+  const sameEmail = (left, right) => String(left || "").trim().toLowerCase() === String(right || "").trim().toLowerCase();
+  const initials = value => String(value || "CX").trim().split(/\s+/).map(part => part[0]).join("").slice(0,2).toUpperCase();
+  const refreshAdminDirectory = async () => {
+    const response = await fetch(ADMIN_API, { cache:"no-store", headers:ownerHeaders(false) });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Owner records could not be refreshed.");
+    adminSnapshot = payload;
+    adminUsers = payload.users || [];
+    adminDirectory = { projects:payload.projects || [], projectAccess:payload.projectAccess || [], recentUploads:payload.recentUploads || [], recentActivity:payload.recentActivity || [] };
+    return payload;
+  };
   const ownerReviewFlow = () => `<section class="owner-review-flow"><article><span>Share links</span><h3>Secure client links</h3><p>Control comments, downloads, uploads, passcode and expiry before sending a review link.</p></article><article><span>Version stack</span><h3>V1 → V2 → Final</h3><p>New uploads stay attached to the same file, so revisions do not scatter across folders.</p></article><article><span>Activity log</span><h3>Views and downloads</h3><p>See who opened, commented, approved or downloaded each asset.</p></article><article><span>Team scope</span><h3>Client-by-client access</h3><p>Owner keeps full control while managers and editors get only the projects you assign.</p></article></section>`;
   const teamPermissionsView = () => {
     const people = [
@@ -961,7 +984,7 @@ export async function renderAdmin(root, actions) {
     const projectRows = projects.slice(0,6).map(project => {
       const state = String(project.status || "active").toLowerCase();
       const statusClass = /approved|complete|ready|delivered/.test(state) ? "approved" : /review/.test(state) ? "in-review" : "editing";
-      return `<div><strong>${escapeHTML(project.name || "Untitled project")}</strong><span>${Number(project.file_count || 0)} files · ${formatBytes(project.storage_bytes)} · ${escapeHTML(project.client_name || project.client_email || "Client")}</span><b class="status ${statusClass}"><i></i>${escapeHTML(state.replaceAll("_", " "))}</b></div>`;
+      return `<button type="button" class="owner-project-row" data-owner-project-detail="${escapeHTML(project.id)}"><strong>${escapeHTML(project.name || "Untitled project")}</strong><span>${Number(project.file_count || 0)} files · ${formatBytes(project.storage_bytes)} · ${escapeHTML(project.client_name || project.client_email || "Client")}</span><b class="status ${statusClass}"><i></i>${escapeHTML(state.replaceAll("_", " "))}</b><i aria-hidden="true">→</i></button>`;
     }).join("");
     const recentUploads = adminDirectory.recentUploads.slice(0,5).map(item => `<div><span>↑</span><p><strong>${escapeHTML(item.original_name || "Uploaded file")}</strong><small>${escapeHTML(item.project_name || "Project")} · ${escapeHTML(item.uploader_name || item.uploader_email || "Client")}</small></p><em>${formatBytes(item.size_bytes)}<small>${formatWhen(item.completed_at)}</small></em></div>`).join("");
     const recentReviews = adminDirectory.recentActivity.slice(0,5).map(item => `<div><span>◌</span><p><strong>${escapeHTML(item.author_name || item.author_email || "Client")}</strong><small>${escapeHTML(item.project_name || "Project")} · ${escapeHTML(item.body || "Review activity")}</small></p><em>${escapeHTML(item.status || "open")}<small>${formatWhen(item.created_at)}</small></em></div>`).join("");
@@ -1006,35 +1029,112 @@ export async function renderAdmin(root, actions) {
       const response = await fetch(ADMIN_API, { cache:"no-store", headers:ownerHeaders(false) });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Client workspaces could not be opened.");
+      adminSnapshot = payload;
+      adminUsers = payload.users || [];
       adminDirectory = { projects:payload.projects || [], projectAccess:payload.projectAccess || [], recentUploads:payload.recentUploads || [], recentActivity:payload.recentActivity || [] };
       const projects = adminDirectory.projects;
-      content.innerHTML = `<div class="dash-section-head"><div><h2>Client workspaces</h2><p>Every project, upload and review note. Only authorized staff can see this information.</p></div><button class="pill pill-hot" data-add-client>+ Add offline-paid client</button></div><section class="client-workspace-grid">${projects.length ? projects.map(project => `<article><div class="client-workspace-title"><span>${escapeHTML((project.client_name || project.client_email || "CX").slice(0,2).toUpperCase())}</span><p><strong>${escapeHTML(project.name || "Untitled project")}</strong><small>${escapeHTML(project.client_name || "Client")} · ${escapeHTML(project.client_email || "No email")}</small></p><em>${escapeHTML(project.status || "active")}</em></div><div class="client-workspace-metrics"><span><b>${Number(project.file_count || 0)}</b> files</span><span><b>${formatBytes(project.storage_bytes)}</b> stored</span></div><small class="client-workspace-updated">Last upload: ${formatWhen(project.latest_upload_at)}</small></article>`).join("") : `<div class="empty-state"><span>◌</span><h3>No client projects yet</h3><p>New paid or offline-approved workspaces will appear here.</p></div>`}</section><section class="owner-activity-columns"><article><h3>Recent uploads</h3>${adminDirectory.recentUploads.length ? adminDirectory.recentUploads.slice(0,12).map(item => `<div><span>↑</span><p><strong>${escapeHTML(item.original_name || "Uploaded file")}</strong><small>${escapeHTML(item.project_name || "Project")} · ${escapeHTML(item.uploader_name || item.uploader_email || "Client")}</small></p><em>${formatBytes(item.size_bytes)}<small>${formatWhen(item.completed_at)}</small></em></div>`).join("") : `<p class="owner-empty-copy">Files uploaded by clients will appear here.</p>`}</article><article><h3>Recent review activity</h3>${adminDirectory.recentActivity.length ? adminDirectory.recentActivity.slice(0,12).map(item => `<div><span>◌</span><p><strong>${escapeHTML(item.author_name || item.author_email || "Client")}</strong><small>${escapeHTML(item.project_name || "Project")} · ${escapeHTML(item.body || "Left a review note")}</small></p><em>${escapeHTML(item.status || "open")}<small>${formatWhen(item.created_at)}</small></em></div>`).join("") : `<p class="owner-empty-copy">Comments and approvals will appear here.</p>`}</article></section>`;
+      content.innerHTML = `<div class="dash-section-head"><div><h2>Client workspaces</h2><p>Every project, upload and review note. Select a workspace to inspect its files and activity.</p></div></div><section class="client-workspace-grid">${projects.length ? projects.map(project => `<button type="button" class="client-workspace-card" data-owner-project-detail="${escapeHTML(project.id)}"><div class="client-workspace-title"><span>${escapeHTML(initials(project.client_name || project.client_email))}</span><p><strong>${escapeHTML(project.name || "Untitled project")}</strong><small>${escapeHTML(project.client_name || "Client")} · ${escapeHTML(project.client_email || "No email")}</small></p><em>${escapeHTML(project.status || "active")}</em></div><div class="client-workspace-metrics"><span><b>${Number(project.file_count || 0)}</b> files</span><span><b>${formatBytes(project.storage_bytes)}</b> stored</span></div><small class="client-workspace-updated">Last upload: ${formatWhen(project.latest_upload_at)}</small><span class="client-workspace-open">Open workspace →</span></button>`).join("") : `<div class="empty-state"><span>◌</span><h3>No client projects yet</h3><p>New paid or offline-approved workspaces will appear here.</p></div>`}</section><section class="owner-activity-columns"><article><h3>Recent uploads</h3>${adminDirectory.recentUploads.length ? adminDirectory.recentUploads.slice(0,12).map(item => `<button type="button" class="owner-activity-row" data-owner-project-detail="${escapeHTML(item.project_id)}"><span>↑</span><p><strong>${escapeHTML(item.original_name || "Uploaded file")}</strong><small>${escapeHTML(item.project_name || "Project")} · ${escapeHTML(item.uploader_name || item.uploader_email || "Client")}</small></p><em>${formatBytes(item.size_bytes)}<small>${formatWhen(item.completed_at)}</small></em></button>`).join("") : `<p class="owner-empty-copy">Files uploaded by clients will appear here.</p>`}</article><article><h3>Recent review activity</h3>${adminDirectory.recentActivity.length ? adminDirectory.recentActivity.slice(0,12).map(item => `<button type="button" class="owner-activity-row" data-owner-project-detail="${escapeHTML(item.project_id)}"><span>◌</span><p><strong>${escapeHTML(item.author_name || item.author_email || "Client")}</strong><small>${escapeHTML(item.project_name || "Project")} · ${escapeHTML(item.body || "Left a review note")}</small></p><em>${escapeHTML(item.status || "open")}<small>${formatWhen(item.created_at)}</small></em></button>`).join("") : `<p class="owner-empty-copy">Comments and approvals will appear here.</p>`}</article></section>`;
     } catch (error) {
       content.innerHTML = `<div class="finance-warning"><strong>Client workspaces are locked.</strong><span>${escapeHTML(error.message || "Could not load projects.")}</span></div>`;
     }
   };
-  const usersView = async () => {
-    const token = sessionStorage.getItem(OWNER_TOKEN_KEY) || "";
-    content.innerHTML = `<div class="dash-section-head"><div><h2>Website users</h2><p>Registered client accounts and emails are visible only to authorized staff.</p></div><button class="pill pill-hot" data-add-client>+ Add offline-paid client</button></div><div class="empty-state"><span>◎</span><h3>Loading users…</h3><p>Checking your secure staff session.</p></div>`;
+  const projectDetailView = async projectId => {
+    if (!projectId) return;
+    root.querySelector(".admin-shell>main>header h1").textContent = "Project details";
+    content.innerHTML = `<div class="owner-detail-loading"><span></span><h2>Opening project workspace…</h2><p>Loading files and review activity securely.</p></div>`;
     try {
-      const response = await fetch(ADMIN_API, { cache:"no-store", headers:ownerHeaders(false) });
+      const response = await fetch(`${ADMIN_API}?projectId=${encodeURIComponent(projectId)}`, { cache:"no-store", headers:ownerHeaders(false) });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "User list could not be opened.");
-      const users = payload.users || [];
-      adminDirectory = { projects:payload.projects || [], projectAccess:payload.projectAccess || [], recentUploads:payload.recentUploads || [], recentActivity:payload.recentActivity || [] };
-      content.innerHTML = `<div class="dash-section-head"><div><h2>Website users</h2><p>Review clients, transfer an account to a verified email, suspend access, or schedule recoverable deletion.</p></div><button class="pill pill-hot" data-add-client>+ Add offline-paid client</button></div><section class="finance-stats admin-user-stats"><article><span>Users</span><strong>${payload.summary?.users || users.length}</strong><small>Registered accounts</small></article><article><span>Paid</span><strong>${payload.summary?.paidOrders || 0}</strong><small>Website + offline records</small></article><article><span>Projects</span><strong>${payload.summary?.projects || 0}</strong><small>Client workspaces</small></article></section><div class="admin-users-table admin-users-table-actions"><div><span>Client</span><span>Email & details</span><span>Orders</span><span>Projects</span><span>Access</span><span>Actions</span></div>${users.length ? users.map(user => `<article data-admin-user="${escapeHTML(user.id)}"><strong>${escapeHTML(user.name || "Client")}<small>${user.staffRole ? escapeHTML(user.staffRole.replaceAll("_", " ")) : "Client"}</small></strong><span>${escapeHTML(user.email || "")}<small>${escapeHTML([user.company, user.roleTitle, user.phone].filter(Boolean).join(" · ") || "No profile details added")}</small></span><b>${Number(user.orders || 0)}</b><b>${Number(user.projects || 0)}</b><em class="${user.status === "active" ? "" : "is-restricted"}">${escapeHTML(user.status === "deletion_pending" ? "Deletion pending" : user.status || "active")}</em><div class="admin-user-actions"><button type="button" data-user-action="email">Change email</button>${user.status === "active" ? `<button type="button" data-user-action="suspend">Suspend</button><button type="button" class="danger" data-user-action="delete">Delete</button>` : `<button type="button" data-user-action="restore">Restore</button>`}${user.staffRole ? `<button type="button" data-user-action="project">Projects (${adminDirectory.projectAccess.filter(item=>item.staff_user_id===user.id).length})</button>` : ""}<select data-user-role aria-label="Staff role for ${escapeHTML(user.name || "client")}"><option value="">Client only</option>${["admin","project_manager","editor","reviewer","finance"].map(role => `<option value="${role}" ${user.staffRole === role ? "selected" : ""}>${role.replaceAll("_", " ")}</option>`).join("")}</select></div></article>`).join("") : `<div class="empty-state"><span>◎</span><h3>No users yet</h3><p>Google, OTP, password and offline-paid clients will appear here.</p></div>`}</div><aside class="team-security-note compact"><span>⌾</span><p><strong>Safe account administration</strong><small>Password hashes are never shown. Email changes revoke active sessions. Each teammate receives a separate account and can be limited to assigned projects.</small></p></aside>`;
+      if (!response.ok) throw new Error(payload.error || "This project could not be opened.");
+      const project = payload.project || {};
+      const files = payload.files || [];
+      const activity = payload.activity || [];
+      const client = adminUsers.find(user => sameEmail(user.email, project.client_email));
+      content.innerHTML = `<button type="button" class="owner-detail-back" data-owner-back="clients">← Client workspaces</button><section class="owner-project-detail-hero"><div><span>${escapeHTML(initials(project.client_name || project.client_email))}</span><p><small>CLIENT PROJECT</small><h2>${escapeHTML(project.name || "Untitled project")}</h2><b>${escapeHTML(project.client_name || "Client")} · ${escapeHTML(project.client_email || "No email")}</b></p></div><div><em>${escapeHTML(project.status || "active")}</em>${client ? `<button type="button" data-owner-user-detail="${escapeHTML(client.id)}">View client →</button>` : ""}</div></section><section class="owner-detail-stats"><article><span>Files</span><strong>${files.length}</strong><small>Current uploads</small></article><article><span>Storage</span><strong>${formatBytes(project.storage_bytes)}</strong><small>Project usage</small></article><article><span>Activity</span><strong>${activity.length}</strong><small>Review notes</small></article><article><span>Updated</span><strong>${formatWhen(project.updated_at)}</strong><small>Latest project change</small></article></section><div class="owner-project-detail-grid"><section><div class="owner-detail-heading"><div><h3>Uploaded files</h3><p>Every active file and version in this workspace.</p></div></div><div class="owner-detail-file-list">${files.length ? files.map(file => `<article><span>${String(file.content_type || "").startsWith("video/") ? "▶" : String(file.content_type || "").startsWith("image/") ? "▧" : "◇"}</span><p><strong>${escapeHTML(file.original_name || "Uploaded file")}</strong><small>${escapeHTML(file.uploader_name || file.uploader_email || "Client")} · ${formatWhen(file.completed_at || file.created_at)}</small></p><b>${formatBytes(file.size_bytes)}</b><em>V${Number(file.version_number || 1)}</em></article>`).join("") : `<div class="owner-detail-empty"><span>↑</span><strong>No files uploaded yet</strong><small>New client uploads will appear here.</small></div>`}</div></section><aside><div class="owner-detail-heading"><div><h3>Review activity</h3><p>Latest comments on this project.</p></div></div><div class="owner-detail-timeline">${activity.length ? activity.map(item => `<article><span>◌</span><p><strong>${escapeHTML(item.author_name || item.author_email || "Client")}</strong><small>${escapeHTML(item.body || "Review activity")}</small><em>${escapeHTML(item.status || "open")} · ${formatWhen(item.created_at)}</em></p></article>`).join("") : `<div class="owner-detail-empty"><span>◌</span><strong>No review activity</strong><small>Client comments will appear here.</small></div>`}</div></aside></div><aside class="owner-security-note"><span>⌾</span><p><strong>Private owner view</strong><small>File names, uploader identities and comments are visible only to authorized Content X staff.</small></p></aside>`;
+    } catch (error) {
+      content.innerHTML = `<button type="button" class="owner-detail-back" data-owner-back="clients">← Client workspaces</button><div class="finance-warning"><strong>Project could not be opened.</strong><span>${escapeHTML(error.message || "Try again shortly.")}</span></div>`;
+    }
+  };
+  const usersView = async () => {
+    content.innerHTML = `<div class="dash-section-head"><div><h2>Website users</h2><p>Registered client accounts and emails are visible only to authorized staff.</p></div></div><div class="empty-state"><span>◎</span><h3>Loading users…</h3><p>Checking your secure staff session.</p></div>`;
+    try {
+      const payload = await refreshAdminDirectory();
+      const users = adminUsers;
+      const userRows = users.map(user => {
+        const projects = adminDirectory.projects.filter(project => sameEmail(project.client_email, user.email));
+        const search = [user.name,user.email,user.phone,user.company,user.roleTitle,...projects.map(project => project.name)].filter(Boolean).join(" ").toLowerCase();
+        return `<button type="button" class="owner-client-row" data-owner-user-detail="${escapeHTML(user.id)}" data-owner-user-search-row data-search="${escapeHTML(search)}"><span class="owner-client-avatar">${escapeHTML(initials(user.name || user.email))}</span><p><strong>${escapeHTML(user.name || "Client")}</strong><small>${escapeHTML(user.email || "No email")}</small><em>${escapeHTML([user.company,user.roleTitle,user.phone].filter(Boolean).join(" · ") || "Profile details not added")}</em></p><span><b>${Number(user.projects || projects.length)}</b><small>projects</small></span><span><b>${Number(user.orders || 0)}</b><small>orders</small></span><i class="${user.status === "active" ? "" : "is-restricted"}">${escapeHTML(user.status === "deletion_pending" ? "Deletion pending" : user.status || "active")}</i><strong class="owner-client-open">View →</strong></button>`;
+      }).join("");
+      content.innerHTML = `<div class="dash-section-head"><div><h2>Website users</h2><p>Select a client to see their profile, projects, uploads, payments and protected account actions.</p></div></div><section class="finance-stats admin-user-stats"><article><span>Users</span><strong>${payload.summary?.users || users.length}</strong><small>Registered accounts</small></article><article><span>Paid</span><strong>${payload.summary?.paidOrders || 0}</strong><small>Website + offline records</small></article><article><span>Projects</span><strong>${payload.summary?.projects || 0}</strong><small>Client workspaces</small></article></section><section class="owner-directory-toolbar"><label><span>⌕</span><input type="search" data-owner-user-search placeholder="Search name, email, phone or project" autocomplete="off"></label><p><strong data-owner-search-count>${users.length}</strong> clients</p></section><div class="owner-client-directory">${userRows || `<div class="empty-state"><span>◎</span><h3>No users yet</h3><p>Google, password and offline-paid clients will appear here.</p></div>`}<div class="owner-search-empty" data-owner-search-empty hidden><span>⌕</span><strong>No matching clients</strong><small>Try another name, email, phone number or project.</small></div></div><aside class="team-security-note compact"><span>⌾</span><p><strong>Actions stay inside each client profile</strong><small>Email changes, role access, suspension and deletion are available only after you deliberately open a client.</small></p></aside>`;
     } catch (error) {
       content.innerHTML = `<div class="dash-section-head"><div><h2>Website users</h2><p>Registered client accounts and emails are protected.</p></div></div><div class="finance-warning"><strong>Live user database locked.</strong><span>${escapeHTML(error.message || "Could not load users.")}</span><form data-finance-token-form><input type="password" name="token" placeholder="Owner token"><button>Unlock users</button></form></div>`;
     }
+  };
+  const userDetailView = async userId => {
+    let user = adminUsers.find(item => String(item.id) === String(userId));
+    if (!user) {
+      try { await refreshAdminDirectory(); } catch {}
+      user = adminUsers.find(item => String(item.id) === String(userId));
+    }
+    if (!user) return notify("This client account is no longer available.");
+    root.querySelector(".admin-shell>main>header h1").textContent = "Client details";
+    const projects = adminDirectory.projects.filter(project => sameEmail(project.client_email, user.email));
+    const projectIds = new Set(projects.map(project => String(project.id)));
+    const uploads = adminDirectory.recentUploads.filter(item => projectIds.has(String(item.project_id)));
+    const activity = adminDirectory.recentActivity.filter(item => projectIds.has(String(item.project_id)));
+    const paymentsForUser = (adminSnapshot.payments || []).filter(item => sameEmail(item.customer_email, user.email));
+    const statusLabel = user.status === "deletion_pending" ? "Deletion pending" : user.status || "active";
+    content.innerHTML = `<button type="button" class="owner-detail-back" data-owner-back="users">← Website users</button><section class="owner-user-hero" data-admin-user="${escapeHTML(user.id)}"><div><span>${escapeHTML(initials(user.name || user.email))}</span><p><small>CLIENT PROFILE</small><h2>${escapeHTML(user.name || "Client")}</h2><b>${escapeHTML(user.email || "No email")}</b></p></div><i class="${user.status === "active" ? "" : "is-restricted"}">${escapeHTML(statusLabel)}</i></section><section class="owner-detail-stats"><article><span>Projects</span><strong>${projects.length}</strong><small>Client workspaces</small></article><article><span>Uploads</span><strong>${uploads.length}</strong><small>Recent files</small></article><article><span>Payments</span><strong>${paymentsForUser.length}</strong><small>Recorded orders</small></article><article><span>Sessions</span><strong>${Number(user.active_sessions || 0)}</strong><small>Signed-in devices</small></article></section><div class="owner-user-detail-grid"><section><div class="owner-detail-heading"><div><h3>Client information</h3><p>Details provided by the client and account history.</p></div></div><dl class="owner-profile-details"><div><dt>Email</dt><dd>${escapeHTML(user.email || "Not provided")}</dd></div><div><dt>Phone</dt><dd>${escapeHTML(user.phone || "Not provided")}</dd></div><div><dt>Company</dt><dd>${escapeHTML(user.company || "Not provided")}</dd></div><div><dt>Role / title</dt><dd>${escapeHTML(user.roleTitle || "Not provided")}</dd></div><div><dt>Created</dt><dd>${formatWhen(user.created_at)}</dd></div><div><dt>Last updated</dt><dd>${formatWhen(user.updated_at)}</dd></div><div><dt>Account ID</dt><dd>${escapeHTML(user.id)}</dd></div></dl></section><section><div class="owner-detail-heading"><div><h3>Projects</h3><p>Open a workspace to inspect files and comments.</p></div></div><div class="owner-user-projects">${projects.length ? projects.map(project => `<button type="button" data-owner-project-detail="${escapeHTML(project.id)}"><span>◉</span><p><strong>${escapeHTML(project.name || "Untitled project")}</strong><small>${Number(project.file_count || 0)} files · ${formatBytes(project.storage_bytes)}</small></p><em>Open →</em></button>`).join("") : `<div class="owner-detail-empty"><span>◉</span><strong>No projects yet</strong><small>This client has not created a workspace.</small></div>`}</div></section></div><section class="owner-user-activity"><div><div class="owner-detail-heading"><div><h3>Recent activity</h3><p>Uploads and review comments from this client’s projects.</p></div></div>${uploads.slice(0,5).map(item => `<button type="button" data-owner-project-detail="${escapeHTML(item.project_id)}"><span>↑</span><p><strong>${escapeHTML(item.original_name || "Uploaded file")}</strong><small>${escapeHTML(item.project_name || "Project")} · ${formatWhen(item.completed_at)}</small></p><em>${formatBytes(item.size_bytes)}</em></button>`).join("")}${activity.slice(0,5).map(item => `<button type="button" data-owner-project-detail="${escapeHTML(item.project_id)}"><span>◌</span><p><strong>${escapeHTML(item.body || "Review activity")}</strong><small>${escapeHTML(item.project_name || "Project")} · ${formatWhen(item.created_at)}</small></p><em>${escapeHTML(item.status || "open")}</em></button>`).join("") || (!uploads.length ? `<div class="owner-detail-empty"><span>◌</span><strong>No recent activity</strong><small>Uploads and comments will appear here.</small></div>` : "")}</div><aside data-admin-user="${escapeHTML(user.id)}"><div class="owner-detail-heading"><div><h3>Account administration</h3><p>Protected actions for this client only.</p></div></div><form class="owner-email-change" data-user-email-form><label>Change verified email<input type="email" name="email" required value="${escapeHTML(user.email || "")}"></label><button type="submit">Update email</button></form><label class="owner-role-control">Team role<select data-user-role aria-label="Staff role for ${escapeHTML(user.name || "client")}"><option value="">Client only</option>${["admin","project_manager","editor","reviewer","finance"].map(role => `<option value="${role}" ${user.staffRole === role ? "selected" : ""}>${role.replaceAll("_", " ")}</option>`).join("")}</select><small>Use Client only unless this person works for Content X.</small></label><div class="owner-access-actions">${user.status === "active" ? `<button type="button" data-user-action="suspend">Suspend access</button><button type="button" class="danger" data-user-action="delete">Schedule deletion</button>` : `<button type="button" data-user-action="restore">Restore account</button>`}</div><p class="owner-action-note">Email changes and access restrictions revoke active sessions. Deletion remains recoverable for 30 days.</p></aside></section>`;
   };
   const moderationView = () => { content.innerHTML=`<div class="dash-section-head"><div><h2>Communication approval queue</h2><p>Review external media links before they appear in client or applicant conversations.</p></div></div><div class="moderation-list">${moderation.length?moderation.map(item=>`<article><span>${item.source==="chat"?"↗":"◌"}</span><div><strong>${escapeHTML(item.author)} submitted a ${escapeHTML(item.source)} link</strong><p>${escapeHTML(item.text)}</p><small>${escapeHTML(item.created)}</small></div><em class="moderation-status ${item.status.toLowerCase()}">${escapeHTML(item.status)}</em><div><button data-moderate="Approved" data-id="${item.id}">Approve</button><button data-moderate="Rejected" data-id="${item.id}">Reject</button></div></article>`).join(""):'<div class="empty-state"><span>✓</span><h3>Approval queue is clear</h3><p>Submitted media links will appear here.</p></div>'}</div>`; };
   const runAdminUserAction = async (userId, action, value) => {
     const response = await fetch(ADMIN_API, { method:"POST", headers:{ ...ownerHeaders(), "Content-Type":"application/json" }, body:JSON.stringify({ action, userId, ...value }) });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "The account could not be updated.");
-    await usersView();
+    await refreshAdminDirectory();
+    return payload;
+  };
+  const openDeleteClientDialog = user => {
+    const { layer, close } = openLayer(`<form class="owner-delete-dialog"><span class="owner-delete-icon">!</span><p class="eyebrow"><span></span>Protected account action</p><h2>Schedule ${escapeHTML(user.name || "this client")} for deletion?</h2><p>The account will be signed out immediately and kept recoverable for 30 days. Type <strong>DELETE</strong> to continue.</p><label>Confirmation<input name="confirmation" autocomplete="off" placeholder="Type DELETE" required></label><div><button type="button" data-cancel-delete>Cancel</button><button type="submit" class="danger" disabled>Schedule deletion</button></div></form>`);
+    const form = layer.querySelector("form");
+    const confirmation = form.elements.confirmation;
+    const submit = form.querySelector('button[type="submit"]');
+    confirmation.addEventListener("input", () => { submit.disabled = confirmation.value !== "DELETE"; });
+    form.querySelector("[data-cancel-delete]").addEventListener("click", close);
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      if (confirmation.value !== "DELETE") return;
+      submit.disabled = true;
+      submit.textContent = "Scheduling…";
+      try {
+        await runAdminUserAction(user.id, "set_user_status", { status:"deletion_pending", confirmation:"DELETE" });
+        close();
+        await userDetailView(user.id);
+        notify("Account deletion scheduled for 30 days.");
+      } catch (error) {
+        submit.disabled = false;
+        submit.textContent = "Schedule deletion";
+        notify(error.message || "The account could not be updated.");
+      }
+    });
   };
   content.addEventListener("click", async event => {
+    const back = event.target.closest("[data-owner-back]");
+    if (back) {
+      const target = back.dataset.ownerBack;
+      root.querySelector(`[data-admin="${target}"]`)?.click();
+      return;
+    }
+    const projectDetail = event.target.closest("[data-owner-project-detail]");
+    if (projectDetail) {
+      await projectDetailView(projectDetail.dataset.ownerProjectDetail);
+      return;
+    }
+    const userDetail = event.target.closest("[data-owner-user-detail]");
+    if (userDetail) {
+      await userDetailView(userDetail.dataset.ownerUserDetail);
+      return;
+    }
     const jump = event.target.closest("[data-owner-jump]");
     if (jump) {
       root.querySelector(`[data-admin="${jump.dataset.ownerJump}"]`)?.click();
@@ -1060,12 +1160,13 @@ export async function renderAdmin(root, actions) {
       if (button.dataset.userAction === "suspend") {
         if (!confirm("Suspend this client account and sign it out on every device?")) return;
         await runAdminUserAction(userId, "set_user_status", { status:"suspended" });
+        await userDetailView(userId);
         return notify("Client access suspended.");
       }
       if (button.dataset.userAction === "delete") {
-        if (prompt("Type DELETE to schedule this account for deletion in 30 days.") !== "DELETE") return;
-        await runAdminUserAction(userId, "set_user_status", { status:"deletion_pending", confirmation:"DELETE" });
-        return notify("Account deletion scheduled for 30 days.");
+        const user = adminUsers.find(item => String(item.id) === String(userId));
+        if (user) openDeleteClientDialog(user);
+        return;
       }
       if (button.dataset.userAction === "project") {
         const choices = adminDirectory.projects.map((project,index)=>`${index+1}. ${project.name}`).join("\n");
@@ -1078,6 +1179,7 @@ export async function renderAdmin(root, actions) {
         return notify(`${project.name} assigned with ${accessLevel} access.`);
       }
       await runAdminUserAction(userId, "set_user_status", { status:"active" });
+      await userDetailView(userId);
       notify("Client account restored.");
     } catch (error) { notify(error.message || "The account could not be updated."); }
   });
@@ -1087,12 +1189,58 @@ export async function renderAdmin(root, actions) {
     const userId = select.closest("[data-admin-user]")?.dataset.adminUser;
     try {
       await runAdminUserAction(userId, select.value ? "set_staff_role" : "remove_staff", select.value ? { role:select.value } : {});
+      await userDetailView(userId);
       notify(select.value ? "Separate staff access assigned." : "Staff access revoked; the account remains a client account.");
     } catch (error) { notify(error.message || "Staff access could not be updated."); }
   });
   const managedReviewView = () => { content.innerHTML = `<div class="dash-section-head"><div><h2>Content X managed review</h2><p>Set the hands-off review price and manage paid review requests.</p></div><span class="status ${managedSettings.enabled ? "approved" : "briefing"}"><i></i>${managedSettings.enabled ? "Available to clients" : "Paused"}</span></div><div class="managed-review-admin"><aside><p class="eyebrow"><span></span>Service settings</p><h3>You decide the review fee.</h3><p>Clients see this price before payment. The review desk then handles feedback, revision follow-up and final quality approval.</p><label>Project fee (₹)<input type="number" min="500" step="100" value="${managedSettings.price}" data-managed-price></label><label>Review turnaround<select data-managed-turnaround>${["Within 4 hours","Within 1 business day","Within 2 business days","Custom schedule"].map(value=>`<option ${value===managedSettings.turnaround?"selected":""}>${value}</option>`).join("")}</select></label><label class="managed-toggle"><span><strong>Offer managed review</strong><small>Show the add-on inside the client review screen</small></span><input type="checkbox" data-managed-enabled ${managedSettings.enabled?"checked":""}></label><button class="pill pill-hot" data-save-managed-review>Save service settings</button></aside><section><div class="dash-section-head"><div><h2>Review queue</h2><p>Paid requests appear here automatically.</p></div></div><div class="managed-request-list">${managedRequests.length ? managedRequests.map(item=>`<article><div><span>CX</span><p><strong>${escapeHTML(item.project)} · ${escapeHTML(item.version)}</strong><small>${escapeHTML(item.clientName)} · ${escapeHTML(item.created)}</small></p></div><strong>${money(item.price)}</strong><select data-managed-status="${item.id}">${["Paid · Review queued","Reviewing brief","Reviewing cut","Feedback sent to editor","Checking revision","Completed","Cancelled"].map(status=>`<option ${status===item.status?"selected":""}>${status}</option>`).join("")}</select></article>`).join("") : '<div class="empty-state"><span>✦</span><h3>No managed reviews yet</h3><p>Paid client requests will appear in this queue.</p></div>'}</div></section></div>`; };
   root.querySelectorAll("[data-admin]").forEach(btn => btn.addEventListener("click", async () => { root.querySelectorAll("[data-admin]").forEach(b=>b.classList.toggle("active",b===btn)); const view=btn.dataset.admin; const titles={overview:"Operations overview",clients:"Client workspaces",users:"Website users",payments:"Payments & refunds",moderation:"Approval queue","managed-review":"Managed review",team:"Team access",applications:"Talent applications",leads:"Website enquiries",settings:"Review controls"}; root.querySelector(".admin-shell>main>header h1").textContent=titles[view]||"Owner workspace"; if(view==="overview") overview(); else if(view==="clients") await clients(); else if(view==="users" || view==="team") await usersView(); else if(view==="moderation") moderationView(); else if(view==="applications") content.innerHTML=`<div class="dash-section-head"><div><h2>Talent & idea applications</h2><p>Private contact details are visible only in Owner view.</p></div></div>${table(apps,"applications")}`; else if(view==="leads") content.innerHTML=`<div class="dash-section-head"><div><h2>Website enquiries</h2><p>Messages submitted through your public website.</p></div></div>${table(leads,"leads")}`; else if(view==="payments") await paymentFinanceView(); else if(view==="managed-review") managedReviewView(); else { overview(); content.querySelector(".control-card")?.scrollIntoView({behavior:"smooth"}); } }));
-  content.addEventListener("submit", e => { const form=e.target.closest("[data-finance-token-form]"); if(!form)return; e.preventDefault(); const token=String(new FormData(form).get("token")||"").trim(); if(!token)return notify("Enter the owner token to unlock live records."); sessionStorage.setItem(OWNER_TOKEN_KEY, token); const activeView = root.querySelector("[data-admin].active")?.dataset.admin; if (activeView === "users") usersView(); else paymentFinanceView(); });
+  content.addEventListener("input", event => {
+    const search = event.target.closest("[data-owner-user-search]");
+    if (!search) return;
+    const query = String(search.value || "").trim().toLowerCase();
+    const rows = [...content.querySelectorAll("[data-owner-user-search-row]")];
+    let visible = 0;
+    rows.forEach(row => {
+      const matches = !query || String(row.dataset.search || "").includes(query);
+      row.hidden = !matches;
+      if (matches) visible += 1;
+    });
+    const count = content.querySelector("[data-owner-search-count]");
+    if (count) count.textContent = String(visible);
+    const empty = content.querySelector("[data-owner-search-empty]");
+    if (empty) empty.hidden = visible !== 0;
+  });
+  content.addEventListener("submit", async event => {
+    const emailForm = event.target.closest("[data-user-email-form]");
+    if (emailForm) {
+      event.preventDefault();
+      const userId = emailForm.closest("[data-admin-user]")?.dataset.adminUser;
+      const email = String(new FormData(emailForm).get("email") || "").trim();
+      if (!userId || !email) return;
+      const button = emailForm.querySelector('button[type="submit"]');
+      button.disabled = true;
+      button.textContent = "Updating…";
+      try {
+        await runAdminUserAction(userId, "update_user_email", { email });
+        await userDetailView(userId);
+        notify("Client email changed and old sessions revoked.");
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = "Update email";
+        notify(error.message || "The email could not be updated.");
+      }
+      return;
+    }
+    const form = event.target.closest("[data-finance-token-form]");
+    if (!form) return;
+    event.preventDefault();
+    const token = String(new FormData(form).get("token") || "").trim();
+    if (!token) return notify("Enter the owner token to unlock live records.");
+    sessionStorage.setItem(OWNER_TOKEN_KEY, token);
+    const activeView = root.querySelector("[data-admin].active")?.dataset.admin;
+    if (activeView === "users" || activeView === "team") usersView(); else paymentFinanceView();
+  });
   content.addEventListener("change", e => { if(e.target.matches("[data-setting]")){settings[e.target.dataset.setting]=e.target.checked;store.set("cx_review_settings",settings);notify("Review protection updated.");} if(e.target.matches("[data-managed-status]")){const item=managedRequests.find(request=>request.id===Number(e.target.dataset.managedStatus));if(!item)return;item.status=e.target.value;item.updated=new Date().toLocaleString();store.set("cx_managed_review_requests",managedRequests);recordNotification(item.status==="Completed"?"approval":"managedReview",`Managed review: ${item.status}`,`${item.project} · ${item.version} has moved to ${item.status}.`,{email:item.clientEmail});notify("Client review status and email activity updated.");} }); content.addEventListener("click",async e=>{const refund=e.target.closest("[data-refund-action]");if(refund){const action=refund.dataset.refundAction,id=refund.dataset.refundId,source=refund.dataset.refundSource;const reason=action==="request_refund"?prompt("Why is this incomplete order being refunded?"):"";if(action==="request_refund"&&reason===null)return;const note=action==="mark_refunded"?prompt("Optional note after you complete the payout in Razorpay/dashboard:", "Refund completed by owner."):"";refund.disabled=true;refund.textContent="Updating…";try{if(source==="server"){const response=await fetch(PAYMENT_HISTORY_API,{method:"POST",headers:ownerHeaders(),body:JSON.stringify({action,razorpayOrderId:id,reason,note})});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload.error||"Refund status could not be updated.");}else{const nextStatus=action==="request_refund"?"requested":action==="mark_processing"?"processing":action==="mark_refunded"?"refunded":"cancelled";const now=Date.now();const index=payments.findIndex(item=>String(item.razorpay_order_id||item.orderId||item.id)===String(id));if(index>=0){payments[index]={...payments[index],refundStatus:nextStatus,refundReason:reason||payments[index].refundReason||"",refundAmountPaise:nextStatus==="cancelled"?0:Number(payments[index].amount||0)*100,refundRequestedAt:payments[index].refundRequestedAt||now,refundUpdatedAt:now,refundNote:note||""};store.set("cx_payments",payments);}}await paymentFinanceView();notify(action==="mark_refunded"?"Refund marked complete. Confirm the real payout is done in Razorpay.":"Refund record updated.");}catch(error){notify(error.message||"Refund record could not be updated.");await paymentFinanceView();}return;}const save=e.target.closest("[data-save-managed-review]");if(save){managedSettings.price=Math.max(500,Number(content.querySelector("[data-managed-price]").value||2500));managedSettings.turnaround=content.querySelector("[data-managed-turnaround]").value;managedSettings.enabled=content.querySelector("[data-managed-enabled]").checked;store.set("cx_managed_review_settings",managedSettings);managedReviewView();return notify("Managed review pricing saved.");}const button=e.target.closest("[data-moderate]");if(!button)return;const item=moderation.find(x=>x.id===Number(button.dataset.id));if(!item)return;item.status=button.dataset.moderate;item.reviewed=new Date().toLocaleString();store.set("cx_moderation",moderation);moderationView();notify(`Link ${item.status.toLowerCase()}. Status is now visible in chat.`);});
   root.querySelector("[data-client-view]").addEventListener("click", () => actions.openDashboard(true)); root.querySelector("[data-owner-lock]").addEventListener("click", () => { store.remove("cx_owner_access"); actions.refreshRoute(); notify("Owner session locked on this device."); }); root.querySelector(".brand")?.addEventListener("click", e=>{e.preventDefault();actions.openMarketing();}); root.querySelector("[data-add-client]").addEventListener("click", event => { event.preventDefault(); event.stopPropagation(); openOfflinePaidClientModal(() => root.querySelector('[data-admin="users"]')?.click()); }); overview();
 }

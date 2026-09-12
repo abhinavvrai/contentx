@@ -10,6 +10,24 @@ export async function GET(request: Request) {
     const actor = await requireAdminAccess(request, "clients:manage");
     await Promise.all([ensureAccountSchema(), ensurePaymentSchema(), ensureUploadSchema()]);
     const db = getAccountDatabase();
+    const projectId = cleanText(new URL(request.url).searchParams.get("projectId"), 100);
+    if (projectId) {
+      const [project, files, activity] = await Promise.all([
+        db.prepare(`SELECT p.id, p.name, p.client_name, p.client_email, p.status, p.max_file_size, p.created_at, p.updated_at,
+          COUNT(f.id) AS file_count, COALESCE(SUM(f.size_bytes),0) AS storage_bytes, MAX(f.completed_at) AS latest_upload_at
+          FROM upload_projects p LEFT JOIN upload_files f ON f.project_id=p.id AND f.status='ready'
+          WHERE p.id = ? GROUP BY p.id LIMIT 1`).bind(projectId).first<Record<string, unknown>>(),
+        db.prepare(`SELECT id, project_id, original_name, content_type, size_bytes, status, uploader_name, uploader_email,
+          created_at, completed_at, COALESCE(asset_id,id) AS asset_id, COALESCE(version_number,1) AS version_number
+          FROM upload_files WHERE project_id = ? AND status != 'deleted' ORDER BY created_at DESC LIMIT 250`)
+          .bind(projectId).all<Record<string, unknown>>(),
+        db.prepare(`SELECT id, project_id, author_name, author_email, body, status, created_at, updated_at
+          FROM project_review_comments WHERE project_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100`)
+          .bind(projectId).all<Record<string, unknown>>(),
+      ]);
+      if (!project) throw new AccountError("Project not found.", 404);
+      return json({ admin:{ email:actor.email, role:actor.role }, project, files:files.results, activity:activity.results });
+    }
     const [users, payments, projects, projectAccess, recentUploads, recentActivity] = await Promise.all([
       db.prepare(`SELECT u.id, u.name, u.email, u.phone_number, u.company_name, u.role_title, u.account_status, u.deletion_scheduled_at, u.created_at, u.updated_at,
         sm.role AS staff_role, sm.status AS staff_status,
