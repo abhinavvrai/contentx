@@ -8,6 +8,7 @@ const store = {
 const PAYMENT_HISTORY_API = "/api/payments/history";
 const NOTIFICATION_API = "/api/notifications";
 const ADMIN_API = "/api/admin";
+const COUPON_ADMIN_API = "/api/admin/coupons";
 const OWNER_TOKEN_KEY = "cx_owner_upload_token";
 
 function ownerHeaders(json = true) {
@@ -660,6 +661,7 @@ export function renderCheckout(root, actions) {
   originalForm.replaceWith(paymentForm);
   paymentForm.querySelector(".payment-tabs").innerHTML = "<span class=\"payment-method-note\">Choose UPI, card, netbanking or wallet securely in the Razorpay payment window.</span>";
   paymentForm.querySelector(".payment-fields").remove();
+  paymentForm.querySelector(".terms").insertAdjacentHTML("beforebegin", `<div class="checkout-coupon"><label>Coupon code <span>optional</span><input name="couponCode" maxlength="32" autocomplete="off" placeholder="Enter your code"></label><small data-coupon-feedback>Discounts are checked securely before Razorpay opens.</small></div>`);
   const payButton = paymentForm.querySelector(".pay-button");
   payButton.textContent = `Pay securely with Razorpay · ${money(plan.price)}`;
   fetch("/api/auth", { cache:"no-store", credentials:"same-origin" }).then(response => response.json()).then(({ user }) => {
@@ -679,18 +681,23 @@ export function renderCheckout(root, actions) {
         fetch("/api/payments/razorpay/order", {
           method:"POST",
           headers:{ "Content-Type":"application/json" },
-          body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.billing || (plan.unit === "month" ? "monthly" : "one_off"), addOns:(plan.addOns || []).map(item => item.id).filter(id => !["longform_extra_minutes", "longform_raw_review"].includes(id)), durationMinutes:plan.durationMinutes, rawFootageMinutes:plan.rawFootageMinutes, currency:activeCurrency, contentType:plan.contentType || "video", deliveryFormat:plan.deliveryFormat || "", projectId:plan.projectId, assetId:plan.assetId, name:contact.name, email:contact.email, phone:contact.phone })
+          body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.billing || (plan.unit === "month" ? "monthly" : "one_off"), addOns:(plan.addOns || []).map(item => item.id).filter(id => !["longform_extra_minutes", "longform_raw_review"].includes(id)), durationMinutes:plan.durationMinutes, rawFootageMinutes:plan.rawFootageMinutes, currency:activeCurrency, contentType:plan.contentType || "video", deliveryFormat:plan.deliveryFormat || "", projectId:plan.projectId, assetId:plan.assetId, name:contact.name, email:contact.email, phone:contact.phone, couponCode:contact.couponCode })
         })
       ]);
       const config = await configResponse.json(), order = await orderResponse.json();
       if (!configResponse.ok || !orderResponse.ok) throw new Error(config.error || order.error || "Payment setup is unavailable. Please try again.");
+      const couponFeedback = paymentForm.querySelector("[data-coupon-feedback]");
+      if (order.coupon && couponFeedback) {
+        couponFeedback.textContent = `${order.coupon.code} applied · ${moneyMinor(order.coupon.discountPaise, order.currency)} saved`;
+        couponFeedback.classList.add("is-applied");
+      }
       await loadRazorpayCheckout();
       const checkout = new window.Razorpay({
         key:config.keyId,
         amount:order.amount,
         currency:order.currency,
         name:"Content X",
-        description:plan.name,
+        description:order.coupon ? `${plan.name} · ${order.coupon.code} applied` : plan.name,
         order_id:order.orderId,
         prefill:{ name:contact.name, email:contact.email, contact:contact.phone },
         theme:{ color:"#f15b2a" },
@@ -955,11 +962,12 @@ export async function renderAdmin(root, actions) {
     if (adminSnapshot.admin?.role === "owner") adminSnapshot.admin.role = "primary administrator";
   } catch { return renderOwnerGate(root, actions); }
   root.className = "admin-app"; const leads = store.get("cx_leads", []), apps = store.get("cx_applications", []), payments = store.get("cx_payments", []), moderation = store.get("cx_moderation", []), settings = store.get("cx_review_settings", { watermark:true, download:false }), managedRequests = store.get("cx_managed_review_requests", []), managedSettings = { enabled:true, price:2500, turnaround:"Within 1 business day", ...store.get("cx_managed_review_settings", {}) };
-  root.innerHTML = `<div class="admin-shell"><aside class="owner-sidebar"><div class="owner-workspace"><span class="brand-mark">CX</span><p><strong>Content X</strong><small>Admin control center</small></p><button type="button" aria-label="Content X admin menu">•••</button></div><nav aria-label="Content X admin navigation"><small>WORKSPACE</small><button class="active" data-admin="overview"><span>⌂</span>Overview</button><button data-admin="clients"><span>◉</span>Client workspaces</button><button data-admin="users"><span>◎</span>Website users</button><button data-admin="payments"><span>₹</span>Payments</button><small>OPERATIONS</small><button data-admin="moderation"><span>◷</span>Approval queue</button><button data-admin="managed-review"><span>✦</span>Managed review</button><button data-admin="team"><span>◇</span>Team access</button><button data-admin="applications"><span>↗</span>Talent applications</button><button data-admin="leads"><span>✉</span>Enquiries</button><small data-owner-group="settings">SECURITY & SETTINGS</small><button data-admin="audit"><span>⌾</span>Security activity</button><button data-admin="settings"><span>⚙</span>Review controls</button></nav><div class="owner-sidebar-actions"><button data-client-view>← Client workspace</button></div></aside><main><header><div><p>Content X admin · ${escapeHTML(adminSnapshot.admin?.role || "authorized staff")}</p><h1>Operations overview</h1></div><button class="pill pill-hot" data-add-client>+ Add offline-paid client</button></header><section class="admin-content"></section></main></div>`;
+  root.innerHTML = `<div class="admin-shell"><aside class="owner-sidebar"><div class="owner-workspace"><span class="brand-mark">CX</span><p><strong>Content X</strong><small>Admin control center</small></p><button type="button" aria-label="Content X admin menu">•••</button></div><nav aria-label="Content X admin navigation"><small>WORKSPACE</small><button class="active" data-admin="overview"><span>⌂</span>Overview</button><button data-admin="clients"><span>◉</span>Client workspaces</button><button data-admin="users"><span>◎</span>Website users</button><button data-admin="payments"><span>₹</span>Payments</button><button data-admin="coupons"><span>％</span>Coupons & commission</button><small>OPERATIONS</small><button data-admin="moderation"><span>◷</span>Approval queue</button><button data-admin="managed-review"><span>✦</span>Managed review</button><button data-admin="team"><span>◇</span>Team access</button><button data-admin="applications"><span>↗</span>Talent applications</button><button data-admin="leads"><span>✉</span>Enquiries</button><small data-owner-group="settings">SECURITY & SETTINGS</small><button data-admin="audit"><span>⌾</span>Security activity</button><button data-admin="settings"><span>⚙</span>Review controls</button></nav><div class="owner-sidebar-actions"><button data-client-view>← Client workspace</button></div></aside><main><header><div><p>Content X admin · ${escapeHTML(adminSnapshot.admin?.role || "authorized staff")}</p><h1>Operations overview</h1></div><button class="pill pill-hot" data-add-client>+ Add offline-paid client</button></header><section class="admin-content"></section></main></div>`;
   root.querySelector(".owner-sidebar-actions")?.insertAdjacentHTML("beforeend", '<button data-owner-lock>⌾ Sign out of admin</button>');
   const content = root.querySelector(".admin-content");
   let adminDirectory = { projects:adminSnapshot.projects || [], projectAccess:adminSnapshot.projectAccess || [], recentUploads:adminSnapshot.recentUploads || [], recentActivity:adminSnapshot.recentActivity || [], recentAudit:adminSnapshot.recentAudit || [] };
   let adminUsers = adminSnapshot.users || [];
+  let couponSnapshot = { codes:[], redemptions:[] };
   const formatBytes = value => { const bytes=Number(value||0); return bytes >= 1073741824 ? `${(bytes/1073741824).toFixed(1)} GB` : bytes >= 1048576 ? `${(bytes/1048576).toFixed(1)} MB` : bytes >= 1024 ? `${Math.ceil(bytes/1024)} KB` : `${bytes} B`; };
   const formatWhen = value => value ? new Date(Number(value)).toLocaleString([], { dateStyle:"medium", timeStyle:"short" }) : "No activity yet";
   const sameEmail = (left, right) => String(left || "").trim().toLowerCase() === String(right || "").trim().toLowerCase();
@@ -1036,6 +1044,33 @@ export async function renderAdmin(root, actions) {
       const canQueueRefund = !refunded && !activeRefund && !completed && ["verified", "captured", "paid (test)", "verified"].includes(String(record.status).toLowerCase());
       return `<article><div><strong>${escapeHTML(record.customer_name || record.name || "Client")}</strong><small>${escapeHTML(record.customer_email || record.email || "No email")} · ${escapeHTML(record.razorpay_order_id || record.id || "")}</small></div><span>${escapeHTML(record.plan_name || record.plan || "Content X package")}<small>${escapeHTML(record.billing === "monthly" ? "Monthly" : record.billing ? "One-time" : record.type || "")}</small></span><span>${moneyMinor(record.amount_paise, record.currency || "INR")}<small>${record.created_at ? new Date(Number(record.created_at)).toLocaleDateString([], { dateStyle:"medium" }) : escapeHTML(record.created || "")}</small></span><b class="finance-status ${escapeHTML(record.refund_status || "none")}">${refundLabel(record.refund_status, record.status)}</b><div class="finance-actions">${canQueueRefund ? `<button data-refund-action="request_refund" data-refund-source="${escapeHTML(record.source)}" data-refund-id="${escapeHTML(record.razorpay_order_id)}">Request refund</button>` : ""}${activeRefund ? `<button data-refund-action="mark_processing" data-refund-source="${escapeHTML(record.source)}" data-refund-id="${escapeHTML(record.razorpay_order_id)}">Processing</button><button data-refund-action="mark_refunded" data-refund-source="${escapeHTML(record.source)}" data-refund-id="${escapeHTML(record.razorpay_order_id)}">Mark refunded</button><button data-refund-action="cancel_refund" data-refund-source="${escapeHTML(record.source)}" data-refund-id="${escapeHTML(record.razorpay_order_id)}">Cancel</button>` : ""}${completed && !refunded ? "<small>Completed projects are locked from this refund queue.</small>" : ""}${refunded ? `<small>${record.refund_updated_at ? `Refunded ${new Date(Number(record.refund_updated_at)).toLocaleDateString([], { dateStyle:"medium" })}` : "Refund completed"}</small>` : ""}</div></article>`;
     }).join("")}</div><p class="finance-footnote">Refund buttons update Content X records only. Complete the actual payout in Razorpay dashboard until a second-confirmation Razorpay refund API is connected.</p>`;
+  };
+  const couponDateTime = value => {
+    if (!value) return "";
+    const date = new Date(Number(value));
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return local.toISOString().slice(0,16);
+  };
+  const couponsView = async editId => {
+    content.innerHTML = `<div class="dash-section-head"><div><h2>Coupons & partner commission</h2><p>Create secure discounts, assign codes to a customer, and track partner earnings.</p></div><span class="status briefing"><i></i>Loading codes</span></div><div class="empty-state"><span>％</span><h3>Opening coupon controls…</h3></div>`;
+    try {
+      const response = await fetch(COUPON_ADMIN_API, { cache:"no-store", headers:ownerHeaders(false) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Coupon controls could not be opened.");
+      couponSnapshot = { codes:payload.codes || [], redemptions:payload.redemptions || [] };
+      const editing = couponSnapshot.codes.find(item => String(item.id) === String(editId)) || null;
+      const earnedCommission = couponSnapshot.redemptions.reduce((sum,item)=>sum+Number(item.commission_paise||0),0);
+      const totalDiscount = couponSnapshot.redemptions.reduce((sum,item)=>sum+Number(item.discount_paise||0),0);
+      const codeRows = couponSnapshot.codes.map(item => {
+        const discount = item.discount_type === "percent" ? `${Number(item.discount_value)}% off` : `${moneyMinor(Number(item.discount_value) * 100, "INR")} off`;
+        const assignment = item.assigned_customer_email ? `Customer: ${escapeHTML(item.assigned_customer_email)}` : "Available to any customer";
+        const partner = item.affiliate_email ? `${escapeHTML(item.affiliate_name || "Partner")} · ${Number(item.commission_percent || 0)}% commission` : "No partner commission";
+        return `<article class="coupon-code-row"><div><span class="coupon-code-chip">${escapeHTML(item.code)}</span><i class="${item.status === "active" ? "active" : "paused"}">${escapeHTML(item.status)}</i></div><p><strong>${discount}</strong><small>${assignment}</small><small>${partner}</small></p><div><span><b>${Number(item.uses_count || 0)}</b><small>${item.max_uses ? `of ${Number(item.max_uses)} uses` : "uses"}</small></span><span><b>${moneyMinor(item.total_commission_paise || 0)}</b><small>commission</small></span></div><footer><button type="button" data-coupon-edit="${escapeHTML(item.id)}">Edit</button><button type="button" data-coupon-status="${escapeHTML(item.id)}" data-next-status="${item.status === "active" ? "paused" : "active"}">${item.status === "active" ? "Pause" : "Activate"}</button></footer></article>`;
+      }).join("");
+      content.innerHTML = `<div class="dash-section-head"><div><h2>Coupons & partner commission</h2><p>Discounts and earnings are calculated by the payment server. Browser totals cannot override them.</p></div><button class="pill pill-hot" type="button" data-coupon-new>+ New coupon</button></div><section class="finance-stats coupon-stats"><article><span>Codes</span><strong>${couponSnapshot.codes.length}</strong><small>${couponSnapshot.codes.filter(item=>item.status==="active").length} active</small></article><article><span>Redemptions</span><strong>${couponSnapshot.redemptions.length}</strong><small>Verified payments only</small></article><article><span>Discounts</span><strong>${moneyMinor(totalDiscount)}</strong><small>Customer savings</small></article><article><span>Commission</span><strong>${moneyMinor(earnedCommission)}</strong><small>Partner earnings</small></article></section><div class="coupon-admin-grid"><form class="coupon-editor" data-coupon-form><input type="hidden" name="id" value="${escapeHTML(editing?.id || "")}"><header><span>％</span><div><h3>${editing ? "Edit coupon" : "Create a coupon"}</h3><p>${editing ? `Code ${escapeHTML(editing.code)} cannot be renamed after creation.` : "Use clear uppercase letters, numbers, hyphens or underscores."}</p></div></header><label>Coupon code<input name="code" required minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]+" value="${escapeHTML(editing?.code || "")}" ${editing ? "readonly" : ""} placeholder="WELCOME20"></label><div class="field-pair"><label>Discount type<select name="discountType"><option value="percent" ${editing?.discount_type !== "fixed" ? "selected" : ""}>Percentage</option><option value="fixed" ${editing?.discount_type === "fixed" ? "selected" : ""}>Fixed amount (₹)</option></select></label><label>Discount value<input name="discountValue" type="number" min="1" required value="${Number(editing?.discount_value || 10)}"></label></div><label>Assign to customer email <span>optional</span><input name="assignedCustomerEmail" type="email" value="${escapeHTML(editing?.assigned_customer_email || "")}" placeholder="client@company.com"><small>When set, only this signed-in customer can use the code.</small></label><div class="coupon-partner-box"><h4>Partner / referral commission <span>optional</span></h4><div class="field-pair"><label>Partner name<input name="affiliateName" value="${escapeHTML(editing?.affiliate_name || "")}" placeholder="Referral partner"></label><label>Partner email<input name="affiliateEmail" type="email" value="${escapeHTML(editing?.affiliate_email || "")}" placeholder="partner@email.com"></label></div><label>Commission percentage<input name="commissionPercent" type="number" min="0" max="100" value="${Number(editing?.commission_percent || 0)}"><small>Calculated on the final amount paid after discount.</small></label></div><div class="field-pair"><label>Maximum uses <span>optional</span><input name="maxUses" type="number" min="1" value="${editing?.max_uses ?? ""}" placeholder="Unlimited"></label><label>Expires <span>optional</span><input name="expiresAt" type="datetime-local" value="${couponDateTime(editing?.expires_at)}"></label></div><label>Status<select name="status"><option value="active" ${editing?.status !== "paused" ? "selected" : ""}>Active</option><option value="paused" ${editing?.status === "paused" ? "selected" : ""}>Paused</option></select></label><p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${editing ? "Save coupon changes" : "Create coupon"}</button></form><section class="coupon-directory"><div class="owner-detail-heading"><div><h3>Managed codes</h3><p>Pause a code instantly without deleting its history.</p></div></div>${codeRows || `<div class="owner-detail-empty"><span>％</span><strong>No coupon codes yet</strong><small>Create the first code using the secure form.</small></div>`}</section></div>`;
+    } catch (error) {
+      content.innerHTML = `<div class="finance-warning"><strong>Coupon controls unavailable.</strong><span>${escapeHTML(error.message || "Try again shortly.")}</span><button type="button" data-owner-jump="coupons">Try again</button></div>`;
+    }
   };
   const clients = async () => {
     content.innerHTML = `<div class="dash-section-head"><div><h2>Client workspaces</h2><p>Loading live projects, uploads and review activity.</p></div></div><div class="empty-state"><span>◌</span><h3>Loading client activity…</h3></div>`;
@@ -1133,6 +1168,21 @@ export async function renderAdmin(root, actions) {
     });
   };
   content.addEventListener("click", async event => {
+    const couponNew = event.target.closest("[data-coupon-new]");
+    if (couponNew) return couponsView();
+    const couponEdit = event.target.closest("[data-coupon-edit]");
+    if (couponEdit) return couponsView(couponEdit.dataset.couponEdit);
+    const couponStatus = event.target.closest("[data-coupon-status]");
+    if (couponStatus) {
+      couponStatus.disabled = true;
+      try {
+        const response = await fetch(COUPON_ADMIN_API, { method:"POST", headers:ownerHeaders(), body:JSON.stringify({ action:"set_coupon_status", id:couponStatus.dataset.couponStatus, status:couponStatus.dataset.nextStatus }) });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Coupon status could not be changed.");
+        await couponsView();
+        return notify(`Coupon ${payload.status}.`);
+      } catch (error) { couponStatus.disabled = false; return notify(error.message || "Coupon status could not be changed."); }
+    }
     const back = event.target.closest("[data-owner-back]");
     if (back) {
       const target = back.dataset.ownerBack;
@@ -1214,7 +1264,7 @@ export async function renderAdmin(root, actions) {
     const label = value => String(value || "admin_action").replaceAll("_", " ").replace(/\b\w/g, letter => letter.toUpperCase());
     content.innerHTML = `<div class="dash-section-head"><div><h2>Security activity</h2><p>A private, read-only record of important Content X admin actions.</p></div><span class="status approved"><i></i>${rows.length} recent events</span></div><section class="owner-audit-list">${rows.length ? rows.map(item => `<article><span>⌾</span><p><strong>${escapeHTML(label(item.action))}</strong><small>${escapeHTML(item.actor_email || "Authorized admin")} · ${escapeHTML(item.target_type || "record")} · ${escapeHTML(item.target_id || "")}</small></p><time>${formatWhen(item.created_at)}</time></article>`).join("") : `<div class="owner-detail-empty"><span>⌾</span><strong>No administrative changes yet</strong><small>Email changes, access updates and payment actions will appear here.</small></div>`}</section>`;
   };
-  root.querySelectorAll("[data-admin]").forEach(btn => btn.addEventListener("click", async () => { root.querySelectorAll("[data-admin]").forEach(b=>b.classList.toggle("active",b===btn)); const view=btn.dataset.admin; const titles={overview:"Operations overview",clients:"Client workspaces",users:"Website users",payments:"Payments & refunds",moderation:"Approval queue","managed-review":"Managed review",team:"Team access",applications:"Talent applications",leads:"Website enquiries",audit:"Security activity",settings:"Review controls"}; root.querySelector(".admin-shell>main>header h1").textContent=titles[view]||"Content X admin"; if(view==="overview") overview(); else if(view==="clients") await clients(); else if(view==="users" || view==="team") await usersView(); else if(view==="moderation") moderationView(); else if(view==="applications") content.innerHTML=`<div class="dash-section-head"><div><h2>Talent & idea applications</h2><p>Private contact details are visible only to authorized Content X administrators.</p></div></div>${table(apps,"applications")}`; else if(view==="leads") content.innerHTML=`<div class="dash-section-head"><div><h2>Website enquiries</h2><p>Messages submitted through your public website.</p></div></div>${table(leads,"leads")}`; else if(view==="payments") await paymentFinanceView(); else if(view==="managed-review") managedReviewView(); else if(view==="audit") await auditView(); else { overview(); content.querySelector(".control-card")?.scrollIntoView({behavior:"smooth"}); } }));
+  root.querySelectorAll("[data-admin]").forEach(btn => btn.addEventListener("click", async () => { root.querySelectorAll("[data-admin]").forEach(b=>b.classList.toggle("active",b===btn)); const view=btn.dataset.admin; const titles={overview:"Operations overview",clients:"Client workspaces",users:"Website users",payments:"Payments & refunds",coupons:"Coupons & commission",moderation:"Approval queue","managed-review":"Managed review",team:"Team access",applications:"Talent applications",leads:"Website enquiries",audit:"Security activity",settings:"Review controls"}; root.querySelector(".admin-shell>main>header h1").textContent=titles[view]||"Content X admin"; if(view==="overview") overview(); else if(view==="clients") await clients(); else if(view==="users" || view==="team") await usersView(); else if(view==="moderation") moderationView(); else if(view==="applications") content.innerHTML=`<div class="dash-section-head"><div><h2>Talent & idea applications</h2><p>Private contact details are visible only to authorized Content X administrators.</p></div></div>${table(apps,"applications")}`; else if(view==="leads") content.innerHTML=`<div class="dash-section-head"><div><h2>Website enquiries</h2><p>Messages submitted through your public website.</p></div></div>${table(leads,"leads")}`; else if(view==="payments") await paymentFinanceView(); else if(view==="coupons") await couponsView(); else if(view==="managed-review") managedReviewView(); else if(view==="audit") await auditView(); else { overview(); content.querySelector(".control-card")?.scrollIntoView({behavior:"smooth"}); } }));
   content.addEventListener("input", event => {
     const search = event.target.closest("[data-owner-user-search]");
     if (!search) return;
@@ -1232,6 +1282,25 @@ export async function renderAdmin(root, actions) {
     if (empty) empty.hidden = visible !== 0;
   });
   content.addEventListener("submit", async event => {
+    const couponForm = event.target.closest("[data-coupon-form]");
+    if (couponForm) {
+      event.preventDefault();
+      const values = Object.fromEntries(new FormData(couponForm));
+      const button = couponForm.querySelector('button[type="submit"]');
+      const errorBox = couponForm.querySelector('[role="alert"]');
+      button.disabled = true; button.textContent = "Saving coupon…"; errorBox.hidden = true;
+      try {
+        const response = await fetch(COUPON_ADMIN_API, { method:"POST", headers:ownerHeaders(), body:JSON.stringify({ action:"save_coupon", ...values, expiresAt:values.expiresAt ? new Date(values.expiresAt).getTime() : null }) });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Coupon could not be saved.");
+        await couponsView(payload.id);
+        notify(values.id ? "Coupon changes saved." : "Coupon created and ready to use.");
+      } catch (error) {
+        errorBox.textContent = error.message || "Coupon could not be saved."; errorBox.hidden = false;
+        button.disabled = false; button.textContent = values.id ? "Save coupon changes" : "Create coupon";
+      }
+      return;
+    }
     const emailForm = event.target.closest("[data-user-email-form]");
     if (emailForm) {
       event.preventDefault();

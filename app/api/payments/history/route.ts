@@ -111,7 +111,9 @@ function paymentSelectSql() {
     p.quantity, p.amount_paise, p.currency, p.status, p.payment_id,
     p.customer_name, p.customer_email, p.customer_phone, p.created_at, p.updated_at,
     p.refund_status, p.refund_reason, p.refund_amount_paise, p.refund_requested_at,
-    p.refund_updated_at, p.refund_note, s.content_type, s.delivery_format, s.add_ons_json,
+    p.refund_updated_at, p.refund_note, p.subtotal_paise, p.coupon_code, p.discount_paise,
+    p.affiliate_name, p.affiliate_email, p.commission_percent, p.commission_paise,
+    s.content_type, s.delivery_format, s.add_ons_json,
     b.id AS brief_id, b.title AS brief_title, b.status AS brief_status, u.project_id
     FROM payment_orders p
     LEFT JOIN order_selections s ON s.razorpay_order_id = p.razorpay_order_id

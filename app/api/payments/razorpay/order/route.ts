@@ -1,4 +1,4 @@
-import { calculateOrder, createRazorpayOrder, ensurePaymentSchema, json, revisionPolicyForPlan } from "../../../../../lib/razorpay";
+import { applyCouponToOrder, calculateOrder, createRazorpayOrder, ensurePaymentSchema, json, revisionPolicyForPlan } from "../../../../../lib/razorpay";
 import { getDb } from "../../../../../db";
 import { paymentOrders } from "../../../../../db/schema";
 import { AccountError, ensureAccountSchema, getAccountDatabase, requireSameOrigin, requireSessionUser } from "../../../../../lib/auth";
@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     requireSameOrigin(request);
     await Promise.all([ensureAccountSchema(), ensurePaymentSchema(), ensureUploadSchema()]);
     const user = await requireSessionUser(request);
-    const input = await request.json() as { planId?: string; quantity?: number; billing?: string; addOns?: string[]; durationMinutes?: number; rawFootageMinutes?: number; rawFootageHours?: number; currency?: string; contentType?: string; deliveryFormat?: string; projectId?: string; assetId?: string; name?: string; email?: string; phone?: string };
+    const input = await request.json() as { planId?: string; quantity?: number; billing?: string; addOns?: string[]; durationMinutes?: number; rawFootageMinutes?: number; rawFootageHours?: number; currency?: string; contentType?: string; deliveryFormat?: string; projectId?: string; assetId?: string; name?: string; email?: string; phone?: string; couponCode?: string };
     const revisionPurchase = input.planId === "revision_short" || input.planId === "revision_long";
     let targetProjectId: string | null = null;
     let targetAssetId: string | null = null;
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       const availableRounds = policy.included + Number(purchased?.purchased || 0);
       if (usedRounds < availableRounds) throw new AccountError(`This video still has ${availableRounds - usedRounds} revision round available.`, 409);
     }
-    const order = calculateOrder({
+    const baseOrder = calculateOrder({
       planId: input.planId || "",
       quantity: input.quantity,
       billing: input.billing,
@@ -54,6 +54,9 @@ export async function POST(request: Request) {
       rawFootageHours: input.rawFootageHours,
       currency: input.currency,
     });
+    const priced = await applyCouponToOrder(baseOrder, input.couponCode, user.email);
+    const order = priced.order;
+    const coupon = priced.coupon;
     const razorpay = await createRazorpayOrder(order);
     const now = new Date();
     await getDb().insert(paymentOrders).values({
@@ -69,6 +72,13 @@ export async function POST(request: Request) {
       customerName: input.name?.trim().slice(0, 120) || user.name,
       customerEmail: input.email?.trim().toLowerCase().slice(0, 254) || user.email,
       customerPhone: input.phone?.trim().slice(0, 32) || null,
+      subtotalPaise: baseOrder.totalAmountPaise,
+      couponCode: coupon?.code || null,
+      discountPaise: coupon?.discountPaise || 0,
+      affiliateName: coupon?.affiliateName || null,
+      affiliateEmail: coupon?.affiliateEmail || null,
+      commissionPercent: coupon?.commissionPercent || 0,
+      commissionPaise: coupon?.commissionPaise || 0,
       createdAt: now,
       updatedAt: now,
     });
@@ -85,10 +95,11 @@ export async function POST(request: Request) {
       currency: order.currency,
       settlementCurrency: order.settlementCurrency,
       plan: order,
+      coupon: coupon ? { code:coupon.code, discountPaise:coupon.discountPaise } : null,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not create your payment order.";
-    const status = error instanceof AccountError ? error.status : message.includes("valid") || message.includes("between") || message.includes("add-on") ? 400 : 503;
+    const status = error instanceof AccountError ? error.status : message.toLowerCase().includes("coupon") || message.includes("valid") || message.includes("between") || message.includes("add-on") ? 400 : 503;
     return json({ error: message }, status);
   }
 }

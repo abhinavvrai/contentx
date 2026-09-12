@@ -1,13 +1,13 @@
 import { studio } from "./data.js?v=revision-bands-1";
 import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=frame-native-20";
-import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=frame-native-20-production-ready-2";
-import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=client-path-1";
+import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=frame-native-20-production-ready-4";
+import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=client-path-2";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js?v=comparison-feedback-1";
 import { initProductPolish, polishRoute } from "./polish.js?v=admin-title-1";
 import { enhanceCreatorTools } from "./creator-tools.js?v=frame-native-3";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=owner-session-files-1";
 import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-native-20-auth-provider-2";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=client-flow-3";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=client-flow-4";
 import { enhanceStudioDashboard } from "./studio-workspace.js?v=organize-access-2";
 
 // Load decorative motion independently so a missing effect cannot block the app.

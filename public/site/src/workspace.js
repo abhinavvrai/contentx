@@ -692,6 +692,11 @@ async function openVersions(root, projectId, assetId, token, canManage = false, 
 }
 
 async function openSharePanel(root, project, shares, files = []) {
+  if (!project?.id) {
+    alert("Create or open a project before creating a share link.");
+    root.querySelector("[data-create-free-project]")?.click();
+    return;
+  }
   const layer = root.querySelector("[data-workspace-layer]");
   const defaultExpiry = localDateTime(Date.now() + 14 * 24 * 60 * 60 * 1000);
   layer.innerHTML = `<div class="workspace-modal-backdrop"><section class="workspace-share-modal workspace-share-control"><button type="button" data-close-share aria-label="Close">×</button><p class="workspace-kicker">SHARE PROJECT</p><h2>Create a secure review link</h2><p>Choose exactly what a reviewer can see and do. The secret link appears once and is copied when created.</p><form><label>Link label<input name="name" value="Client review" maxlength="100" placeholder="Client review, agency review, final approval..."></label><div class="workspace-share-permissions">${sharePermissionSwitch("uploads","Uploads","Add files or new versions.",false)}${sharePermissionSwitch("downloads","Downloads","Save original files.",true)}${sharePermissionSwitch("comments","Comments","Write text or voice feedback.",true)}${sharePermissionSwitch("approval","Approval","Approve or request changes.",true)}${sharePermissionSwitch("previous","Version history","Open earlier versions.",true)}</div><div class="workspace-share-edit-grid"><label>Exact expiry <span>optional</span><input name="expiresAt" type="datetime-local" value="${defaultExpiry}"></label><label>Password <span>optional</span><input name="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="At least 6 characters"></label></div>${shareAssetChoices(files)}<p role="alert" data-share-error hidden></p><button class="workspace-button primary" type="submit">Create & copy share link</button></form><div class="workspace-existing-shares"><h3>Manage links</h3><small class="workspace-share-safe-note">Secret URLs are only shown at creation. Disable a lost link and create a fresh one.</small>${shares.length ? shares.map(share => shareRow(share, files)).join("") : `<p>No share links created yet.</p>`}</div></section></div>`;

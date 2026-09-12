@@ -1,10 +1,10 @@
 # Content X Project Guide
 
-Last updated: 8 September 2026
+Last updated: 13 September 2026
 Production URL: https://contentx.co.in/  
 GitHub repository: https://github.com/abhinavvrai/contentx  
 Production branch: `main`  
-Last verified feature checkpoint: `05f60c2` (`frame-native-19`); see live evidence in `README.md`. Current source release: `frame-native-20`. Older checkpoints below are historical.
+Last verified feature checkpoint: see the deployment evidence in `README.md`. Current source release: `frame-native-20-production-ready-4`. Older checkpoints below are historical.
 
 Current continuation rule: use `docs/APP_IMPROVEMENT_CHECKLIST.md` as the complete 186-item app backlog. Public marketing/conversion is excluded. Release 18 adds organization and reliability work but does not complete the entire list. Historical prototype descriptions below must not override newer server-backed implementation notes.
 
@@ -24,6 +24,7 @@ The public website includes:
 - Durable project upload spaces backed by R2, with D1 file metadata and private client links.
 - D1-backed client accounts, secure sessions, paid-order history, and post-payment project briefs.
 - Owner-only finance tracking with refund status controls for incomplete paid orders.
+- Server-calculated coupon discounts, customer-specific codes, partner commission tracking and protected admin controls.
 - Server-backed notification preferences, transactional email hooks, forgot-password links and bundled review-comment digests.
 
 ## 2. Production Architecture
@@ -91,6 +92,7 @@ Cloudflare configuration:
 - Static assets are served from `dist/client` through the `ASSETS` binding.
 - Payment records use the D1 binding `DB`, connected to `contentx-payments`.
 - Refund status is stored with payment records in D1 and should be treated as private payment data.
+- Coupon definitions, successful redemptions and earned commission are stored in D1 and are available only to staff with payment permission.
 
 Manual fallback instructions are in `DEPLOY.md`.
 
@@ -368,3 +370,13 @@ Apply `drizzle/0009_share_permissions.sql` to the production D1 database before 
 Account Security & data lists the user's own active sessions, supports scoped revocation and exports safe JSON metadata. It never returns stored credential hashes, R2 keys or share tokens, and export is not a backup archive of all media. Team/member roles and account-erasure policy remain separate backlog items.
 
 Migration `0010_workspace_records.sql` was applied to production on 7 September 2026 after checking the live schema. Preserve all application secrets and bindings during publishing. Build cleanup must never remove `.wrangler` local database/storage state. README documents the microphone policy, workerd hashing limit, empty-project control failure and restricted-version fixes, with test evidence and remaining verification boundaries.
+
+## 22. Admin, Complete Light Theme, Coupons and Commission
+
+Current source release: `frame-native-20-production-ready-4`.
+
+The real client workspace and account pages now map all nested cards, search controls, upload/browser surfaces, profile forms, notification settings, session rows, drawers and review feedback into the saved light theme. Media theaters and project artwork may remain deliberately dark; controls and readable surfaces must follow the selected theme. Test both a signed-in client and an authorized Content X administrator after every shared-theme change.
+
+`/api/admin/coupons` is protected by the same server-side payment permissions as finance. A payment administrator can create or update a code, choose percentage or fixed-INR discount, optionally restrict it to one signed-in customer email, assign a referral partner/name/email and commission percentage, set a future expiry and maximum uses, and pause/reactivate it. Code names are immutable after creation so pending payment records cannot lose their reference. Checkout sends only the entered code; `lib/razorpay.ts` validates eligibility and calculates the final Razorpay amount. `discount_redemptions` and `uses_count` are written only after payment verification/capture, and the unique order constraint prevents double commission when both verification and webhook run.
+
+Apply `drizzle/0012_discount_codes.sql` once to production D1 before the application deployment. Never replay it against a database where those columns/tables already exist without first inspecting the schema. Runtime idempotent guards remain recovery support, not permission to skip the migration review. Share-link UI and API flows continue to require a real project ID; the browser guard redirects an impossible project-less attempt to project creation.

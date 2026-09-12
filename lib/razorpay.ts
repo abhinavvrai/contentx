@@ -80,12 +80,6 @@ export async function ensurePaymentSchema(): Promise<void> {
   if (!db) throw new Error("Payment database is unavailable.");
   if (!paymentSchemaPromise) {
     paymentSchemaPromise = (async () => {
-      try {
-        await db.prepare("SELECT refund_status, refund_reason, refund_amount_paise, refund_requested_at, refund_updated_at, refund_note FROM payment_orders LIMIT 0").first();
-        return;
-      } catch {
-        // Fall through to the idempotent bootstrap for a fresh or older database.
-      }
       await db.prepare(`CREATE TABLE IF NOT EXISTS payment_orders (
       razorpay_order_id TEXT PRIMARY KEY NOT NULL,
       receipt TEXT NOT NULL UNIQUE,
@@ -110,6 +104,38 @@ export async function ensurePaymentSchema(): Promise<void> {
       updated_at INTEGER NOT NULL
       )`).run();
       await ensurePaymentSchemaColumns(db);
+      await db.prepare(`CREATE TABLE IF NOT EXISTS discount_codes (
+        id TEXT PRIMARY KEY NOT NULL,
+        code TEXT NOT NULL UNIQUE,
+        discount_type TEXT NOT NULL,
+        discount_value INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        assigned_customer_email TEXT,
+        affiliate_name TEXT,
+        affiliate_email TEXT,
+        commission_percent INTEGER NOT NULL DEFAULT 0,
+        max_uses INTEGER,
+        uses_count INTEGER NOT NULL DEFAULT 0,
+        expires_at INTEGER,
+        created_by_email TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )`).run();
+      await db.prepare(`CREATE TABLE IF NOT EXISTS discount_redemptions (
+        id TEXT PRIMARY KEY NOT NULL,
+        discount_code_id TEXT NOT NULL,
+        razorpay_order_id TEXT NOT NULL UNIQUE,
+        customer_email TEXT NOT NULL,
+        discount_paise INTEGER NOT NULL,
+        commission_paise INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'earned',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY(discount_code_id) REFERENCES discount_codes(id),
+        FOREIGN KEY(razorpay_order_id) REFERENCES payment_orders(razorpay_order_id)
+      )`).run();
+      await db.prepare("CREATE INDEX IF NOT EXISTS idx_discount_codes_status ON discount_codes(status, updated_at)").run();
+      await db.prepare("CREATE INDEX IF NOT EXISTS idx_discount_redemptions_code ON discount_redemptions(discount_code_id, status, created_at)").run();
     })().catch((error: unknown) => {
       paymentSchemaPromise = null;
       throw error;
@@ -128,10 +154,95 @@ async function ensurePaymentSchemaColumns(db: D1Database): Promise<void> {
     ["refund_requested_at", "INTEGER"],
     ["refund_updated_at", "INTEGER"],
     ["refund_note", "TEXT"],
+    ["subtotal_paise", "INTEGER"],
+    ["coupon_code", "TEXT"],
+    ["discount_paise", "INTEGER NOT NULL DEFAULT 0"],
+    ["affiliate_name", "TEXT"],
+    ["affiliate_email", "TEXT"],
+    ["commission_percent", "INTEGER NOT NULL DEFAULT 0"],
+    ["commission_paise", "INTEGER NOT NULL DEFAULT 0"],
   ];
   for (const [name, definition] of columns) {
     if (!names.has(name)) await db.prepare(`ALTER TABLE payment_orders ADD COLUMN ${name} ${definition}`).run();
   }
+}
+
+export type AppliedCoupon = {
+  id: string;
+  code: string;
+  discountPaise: number;
+  affiliateName: string | null;
+  affiliateEmail: string | null;
+  commissionPercent: number;
+  commissionPaise: number;
+};
+
+export function normalizeCouponCode(value: unknown): string {
+  return typeof value === "string" ? value.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 32) : "";
+}
+
+export async function applyCouponToOrder<T extends ReturnType<typeof calculateOrder>>(
+  order: T,
+  rawCode: unknown,
+  customerEmail: string,
+): Promise<{ order: T; coupon: AppliedCoupon | null }> {
+  const code = normalizeCouponCode(rawCode);
+  if (!code) return { order, coupon:null };
+  const db = (env as unknown as { DB?: D1Database }).DB;
+  if (!db) throw new Error("Coupon service is unavailable.");
+  const coupon = await db.prepare(`SELECT id, code, discount_type, discount_value, status,
+    assigned_customer_email, affiliate_name, affiliate_email, commission_percent,
+    max_uses, uses_count, expires_at FROM discount_codes WHERE code = ? LIMIT 1`)
+    .bind(code).first<Record<string, unknown>>();
+  if (!coupon || coupon.status !== "active") throw new Error("This coupon code is not active.");
+  if (coupon.expires_at && Number(coupon.expires_at) <= Date.now()) throw new Error("This coupon code has expired.");
+  if (coupon.max_uses !== null && coupon.max_uses !== undefined && Number(coupon.uses_count || 0) >= Number(coupon.max_uses)) {
+    throw new Error("This coupon code has reached its usage limit.");
+  }
+  const assigned = String(coupon.assigned_customer_email || "").trim().toLowerCase();
+  if (assigned && assigned !== customerEmail.trim().toLowerCase()) throw new Error("This coupon code is assigned to another customer.");
+  const value = Math.max(0, Number(coupon.discount_value || 0));
+  const discountPaise = coupon.discount_type === "percent"
+    ? Math.round(order.totalAmountPaise * Math.min(value, 100) / 100)
+    : order.currency === "USD" ? Math.round(value * 100 / USD_INR_RATE) : value * 100;
+  const safeDiscount = Math.min(Math.max(0, discountPaise), Math.max(0, order.totalAmountPaise - 100));
+  const discountedTotal = order.totalAmountPaise - safeDiscount;
+  const commissionPercent = Math.min(100, Math.max(0, Number(coupon.commission_percent || 0)));
+  const commissionPaise = Math.round(discountedTotal * commissionPercent / 100);
+  return {
+    order:{ ...order, totalAmountPaise:discountedTotal, couponCode:code, discountPaise:safeDiscount } as T,
+    coupon:{
+      id:String(coupon.id), code, discountPaise:safeDiscount,
+      affiliateName:coupon.affiliate_name ? String(coupon.affiliate_name) : null,
+      affiliateEmail:coupon.affiliate_email ? String(coupon.affiliate_email) : null,
+      commissionPercent, commissionPaise,
+    },
+  };
+}
+
+export async function finalizeCouponRedemption(orderId: string): Promise<void> {
+  const db = (env as unknown as { DB?: D1Database }).DB;
+  if (!db) return;
+  const order = await db.prepare(`SELECT coupon_code, customer_email, discount_paise,
+    commission_paise FROM payment_orders WHERE razorpay_order_id = ? LIMIT 1`)
+    .bind(orderId).first<Record<string, unknown>>();
+  if (!order?.coupon_code) return;
+  const coupon = await db.prepare("SELECT id FROM discount_codes WHERE code = ? LIMIT 1")
+    .bind(order.coupon_code).first<{ id:string }>();
+  if (!coupon) return;
+  const existing = await db.prepare("SELECT id FROM discount_redemptions WHERE razorpay_order_id = ? LIMIT 1")
+    .bind(orderId).first();
+  if (existing) return;
+  const now = Date.now();
+  const redemption = await db.prepare(`INSERT OR IGNORE INTO discount_redemptions
+    (id, discount_code_id, razorpay_order_id, customer_email, discount_paise, commission_paise, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, 'earned', ?, ?)`).bind(
+      `red_${crypto.randomUUID().replaceAll("-", "")}`, coupon.id, orderId,
+      String(order.customer_email || ""), Number(order.discount_paise || 0), Number(order.commission_paise || 0), now, now,
+    ).run();
+  if (!redemption.meta.changes) return;
+  await db.prepare("UPDATE discount_codes SET uses_count = uses_count + 1, updated_at = ? WHERE id = ?")
+    .bind(now, coupon.id).run();
 }
 
 export function getRazorpayConfig() {

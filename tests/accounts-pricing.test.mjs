@@ -83,12 +83,12 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/src/main.js"),
   ]);
   assert.match(page, /\/site\/index\.html\?v=frame-native-20/);
-  assert.match(html, /contentx-release" content="frame-native-20-production-ready-2/);
-  assert.match(html, /main\.js\?v=frame-native-20-production-ready-2/);
+  assert.match(html, /contentx-release" content="frame-native-20-production-ready-4/);
+  assert.match(html, /main\.js\?v=frame-native-20-production-ready-4/);
   assert.match(html, /commerce\.css\?v=frame-native-20-owner-drilldown-1/);
-  assert.match(html, /theme\.css\?v=complete-light-2/);
-  assert.match(main, /features\.js\?v=frame-native-20-production-ready-2/);
-  assert.match(main, /marketplace\.js\?v=client-path-1/);
+  assert.match(html, /theme\.css\?v=complete-light-4/);
+  assert.match(main, /features\.js\?v=frame-native-20-production-ready-4/);
+  assert.match(main, /marketplace\.js\?v=client-path-2/);
   assert.match(main, /uploads\.js\?v=owner-session-files-1/);
   assert.match(main, /account\.js\?v=frame-native-20-auth-provider-2/);
   assert.match(main, /ui\.js\?v=frame-native-20/);
@@ -198,6 +198,34 @@ test("keeps payment totals server-calculated with allowlisted add-ons", async ()
   assert.match(orderRoute, /This video still has \$\{availableRounds - usedRounds\} revision round available/);
   assert.match(orderRoute, /project_id, asset_id/);
   assert.match(orderRoute, /order_selections/);
+});
+
+test("applies server-owned coupons and earns partner commission only after verified payment", async () => {
+  const [razorpay, orderRoute, verifyRoute, webhookRoute, couponRoute, schema, features, workspace] = await Promise.all([
+    load("lib/razorpay.ts"),
+    load("app/api/payments/razorpay/order/route.ts"),
+    load("app/api/payments/razorpay/verify/route.ts"),
+    load("app/api/payments/razorpay/webhook/route.ts"),
+    load("app/api/admin/coupons/route.ts"),
+    load("db/schema.ts"),
+    load("public/site/src/features.js"),
+    load("public/site/src/workspace.js"),
+  ]);
+  assert.match(razorpay, /CREATE TABLE IF NOT EXISTS discount_codes/);
+  assert.match(razorpay, /CREATE TABLE IF NOT EXISTS discount_redemptions/);
+  assert.match(razorpay, /applyCouponToOrder/);
+  assert.match(razorpay, /assigned_customer_email/);
+  assert.match(razorpay, /commissionPaise = Math\.round\(discountedTotal \* commissionPercent \/ 100\)/);
+  assert.match(orderRoute, /couponCode/);
+  assert.match(orderRoute, /subtotalPaise: baseOrder\.totalAmountPaise/);
+  assert.match(verifyRoute, /finalizeCouponRedemption\(orderId\)/);
+  assert.match(webhookRoute, /finalizeCouponRedemption\(payment\.order_id\)/);
+  assert.match(couponRoute, /requireAdminAccess\(request, "payments:manage"\)/);
+  assert.match(couponRoute, /coupon_created/);
+  assert.match(schema, /commissionPaise/);
+  assert.match(features, /Coupons & commission/);
+  assert.match(features, /name="couponCode"/);
+  assert.match(workspace, /Create or open a project before creating a share link/);
 });
 
 test("offers another paid revision only after a video's allowance is exhausted", async () => {

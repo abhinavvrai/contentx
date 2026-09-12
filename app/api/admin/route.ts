@@ -41,7 +41,8 @@ export async function GET(request: Request) {
         LEFT JOIN user_upload_projects p ON p.user_id = u.id
         GROUP BY u.id ORDER BY u.created_at DESC LIMIT 250`).bind(Date.now()).all<Record<string, unknown>>(),
       db.prepare(`SELECT razorpay_order_id, plan_name, billing, quantity, amount_paise,
-        currency, status, customer_name, customer_email, created_at
+        currency, status, customer_name, customer_email, created_at, coupon_code,
+        discount_paise, affiliate_name, affiliate_email, commission_percent, commission_paise
         FROM payment_orders ORDER BY created_at DESC LIMIT 250`).all<Record<string, unknown>>(),
       db.prepare(`SELECT p.id, p.name, p.client_name, p.client_email, p.status, p.created_at, p.updated_at,
         COUNT(f.id) AS file_count, COALESCE(SUM(f.size_bytes),0) AS storage_bytes, MAX(f.completed_at) AS latest_upload_at

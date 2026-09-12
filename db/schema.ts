@@ -20,6 +20,13 @@ export const paymentOrders = sqliteTable("payment_orders", {
   refundRequestedAt: integer("refund_requested_at", { mode: "timestamp_ms" }),
   refundUpdatedAt: integer("refund_updated_at", { mode: "timestamp_ms" }),
   refundNote: text("refund_note"),
+  subtotalPaise: integer("subtotal_paise"),
+  couponCode: text("coupon_code"),
+  discountPaise: integer("discount_paise").notNull().default(0),
+  affiliateName: text("affiliate_name"),
+  affiliateEmail: text("affiliate_email"),
+  commissionPercent: integer("commission_percent").notNull().default(0),
+  commissionPaise: integer("commission_paise").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });

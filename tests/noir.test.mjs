@@ -35,6 +35,11 @@ test("dark styling is set before script execution and visitors can save their di
   assert.match(theme, /tutorial-video-grid \.cx-tutorial-art/);
   assert.match(theme, /html\[data-theme="light"\] #app \.dashboard-shell/);
   assert.match(theme, /html\[data-theme="light"\] #app \.workspace-main/);
+  assert.match(theme, /html\[data-theme="light"\] #app \.workspace-overview>header h1/);
+  assert.match(theme, /html\[data-theme="light"\] #app \.workspace-overview-card/);
+  assert.match(theme, /html\[data-theme="light"\] #app \.workspace-account-surface/);
+  assert.match(theme, /html\[data-theme="light"\] #app \.account-profile-hero/);
+  assert.match(theme, /html\[data-theme="light"\] #app \.security-session/);
   assert.match(theme, /html\[data-theme="light"\] #app\.review-app \.comment-panel/);
   assert.match(theme, /html\[data-theme="light"\] #app \.admin-shell>main/);
   assert.match(theme, /html\[data-theme="light"\] #app :is\(\.account-story/);

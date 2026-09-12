@@ -8,9 +8,9 @@ Live site:
 - Direct app route: https://contentx.co.in/site/
 - Owner workspace route: https://contentx.co.in/site/#owner
 
-Current verified live release label:
+Current source release label (publish and live verification required before calling it live):
 
-- `frame-native-20` (verified 9 September 2026)
+- `frame-native-20-production-ready-4` (13 September 2026)
 
 Important: do not write private passwords, OTPs, API keys, Razorpay secrets, Google client secrets, access codes or owner credentials in this file. Keep secrets in the proper environment variable system only.
 
@@ -30,7 +30,17 @@ Workspace continuity: failed route refreshes must keep the last usable workspace
 
 Share-link reliability: each link may have its own exact expiry, password, selected-file scope and independent upload, original-download, comment, approval and previous-version permissions. Share passwords are derived with a unique salt and PBKDF2-SHA-256 and must never be stored in readable form, placed in URLs or persisted in browser storage. Inline preview signatures and original-download signatures are deliberately different; never remove that distinction. Every share-scoped file, version, comment, decision, preview, download and replacement request must be re-authorized on the server. Apply `drizzle/0009_share_permissions.sql` before deploying `frame-native-17`.
 
+Coupon reliability: discounts are created only in Content X admin and recalculated by the server before a Razorpay order is created. A code may be public or assigned to one signed-in customer email, paused, expired, and limited by successful uses. Partner commission is optional, requires a partner name/email, is calculated from the final discounted charge, and becomes earned only after signature verification or a captured-payment webhook. Never trust a browser-supplied amount, discount, commission, redemption count, or customer assignment. Apply `drizzle/0012_discount_codes.sql` before publishing the coupon release.
+
 The complete accepted signed-in scope is tracked item-by-item in [APP_IMPROVEMENT_CHECKLIST.md](docs/APP_IMPROVEMENT_CHECKLIST.md), with the release history in [APP_WORKSPACE_ROADMAP.md](docs/APP_WORKSPACE_ROADMAP.md). There are 186 in-scope improvements, excluding all 15 public marketing/conversion items. The whole backlog is **not complete**: never turn a partial implementation or an unavailable provider into a completion claim.
+
+## Production-ready release 4 — 13 September 2026
+
+This release completes the light appearance across the real signed-in project overview, project files, account/profile, notifications, security, review and Content X admin surfaces. Theme choice remains device-saved and the global icon is available beside the main navigation action. The admin sidebar includes Coupons & commission: authorized payment administrators can create percentage or fixed-INR discounts, optionally assign one to a customer, add a referral partner and commission percentage, set expiry/usage limits, and pause/reactivate a code without deleting financial history. Checkout accepts an optional coupon and Razorpay always receives the server-recalculated total. Commission is recorded only after verified/captured payment.
+
+Share-link creation now has an additional browser guard and remains unavailable until a real project exists. Admin client rows open deliberate drill-down screens for profile, projects, uploads, activity and protected account actions. Account deletion still requires typing `DELETE`. The Content X admin area uses signed-in, server-authorized staff roles; an owner token is a protected fallback for maintenance/API access and is not requested again during a normal authorized admin session.
+
+Verification before publication: 103 unit/regression tests pass, the production build completes, and the new `/api/admin/coupons` route is present. Browser and production checks must still be recorded after deployment.
 
 ## Release 20 public-video incident record — 9 September 2026
 

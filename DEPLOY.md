@@ -5,7 +5,7 @@ Your complete website code is in this folder. GitHub is your backup and change h
 ## Normal publishing
 
 1. Make your website changes in this folder.
-2. If the change includes a new file in `drizzle/`, inspect and apply that unapplied migration to the production D1 database first. Never edit a migration that has already been applied.
+2. If the change includes a new file in `drizzle/`, inspect the live schema and apply only that unapplied migration to the production D1 database first. Never edit or blindly replay a migration that has already been applied. The coupon release requires `drizzle/0012_discount_codes.sql`.
 3. Commit and push the changes to the `main` branch on GitHub.
 4. Cloudflare automatically builds and publishes that commit to `contentx.co.in`.
 5. Open `https://contentx.co.in/?version=latest` and confirm the change.
@@ -44,13 +44,15 @@ Before the first file-storage deployment:
 1. Confirm the private Cloudflare R2 bucket named `contentx` exists.
 2. Add a long, random Worker secret named `CONTENTX_OWNER_TOKEN`.
 3. Apply the latest D1 migrations to `contentx-payments`.
-4. Deploy the Worker, open Owner workspace → Project files, and enter the owner token.
+4. Deploy the Worker and sign in to Content X admin with an authorized staff account. Normal admin file access must not ask for the owner token again. Keep `CONTENTX_OWNER_TOKEN` only as a protected maintenance/API fallback; never paste it into documentation, links or frontend source.
 
 Client upload links contain a high-entropy project token. Creating a new link invalidates the previous link. Never put the owner token inside a link or frontend source.
 
 ## Client accounts
 
 Client accounts, sessions, paid-order links, and project briefs use the same D1 database. Apply each new checked-in migration whenever these tables change. Production schema changes are migration-owned; runtime guards may verify the expected schema but must not replace the migration step.
+
+The coupon/partner-commission feature requires `drizzle/0012_discount_codes.sql`. It adds immutable coupon references and calculated discount/commission fields to payment orders, plus `discount_codes` and `discount_redemptions`. Apply it once before the matching application release. Coupon discounts are server-calculated; redemption and commission become earned only after a verified/captured payment. Pausing a coupon preserves its financial history.
 
 `frame-native-17` requires `drizzle/0009_share_permissions.sql` before the application commit is deployed. This adds password, exact permission, selected-file scope and link-activity columns to existing share links without exposing any secret values.
 

@@ -1,4 +1,4 @@
-import { ensurePaymentSchema, getRazorpayConfig, json, signHmacSha256, timingSafeEqual } from "../../../../../lib/razorpay";
+import { ensurePaymentSchema, finalizeCouponRedemption, getRazorpayConfig, json, signHmacSha256, timingSafeEqual } from "../../../../../lib/razorpay";
 import { getDb } from "../../../../../db";
 import { paymentOrders } from "../../../../../db/schema";
 import { eq } from "drizzle-orm";
@@ -22,6 +22,7 @@ export async function POST(request: Request) {
     const payment = event.payload?.payment?.entity;
     if ((event.event === "payment.captured" || event.event === "order.paid") && payment?.order_id) {
       await getDb().update(paymentOrders).set({ status: "captured", paymentId: payment.id || null, updatedAt: new Date() }).where(eq(paymentOrders.razorpayOrderId, payment.order_id));
+      await finalizeCouponRedemption(payment.order_id);
     }
     return json({ received: true, event: event.event || "unknown" });
   } catch {
