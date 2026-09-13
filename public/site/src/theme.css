@@ -379,6 +379,24 @@ html[data-theme="light"] #app :is(.security-session small,.security-export-help)
 html[data-theme="light"] #app :is(.workspace-drawer,.workspace-share-modal,.workspace-command-menu) { border-color:#dfe2e7; background:#fff; color:#17191f; box-shadow:0 24px 70px #20232c22; }
 html[data-theme="light"] #app :is(.workspace-version-list article,.workspace-existing-shares article) { border-color:#dfe2e7; background:#f7f8fa; color:#17191f; }
 
+/* Light mode project settings modal */
+html[data-theme="light"] #app .workspace-settings-modal { background:#fff!important; border-color:#dfe2e7!important; box-shadow:0 24px 70px rgba(24,25,31,.12)!important; }
+html[data-theme="light"] #app .workspace-settings-modal>button { background:#f0f2f5!important; color:#646a78!important; }
+html[data-theme="light"] #app .workspace-settings-modal>button:hover { background:#e2e5eb!important; color:#17191f!important; }
+html[data-theme="light"] #app .workspace-settings-modal .workspace-kicker { color:#b84f24!important; }
+html[data-theme="light"] #app .workspace-settings-modal h2 { color:#17191f!important; }
+html[data-theme="light"] #app .workspace-settings-modal .workspace-settings-sub { color:#646a78!important; }
+html[data-theme="light"] #app .workspace-settings-modal .workspace-field-label { color:#2b2f38!important; }
+html[data-theme="light"] #app .workspace-settings-modal .workspace-optional { background:#eef1f5!important; color:#6b7280!important; }
+html[data-theme="light"] #app .workspace-settings-modal input,html[data-theme="light"] #app .workspace-settings-modal select { background:#f8f9fb!important; border-color:#d9dce2!important; color:#17191f!important; }
+html[data-theme="light"] #app .workspace-settings-modal input:focus,html[data-theme="light"] #app .workspace-settings-modal select:focus { background:#fff!important; border-color:#ff5c20!important; box-shadow:0 0 0 3px rgba(255,92,32,.12)!important; }
+html[data-theme="light"] #app .workspace-settings-modal .workspace-settings-save { background:linear-gradient(135deg,#ff5c20,#ff7a3d)!important; color:#fff!important; }
+html[data-theme="light"] #app .workspace-settings-danger { border-color:#fbd6d3!important; background:#fff8f8!important; }
+html[data-theme="light"] #app .workspace-settings-danger b { color:#b92b37!important; }
+html[data-theme="light"] #app .workspace-settings-danger small { color:#7b4f53!important; }
+html[data-theme="light"] #app .workspace-settings-danger .workspace-button.danger { border-color:#f7bec2!important; background:#ffebee!important; color:#c62828!important; }
+html[data-theme="light"] #app .workspace-settings-danger .workspace-button.danger:hover { border-color:#d32f2f!important; background:#d32f2f!important; color:#fff!important; }
+
 /* Review keeps the video theater dark while navigation and feedback become readable light surfaces. */
 html[data-theme="light"] #app.review-app { background:#eef0f3; color:#17191f; }
 html[data-theme="light"] #app.review-app .review-header { border-color:#dfe2e7; background:#fff; color:#17191f; }
