@@ -137,13 +137,17 @@ html[data-theme="light"] #app .dash-sidebar nav button { color:#656b76; }
 html[data-theme="light"] #app .dash-sidebar nav button b { background:#e7e9ee; color:#696e79; }
 html[data-theme="light"] #app .dash-sidebar nav button:is(:hover,.active) { background:#e7e9ee; color:#17191f; }
 html[data-theme="light"] #app .dash-sidebar :is(.storage,.dash-user) { border-color:#dfe2e7; color:#353942; }
-html[data-theme="light"] #app .dash-main { grid-column:3; padding:24px 28px 60px; background:#f4f5f7; color:#17191f; }
-html[data-theme="light"] #app .cx-product-topbar { border-color:#dfe2e7; background:#fffffff2; }
-html[data-theme="light"] #app .cx-product-topbar label { border-color:#dfe2e7; background:#f4f5f7; color:#656b76; }
+html[data-theme="light"] #app .dash-main { grid-column:3; padding:0 28px 60px; background:#f4f5f7; color:#17191f; }
+html[data-theme="light"] #app .cx-product-topbar { border-color:#dfe2e7; background:rgba(255,255,255,.84)!important; backdrop-filter:blur(16px)!important; -webkit-backdrop-filter:blur(16px)!important; margin:0 -28px 18px; padding:0 28px; }
+html[data-theme="light"] #app .cx-product-topbar label { border-color:#dfe2e7; background:#fff; color:#656b76; }
+html[data-theme="light"] #app .cx-product-topbar input { color:#17191f!important; }
+html[data-theme="light"] #app .cx-product-topbar input::placeholder { color:#8d929c; }
 html[data-theme="light"] #app .cx-product-topbar button { color:#646a75; }
 html[data-theme="light"] #app :is(.dash-summary article,.project-card,.new-project-card,.activity-list,.dashboard-help-strip article,.notification-summary,.notification-settings,.notification-activity) { border-color:#dfe2e7; background:#fff; color:#17191f; }
 html[data-theme="light"] #app :is(.project-card h3,.new-project-card strong,.dash-summary strong,.activity-list strong) { color:#17191f; }
 html[data-theme="light"] #app :is(.project-card footer,.activity-list article,.dash-header,.sx-dashboard-tools) { border-color:#e3e5ea; }
+
+/* Targeted text visibility: explore page cards, filters and controls */
 html[data-theme="light"] #app .cx-card-copy h3 { color:#17191f!important; }
 html[data-theme="light"] #app .cx-card-copy p { color:#555b68!important; }
 html[data-theme="light"] #app .cx-card-copy small { color:#7b818f!important; }
@@ -157,6 +161,9 @@ html[data-theme="light"] #app .cx-demo-chip { border-color:#efc1aa!important; ba
 html[data-theme="light"] #app .cx-demo-chip:hover { border-color:#ff883f!important; background:#ffe6db!important; color:#a04018!important; }
 html[data-theme="light"] #app :is(.dash-header h1,.dash-section-head h2) { color:#17191f!important; }
 html[data-theme="light"] #app :is(.dash-header div p,.dash-section-head p) { color:#646a78!important; }
+html[data-theme="light"] #app .dash-header .pill-dark { border-color:#d9dce2!important; background:#fff!important; color:#17191f!important; }
+html[data-theme="light"] #app .dash-header .pill-dark:hover { border-color:#efc1aa!important; background:#fff0e9!important; color:#b84f24!important; }
+html[data-theme="light"] #app .dash-header .pill-hot { color:#fff!important; }
 html[data-theme="light"] #app .new-project-card { border-color:#cfd3db!important; background:#fff!important; color:#646a78!important; }
 html[data-theme="light"] #app .new-project-card:hover { border-color:#ff883f!important; color:#ff5c20!important; background:#fff8f5!important; }
 html[data-theme="light"] #app .new-project-card>:is(.cx-icon,.cx-new-project-plus) { border-color:#efc1aa!important; background:#fff0e9!important; color:#ff5c20!important; }
@@ -166,17 +173,20 @@ html[data-theme="light"] #app .project-card>footer { border-top-color:#e4e6eb!im
 html[data-theme="light"] #app .project-card>footer>span:nth-child(2) { color:#6a707e!important; }
 html[data-theme="light"] #app .project-card>footer button { color:#555b68!important; }
 html[data-theme="light"] #app .project-card>footer button:hover { color:#ff5c20!important; }
+html[data-theme="light"] #app .workspace-overview-card footer span { color:#15803d; }
+html[data-theme="light"] #app .workspace-overview-card.archived footer span { color:#8a5a50; }
 
-/* Light mode warm orange hovers across workspace and dashboard */
+/* Light mode base buttons and warm orange hovers */
+html[data-theme="light"] #app :is(.workspace-button:not(.primary):not(.danger),.workspace-button.subtle) { border-color:#d9dce2; background:#fff; color:#555b68; }
+html[data-theme="light"] #app .workspace-button.primary { color:#fff!important; }
+html[data-theme="light"] #app .workspace-topbar :is(button,a).workspace-button.primary { color:#fff!important; }
 html[data-theme="light"] #app :is(.workspace-button:not(.primary):not(.danger),.workspace-button.subtle):hover { border-color:#efc1aa!important; background:#fff0e9!important; color:#b84f24!important; }
 html[data-theme="light"] #app .workspace-overview-card footer button:hover { border-color:#efc1aa!important; background:#fff0e9!important; color:#b84f24!important; }
 html[data-theme="light"] #app .workspace-overview-new:hover { border-color:#efc1aa!important; background:#fff0e9!important; }
 html[data-theme="light"] #app .cx-product-topbar button:hover { border-color:#efc1aa!important; background:#fff0e9!important; color:#b84f24!important; }
-html[data-theme="light"] #app .workspace-command-trigger:hover { border-color:#efc1aa!important; }
-html[data-theme="light"] #app .pill-dark:hover { border-color:#efc1aa!important; background:#fff0e9!important; color:#b84f24!important; }
-html[data-theme="light"] #app .pill-outline:hover { border-color:#efc1aa!important; background:#fff0e9!important; color:#b84f24!important; }
-html[data-theme="light"] #app .text-button:hover { color:#ff5c20!important; }
 html[data-theme="light"] #app .workspace-share-nav>button:hover { background:#fff0e9!important; color:#b84f24!important; border-color:#efc1aa!important; }
+html[data-theme="light"] #app .pill-dark:hover { border-color:#efc1aa!important; background:#fff0e9!important; color:#b84f24!important; }
+html[data-theme="light"] #app .text-button:hover { color:#ff5c20!important; }
 
 /* Authenticated workspace, including files, folders, account settings and refresh states. */
 html[data-theme="light"] #app .workspace-shell { grid-template-columns:64px 232px minmax(0,1fr); background:var(--fx-bg); color:#17191f; }
@@ -399,7 +409,15 @@ html[data-theme="light"] #app :is(.admin-user-actions button,.admin-user-actions
 html[data-theme="light"] #app .admin-user-actions button.danger { border-color:#efc2c5; background:#fff5f5; color:#a83c45; }
 html[data-theme="light"] #app .owner-overview-intro { border-color:#dfe2e7; background:#fff; }
 html[data-theme="light"] #app .owner-quick-actions button { border-color:#d9dce2; background:#f6f7f9; color:#3e444f; }
+html[data-theme="light"] #app .owner-quick-actions button:hover { border-color:#efc1aa!important; background:#fff0e9!important; color:#b84f24!important; }
+html[data-theme="light"] #app .client-space-grid footer button { border-color:#d9dce2; background:#f6f7f9; color:#3e444f; }
+html[data-theme="light"] #app .client-space-grid footer button:first-child { border-color:var(--client); background:var(--client); color:#fff; }
+html[data-theme="light"] #app .client-space-grid footer button:hover { border-color:#efc1aa!important; background:#fff0e9!important; color:#b84f24!important; }
+html[data-theme="light"] #app .owner-directory-toolbar label { border-color:#dfe2e7; background:#fff; color:#656b76; }
+html[data-theme="light"] #app .owner-directory-toolbar input { color:#17191f!important; }
+html[data-theme="light"] #app .owner-directory-toolbar input::placeholder { color:#8d929c; }
 html[data-theme="light"] #app .owner-security-link { border-color:#f0c9b5; background:#fff2ea; color:#a64f29; }
+html[data-theme="light"] #app .owner-security-link:hover { border-color:#ff883f!important; background:#ffe6db!important; color:#a04018!important; }
 html[data-theme="light"] #app .owner-audit-list { border-color:#dfe2e7; background:#fff; color:#17191f; }
 html[data-theme="light"] #app .owner-audit-list article { border-color:#e5e7ec; }
 html[data-theme="light"] #app .owner-audit-list article>span { background:#fff0e9; color:#b65025; }
@@ -413,6 +431,7 @@ html[data-theme="light"] #app .coupon-code-chip { background:#fff0e9; color:#a94
 html[data-theme="light"] #app .coupon-code-row i.active { background:#e9f8f1; color:#14714b; }
 html[data-theme="light"] #app .coupon-code-row i.paused { background:#f8eeee; color:#9a4c4c; }
 html[data-theme="light"] #app .coupon-code-row footer button { border-color:#d9dce2; background:#f7f8fa; color:#3d434d; }
+html[data-theme="light"] #app .coupon-code-row footer button:hover { border-color:#efc1aa!important; background:#fff0e9!important; color:#b84f24!important; }
 
 /* Give operational cards breathing room and a clearer visual rhythm. */
 #app.admin-app .admin-content { padding-bottom:40px; }
