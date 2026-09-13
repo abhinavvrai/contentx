@@ -700,15 +700,21 @@ html.route-busy::after {
 #app .workspace-tree button span { color:#ff8b50; font-size:9px; }
 #app .workspace-tree button b { min-width:0; overflow:hidden; font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
 #app .workspace-tree button em { min-width:20px; color:#666872; font:normal 7px/1 inherit; text-align:right; }
+#app .workspace-organize-tip { display:flex; align-items:center; gap:14px; margin:0 var(--workspace-gutter,28px) 18px; padding:14px 18px; border:1px solid #343743; border-radius:12px; background:linear-gradient(110deg,#1c1d24,#17181f); color:#e2e4ec; }
+#app .workspace-organize-tip>span { width:36px; height:36px; display:grid; place-items:center; flex:0 0 36px; border-radius:9px; background:#2b1d18; color:#ff9062; font-size:16px; font-weight:900; border:1px solid #4a2b20; }
+#app .workspace-organize-tip div { display:grid; gap:3px; }
+#app .workspace-organize-tip b { font-size:13px; font-weight:700; color:#fff; }
+#app .workspace-organize-tip p { margin:0; font-size:12px; line-height:1.5; color:#9597a4; }
 #app .workspace-browser { margin:0 var(--workspace-gutter) 14px; border:1px solid #2d2f38; border-radius:10px; background:linear-gradient(150deg,#17181f,#121319); overflow:hidden; }
-#app .workspace-browser-head { min-height:48px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 12px; border-bottom:1px solid #2b2d35; }
-#app .workspace-browser-head nav { min-width:0; display:flex; align-items:center; gap:5px; overflow:auto; }
-#app .workspace-browser-head nav span { display:flex; align-items:center; gap:5px; }
-#app .workspace-browser-head nav i { color:#4f515a; font:normal 8px/1 inherit; }
-#app .workspace-browser-head nav button { flex:0 0 auto; min-height:27px; padding:0 8px; border:0; border-radius:6px; background:transparent; color:#8f919b; font:750 8px/1 inherit; cursor:pointer; }
-#app .workspace-browser-head nav button:hover,#app .workspace-browser-head nav button.active { background:#24252d; color:#fff; }
-#app .workspace-browser-head>div { display:flex; gap:6px; }
-#app .workspace-browser-head>div>button:not(.workspace-button) { min-height:31px; padding:0 10px; border:1px solid #383a43; border-radius:7px; background:#202129; color:#e6e4e7; font:800 8px/1 inherit; cursor:pointer; }
+#app .workspace-browser-head { min-height:48px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; border-bottom:1px solid #2b2d35; }
+#app .workspace-browser-head nav { min-width:0; display:flex; align-items:center; gap:6px; overflow:auto; }
+#app .workspace-browser-head nav span { display:flex; align-items:center; gap:6px; }
+#app .workspace-browser-head nav i { color:#626572; font:normal 12px/1 inherit; }
+#app .workspace-browser-head nav button { flex:0 0 auto; min-height:32px; padding:0 12px; border:1px solid transparent; border-radius:7px; background:transparent; color:#9fa2af; font:700 12px/1 inherit; cursor:pointer; transition:all .15s; }
+#app .workspace-browser-head nav button:hover,#app .workspace-browser-head nav button.active { background:#24252d; border-color:#383b48; color:#fff; }
+#app .workspace-browser-head>div { display:flex; gap:8px; }
+#app .workspace-browser-head>div>button:not(.workspace-button) { min-height:34px; padding:0 14px; border:1px solid #383a43; border-radius:8px; background:#202129; color:#f0eff2; font:700 12px/1 inherit; cursor:pointer; transition:all .15s; }
+#app .workspace-browser-head>div>button:not(.workspace-button):hover { border-color:#ff883f; color:#ff9d6b; background:#292a36; }
 #app .workspace-browser-head>div>button[hidden] { display:none; }
 #app .workspace-button:disabled { opacity:.42; cursor:not-allowed; filter:saturate(.35); }
 #app .workspace-status-badge { display:inline-flex; margin-left:7px; padding:4px 6px; border:1px solid #6a4538; border-radius:999px; background:#2a1b17; color:#ff9d70; font:850 7px/1 inherit; letter-spacing:.08em; vertical-align:middle; }
@@ -882,28 +888,30 @@ html.route-busy::after {
 #app .workspace-dropbar { min-height:38px; margin:4px 14px 0; padding:7px 10px; border-style:solid; background:#151720; }
 #app .workspace-dropbar>span { width:26px; height:26px; }
 #app .workspace-files { padding:14px; }
-#app .workspace-files>header { min-height:38px; }
-#app .workspace-files>header h2 { font-size:14px; }
+#app .workspace-files>header { min-height:42px; display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px; }
+#app .workspace-files>header>div { display:flex; align-items:center; gap:12px; }
+#app .workspace-files>header h2 { font-size:18px; font-weight:750; margin:0; letter-spacing:-.02em; color:#fff; }
+#app .workspace-files>header span[data-visible-folder-label] { display:inline-flex; align-items:center; padding:4px 12px; border-radius:999px; font-size:11px; font-weight:650; border:1px solid #383a45; background:#202129; color:#b4b6c2; }
 
-#app .sx-library-tools { min-height:48px; position:sticky; top:52px; z-index:11; display:flex; align-items:center; gap:4px; margin:8px -14px 14px!important; padding:7px 14px!important; border-top:1px solid #252731; border-bottom:1px solid #252731; background:#101119f2!important; backdrop-filter:blur(16px); }
-#app .sx-library-tools>label,#app .sx-library-tools>.sx-tool-menu>button { min-height:32px; display:flex; align-items:center; gap:6px; padding:0 9px; border:0; border-radius:6px; background:transparent; color:#d9d9df; font:750 9px/1 inherit; cursor:pointer; }
-#app .sx-library-tools>label:hover,#app .sx-library-tools>.sx-tool-menu>button:hover { background:#22242d; color:#fff; }
-#app .sx-library-tools b { color:#fff; font-size:9px; }
-#app .sx-library-tools small { color:#898b98; font-size:8px; font-weight:650; }
-#app .sx-library-tools :is(select,input) { border:0; outline:0; background:transparent; color:#999ba7; font:700 9px/1 inherit; }
+#app .sx-library-tools { min-height:48px; position:sticky; top:52px; z-index:11; display:flex; align-items:center; gap:6px; margin:8px -14px 14px!important; padding:7px 14px!important; border-top:1px solid #252731; border-bottom:1px solid #252731; background:#101119f2!important; backdrop-filter:blur(16px); }
+#app .sx-library-tools>label,#app .sx-library-tools>.sx-tool-menu>button { min-height:34px; display:flex; align-items:center; gap:6px; padding:0 10px; border:1px solid transparent; border-radius:7px; background:transparent; color:#d9d9df; font:700 12px/1 inherit; cursor:pointer; transition:all .15s; }
+#app .sx-library-tools>label:hover,#app .sx-library-tools>.sx-tool-menu>button:hover { background:#22242d; border-color:#363945; color:#fff; }
+#app .sx-library-tools b { color:#fff; font-size:12px; font-weight:700; }
+#app .sx-library-tools small { color:#898b98; font-size:11px; font-weight:600; }
+#app .sx-library-tools :is(select,input) { border:0; outline:0; background:transparent; color:#999ba7; font:700 12px/1 inherit; }
 #app .sx-library-tools select option { background:#20222c; color:#fff; }
-#app .sx-library-tools>.sx-search { width:min(210px,22vw); margin-left:auto; border:1px solid #2d303a; background:#171922; }
-#app .sx-library-tools>[data-file-results] { color:#686b77; font-size:8px; white-space:nowrap; }
+#app .sx-library-tools>.sx-search { width:min(230px,24vw); min-height:34px; margin-left:auto; border:1px solid #2d303a; border-radius:8px; background:#171922; padding:0 10px; }
+#app .sx-library-tools>[data-file-results] { color:#8b8e9c; font-size:11px; white-space:nowrap; }
 #app .sx-tool-menu { position:relative; }
-#app .sx-control-popover { width:250px; position:absolute; z-index:30; top:38px; left:0; display:grid; gap:10px; padding:14px; border:1px solid #414451; border-radius:10px; background:#272936; box-shadow:0 20px 55px #0009; }
+#app .sx-control-popover { width:260px; position:absolute; z-index:30; top:42px; left:0; display:grid; gap:12px; padding:16px; border:1px solid #414451; border-radius:12px; background:#272936; box-shadow:0 20px 55px rgba(0,0,0,.5); }
 #app .sx-control-popover[hidden] { display:none; }
-#app .sx-control-popover h3 { margin:0 0 2px; color:#aeb0ba; font-size:9px; }
-#app .sx-control-popover>label { min-height:30px; display:flex; align-items:center; justify-content:space-between; gap:12px; color:#e0e1e6; font-size:9px; }
-#app .sx-control-popover select { min-height:29px; padding:0 8px; border:1px solid #414452; border-radius:6px; background:#323442; color:#fff; }
-#app .sx-control-popover input[type="checkbox"] { width:30px; height:17px; accent-color:#6454ff; }
-#app .sx-segment { display:flex; padding:2px; border-radius:6px; background:#323441; }
-#app .sx-segment button { min-width:35px; height:25px; border:0; border-radius:5px; background:transparent; color:#9c9eaa; font:800 8px/1 inherit; cursor:pointer; }
-#app .sx-segment button.active { background:#6554f3; color:#fff; }
+#app .sx-control-popover h3 { margin:0 0 2px; color:#aeb0ba; font-size:11px; font-weight:700; }
+#app .sx-control-popover>label { min-height:32px; display:flex; align-items:center; justify-content:space-between; gap:12px; color:#e0e1e6; font-size:12px; }
+#app .sx-control-popover select { min-height:32px; padding:0 10px; border:1px solid #414452; border-radius:7px; background:#323442; color:#fff; }
+#app .sx-control-popover input[type="checkbox"] { width:20px; height:20px; accent-color:#ff5c20; }
+#app .sx-segment { display:flex; padding:3px; border-radius:7px; background:#323441; }
+#app .sx-segment button { min-width:38px; height:28px; border:0; border-radius:5px; background:transparent; color:#9c9eaa; font:700 11px/1 inherit; cursor:pointer; }
+#app .sx-segment button.active { background:linear-gradient(135deg,#ff5c20,#ff7a3d); color:#fff; }
 #app .sx-fields-popover>label { justify-content:flex-start; }
 #app .sx-fields-popover>label input { order:2; margin-left:auto; }
 
