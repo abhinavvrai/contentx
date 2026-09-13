@@ -422,7 +422,7 @@ export async function renderAccountDashboard(root, actions) {
 }
 
 export async function renderWorkspaceAccountPanel(container, actions, initialView = "profile") {
-  container.innerHTML = `<div class="workspace-account-opening"><span></span><span></span><span></span></div>`;
+  container.innerHTML = `<div class="workspace-account-loading" aria-label="Loading account"><span class="workspace-account-spinner" aria-hidden="true"></span></div>`;
   try {
     const [data, notificationData] = await Promise.all([
       api(BRIEF_API, { cache:"no-store" }),

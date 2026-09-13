@@ -387,9 +387,10 @@ html[data-theme="dark"] #app .project-card { padding:0 0 10px; border-color:var(
 #app .workspace-account-tabs button:hover,#app .workspace-account-tabs button.active { color:#fff; }
 #app .workspace-account-tabs button.active::after { content:""; position:absolute; right:10px; bottom:0; left:10px; height:2px; border-radius:2px; background:linear-gradient(90deg,var(--fx-orange),var(--fx-amber)); }
 #app .workspace-account-content.account-settings-content { width:min(920px,calc(100% - (var(--workspace-gutter) * 2))); padding:32px 0 70px; }
-#app .workspace-account-opening { display:grid; gap:12px; padding:36px var(--workspace-gutter); }
-#app .workspace-account-opening span { height:82px; border-radius:10px; background:linear-gradient(100deg,#171820 20%,#242630 40%,#171820 60%); background-size:220% 100%; animation:workspaceSkeleton 1.25s ease-in-out infinite; }
-#app .workspace-account-opening span:first-child { width:56%; height:36px; }
+#app .workspace-account-opening { display:none!important; }
+#app .workspace-account-opening span { display:none!important; }
+#app .workspace-account-loading { min-height:280px; display:flex; align-items:center; justify-content:center; }
+#app .workspace-account-spinner { width:32px; height:32px; border:2.5px solid rgba(255,92,32,.18); border-top-color:#ff5c20; border-radius:50%; animation:spin .75s linear infinite; }
 #app .workspace-account-error { min-height:420px; display:grid; place-items:center; align-content:center; gap:10px; padding:30px; text-align:center; }
 #app .workspace-account-error>span { width:48px; height:48px; display:grid; place-items:center; border-radius:12px; background:#38211d; color:#ff9a72; font-weight:900; }
 #app .workspace-account-error p { color:var(--fx-muted); }

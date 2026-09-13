@@ -480,6 +480,9 @@ html[data-theme="light"] #app .workspace-comment p { color:#4f5560; }
 
 /* Account settings live inside the client workspace and follow the same theme. */
 html[data-theme="light"] #app .workspace-account-surface { background:#f4f5f7; color:#17191f; }
+html[data-theme="light"] #app .workspace-account-opening { display:none!important; }
+html[data-theme="light"] #app .workspace-account-loading { background:transparent; }
+html[data-theme="light"] #app .workspace-account-spinner { border-color:rgba(255,92,32,.18); border-top-color:#ff5c20; }
 html[data-theme="light"] #app :is(.workspace-account-head,.workspace-account-tabs) { border-color:#dfe2e7; background:#fff; }
 html[data-theme="light"] #app .workspace-account-tabs button { color:#6a707b; }
 html[data-theme="light"] #app .workspace-account-tabs button:is(:hover,.active) { color:#17191f; }
