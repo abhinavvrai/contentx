@@ -25,7 +25,20 @@
   border-color: #62504a;
   box-shadow: 0 35px 90px #0007, 0 0 65px #ff7f3220;
 }
-.cx-cinematic .hero .float-card { box-shadow: 0 20px 48px #0005; }
+.cx-cinematic .hero .product-window .window-bar { color: #17181d; }
+.cx-cinematic .hero .float-card { box-shadow: 0 20px 48px #0005; color: #17181d; }
+.cx-cinematic .hero .float-card strong { color: #17181d; }
+.cx-cinematic .hero .float-card small { color: #646a78; }
+.cx-cinematic .hero .comment-preview { color: #17181d; }
+.cx-cinematic .hero .comment-preview strong { color: #17181d; }
+.cx-cinematic .hero .comment-preview article p { color: #17181d; }
+html[data-theme="dark"] .cx-cinematic .hero .product-window .window-bar { color: #f3f3f4; }
+html[data-theme="dark"] .cx-cinematic .hero .float-card { color: #f3f3f4; }
+html[data-theme="dark"] .cx-cinematic .hero .float-card strong { color: #f3f3f4; }
+html[data-theme="dark"] .cx-cinematic .hero .float-card small { color: #777780; }
+html[data-theme="dark"] .cx-cinematic .hero .comment-preview { color: #f3f3f4; }
+html[data-theme="dark"] .cx-cinematic .hero .comment-preview strong { color: #f3f3f4; }
+html[data-theme="dark"] .cx-cinematic .hero .comment-preview article p { color: #f3f3f4; }
 .cx-atmosphere { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .cx-orbit {
   position: absolute; width: 670px; height: 670px; right: -90px; top: -155px;

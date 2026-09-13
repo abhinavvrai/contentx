@@ -338,19 +338,24 @@ export function enhanceDashboardSuite(root, actions) {
   const tasks = getTasks();
   const taskButton = document.createElement("button"); taskButton.dataset.dash = "tasks"; taskButton.innerHTML = `<span>✓</span>Tasks <b>${tasks.filter(task => task.clientId === activeClient.id && task.status !== "Done").length}</b>`;
   nav.insertBefore(taskButton, nav.querySelector('[data-dash="messages"]') || null);
-  taskButton.addEventListener("click", () => { setActiveNav(root, taskButton); renderTaskBoard(root.querySelector(".dash-main"), false, null, activeClient.id); });
+  taskButton.addEventListener("click", () => { setActiveNav(root, taskButton); renderTaskBoard(root.querySelector(".dash-main"), false, null, activeClient.id, actions); });
   root.querySelector('[data-dash="reviews"]')?.addEventListener("click", event => { setActiveNav(root, event.currentTarget); renderWorkspaceCollection(root.querySelector(".dash-main"), "review", actions); });
   root.querySelector('[data-dash="approved"]')?.addEventListener("click", event => { setActiveNav(root, event.currentTarget); renderWorkspaceCollection(root.querySelector(".dash-main"), "approved", actions); });
   root.querySelector('[data-dash="assets"]')?.addEventListener("click", event => { setActiveNav(root, event.currentTarget); renderWorkspaceCollection(root.querySelector(".dash-main"), "assets", actions); });
-  root.querySelector('[data-dash="home"]')?.addEventListener("click", () => { location.hash = "workspace"; window.dispatchEvent(new Event("hashchange")); });
-  root.querySelector('[data-dash="projects"]')?.addEventListener("click", () => { location.hash = "workspace"; window.dispatchEvent(new Event("hashchange")); });
+  root.querySelector('[data-dash="home"]')?.addEventListener("click", (e) => { setActiveNav(root, e.currentTarget); actions.openDashboard(true); window.dispatchEvent(new Event("hashchange")); });
+  root.querySelector('[data-dash="projects"]')?.addEventListener("click", (e) => { setActiveNav(root, e.currentTarget); actions.openDashboard(true); window.dispatchEvent(new Event("hashchange")); });
 
   const iconButtons = root.querySelectorAll(".dash-header .icon-button");
   iconButtons[0]?.addEventListener("click", () => openWorkspaceSearch(actions));
   iconButtons[1]?.addEventListener("click", () => root.querySelector('[data-dash="notifications"]')?.click());
   root.querySelector(".storage button")?.addEventListener("click", openStorageUpgrade);
   root.querySelector(".dash-user button")?.addEventListener("click", openAccountMenu);
-  root.querySelectorAll(".view-switch button").forEach((button, index) => button.addEventListener("click", () => { root.querySelectorAll(".view-switch button").forEach(item => item.classList.toggle("active", item === button)); root.querySelector(".project-grid")?.classList.toggle("project-list-view", index === 1); }));
+  root.querySelectorAll(".view-switch button").forEach((button, index) => button.addEventListener("click", () => {
+    root.querySelectorAll(".view-switch button").forEach(item => item.classList.toggle("active", item === button));
+    const grid = root.querySelector(".project-grid");
+    grid?.classList.toggle("project-list-view", index === 1);
+    grid?.classList.toggle("cx-list-view", index === 1);
+  }));
   const viewAll = [...root.querySelectorAll(".recent-section button")].find(button => button.textContent.includes("View all")); viewAll?.addEventListener("click", () => root.querySelector('[data-dash="notifications"]')?.click());
 }
 
@@ -399,13 +404,36 @@ function openClientProjectModal(client, actions, onComplete = null) {
   layer.querySelector("form").addEventListener("submit", event => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const clients = getClients(), current = clients.find(item => item.id === client.id); const project = { id: `${client.id}-${Date.now()}`, ...data, status: "Briefing", progress: 0, files: 0, color: client.color }; current.projects.unshift(project); saveClients(clients); local.set("cx_active_project", project.id); close(); recordNotification("upload", "New client project created", `${project.name} was created inside ${client.name}'s private workspace.`); toast(`Separate workspace created for ${client.name}.`); if (onComplete) onComplete(current); else { local.set("cx_active_client", client.id); actions.openDashboard(true); window.dispatchEvent(new Event("hashchange")); } });
 }
 
+function getDashTopbar(container) {
+  return container?.querySelector(".cx-product-topbar")?.outerHTML || `
+    <div class="cx-product-topbar">
+      <label><svg class="cx-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg><input type="search" placeholder="Search Content X" aria-label="Search Content X"></label>
+      <button aria-label="Notifications"><svg class="cx-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></button>
+      <button aria-label="Help"><svg class="cx-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></button>
+    </div>`;
+}
+
+function bindDashTopbar(container, actions) {
+  container?.querySelector('.cx-product-topbar button[aria-label="Notifications"]')?.addEventListener("click", () => document.querySelector('[data-dash="notifications"]')?.click());
+  container?.querySelector('.cx-product-topbar button[aria-label="Help"]')?.addEventListener("click", () => {
+    if (actions) openWorkspaceSearch(actions);
+  });
+  container?.querySelector('.cx-product-topbar input')?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && actions) openWorkspaceSearch(actions);
+  });
+}
+
 function renderWorkspaceCollection(main, type, actions) {
   const client = getActiveClient();
   const reviewProjects = client.projects.filter(project => project.status === "In review" || project.status === "Editing");
   const approvedProjects = client.projects.filter(project => project.status === "Approved");
-  if (type === "review") main.innerHTML = `<header class="dash-header"><div><p>${safe(client.name)} · review queue</p><h1>Needs your decision</h1></div>${reviewProjects.length ? '<button class="pill pill-hot" data-open-review>Open next review →</button>' : ""}</header><div class="workspace-collection">${reviewProjects.length ? reviewProjects.map((project, index) => `<article><span>▶</span><div><strong>${safe(project.name)} · ${String(index + 1).padStart(2, "0")}</strong><small>${safe(project.format)} · V${index + 2}</small></div><em>${index + 2} open comments</em><button data-review-item="${project.id}">Review now →</button></article>`).join("") : '<div class="empty-state"><span>✓</span><h3>No reviews waiting</h3><p>This client has no open review decisions.</p></div>'}</div>`;
-  else if (type === "approved") main.innerHTML = `<header class="dash-header"><div><p>${safe(client.name)} · final library</p><h1>Approved videos</h1></div></header><div class="workspace-collection">${approvedProjects.length ? approvedProjects.map(project => `<article><span class="approved-mark">✓</span><div><strong>${safe(project.name)} · Master</strong><small>${safe(project.format)} · approved</small></div><em>Master ready</em><button data-final-download>Download master ↓</button></article>`).join("") : '<div class="empty-state"><span>◇</span><h3>No approved masters yet</h3><p>Approved files for this client will appear here.</p></div>'}</div>`;
-  else main.innerHTML = `<header class="dash-header"><div><p>${safe(client.name)} · private assets</p><h1>Reusable brand files</h1></div><button class="pill pill-hot" data-asset-upload>↑ Upload assets</button></header><div class="asset-dropzone"><span>◇</span><h2>${safe(client.name)} brand library</h2><p>These original-quality files are isolated from every other client.</p><button data-asset-upload>Choose files</button><input type="file" hidden multiple accept="image/*,video/*,audio/*,.pdf,.zip"></div><div class="workspace-collection asset-items"><article><span>PNG</span><div><strong>${safe(client.initials)}-Logo-Master.png</strong><small>${safe(client.name)} Brand Assets · 2.4 MB</small></div><em>Client-only asset</em><button data-copy-asset>Copy to project</button></article><article><span>ZIP</span><div><strong>${safe(client.initials)}-Brand-Kit.zip</strong><small>Fonts, colours and guidelines</small></div><em>Client-only asset</em><button data-copy-asset>Copy to project</button></article></div>`;
+  const topbar = getDashTopbar(main);
+  let content = "";
+  if (type === "review") content = `<header class="dash-header"><div><p>${safe(client.name)} · review queue</p><h1>Needs your decision</h1></div>${reviewProjects.length ? '<button class="pill pill-hot" data-open-review>Open next review →</button>' : ""}</header><div class="workspace-collection">${reviewProjects.length ? reviewProjects.map((project, index) => `<article><span>▶</span><div><strong>${safe(project.name)} · ${String(index + 1).padStart(2, "0")}</strong><small>${safe(project.format)} · V${index + 2}</small></div><em>${index + 2} open comments</em><button data-review-item="${project.id}">Review now →</button></article>`).join("") : '<div class="empty-state"><span>✓</span><h3>No reviews waiting</h3><p>This client has no open review decisions.</p></div>'}</div>`;
+  else if (type === "approved") content = `<header class="dash-header"><div><p>${safe(client.name)} · final library</p><h1>Approved videos</h1></div></header><div class="workspace-collection">${approvedProjects.length ? approvedProjects.map(project => `<article><span class="approved-mark">✓</span><div><strong>${safe(project.name)} · Master</strong><small>${safe(project.format)} · approved</small></div><em>Master ready</em><button data-final-download>Download master ↓</button></article>`).join("") : '<div class="empty-state"><span>◇</span><h3>No approved masters yet</h3><p>Approved files for this client will appear here.</p></div>'}</div>`;
+  else content = `<header class="dash-header"><div><p>${safe(client.name)} · private assets</p><h1>Reusable brand files</h1></div><button class="pill pill-hot" data-asset-upload>↑ Upload assets</button></header><div class="asset-dropzone"><span>◇</span><h2>${safe(client.name)} brand library</h2><p>These original-quality files are isolated from every other client.</p><button data-asset-upload>Choose files</button><input type="file" hidden multiple accept="image/*,video/*,audio/*,.pdf,.zip"></div><div class="workspace-collection asset-items"><article><span>PNG</span><div><strong>${safe(client.initials)}-Logo-Master.png</strong><small>${safe(client.name)} Brand Assets · 2.4 MB</small></div><em>Client-only asset</em><button data-copy-asset>Copy to project</button></article><article><span>ZIP</span><div><strong>${safe(client.initials)}-Brand-Kit.zip</strong><small>Fonts, colours and guidelines</small></div><em>Client-only asset</em><button data-copy-asset>Copy to project</button></article></div>`;
+  main.innerHTML = topbar + content;
+  bindDashTopbar(main, actions);
   main.querySelector("[data-open-review]")?.addEventListener("click", () => { local.set("cx_active_project", reviewProjects[0].id); actions.openReview(); });
   main.querySelectorAll("[data-review-item]").forEach(button => button.addEventListener("click", () => { local.set("cx_active_project", button.dataset.reviewItem); actions.openReview(); }));
   main.querySelectorAll("[data-final-download]").forEach(button => button.addEventListener("click", () => toast("Protected master download prepared.")));
@@ -423,13 +451,15 @@ function syncTaskCounts(tasks) {
   document.querySelector('[data-project-tasks] b')?.replaceChildren(String(projectActive));
 }
 
-function renderTaskBoard(container, owner = false, projectScope = null, clientScope = null) {
+function renderTaskBoard(container, owner = false, projectScope = null, clientScope = null, actions = null) {
   let tasks = getTasks();
+  const topbar = !owner ? getDashTopbar(container) : "";
   const paint = () => {
     const visibleTasks = tasks.filter(task => (!projectScope || task.project === projectScope) && (!clientScope || task.clientId === clientScope));
     const statuses = ["To do", "In progress", "Review", "Done"];
     const scopeCopy = projectScope ? `${visibleTasks.filter(task => task.status !== "Done").length} active in ${projectScope}` : `${visibleTasks.filter(task => task.status !== "Done").length} active across ${new Set(visibleTasks.map(task => task.project)).size} projects`;
-    container.innerHTML = `<header class="task-board-head"><div><p>${owner ? "Operations workflow" : "Project workflow"}</p><h1>${owner ? "Team tasks & workload" : "Tasks"}</h1><span>${scopeCopy}</span></div><div><select data-task-assignee><option>Everyone</option>${[...new Set(visibleTasks.map(task => task.assignee))].map(name => `<option>${safe(name)}</option>`).join("")}</select><button class="pill pill-hot" data-add-task>+ Add task</button></div></header><div class="task-board">${statuses.map(status => `<section data-task-column="${status}"><header><strong>${status}</strong><span>${visibleTasks.filter(task => task.status === status).length}</span></header><div>${visibleTasks.filter(task => task.status === status).map(task => taskCard(task, statuses)).join("") || '<p class="task-empty">No tasks here</p>'}</div></section>`).join("")}</div>`;
+    container.innerHTML = (owner ? "" : topbar) + `<header class="task-board-head"><div><p>${owner ? "Operations workflow" : "Project workflow"}</p><h1>${owner ? "Team tasks & workload" : "Tasks"}</h1><span>${scopeCopy}</span></div><div><select data-task-assignee><option>Everyone</option>${[...new Set(visibleTasks.map(task => task.assignee))].map(name => `<option>${safe(name)}</option>`).join("")}</select><button class="pill pill-hot" data-add-task>+ Add task</button></div></header><div class="task-board">${statuses.map(status => `<section data-task-column="${status}"><header><strong>${status}</strong><span>${visibleTasks.filter(task => task.status === status).length}</span></header><div>${visibleTasks.filter(task => task.status === status).map(task => taskCard(task, statuses)).join("") || '<p class="task-empty">No tasks here</p>'}</div></section>`).join("")}</div>`;
+    if (!owner) bindDashTopbar(container, actions);
     syncTaskCounts(tasks);
     container.querySelector("[data-add-task]").addEventListener("click", () => openTaskModal(newTask => { tasks.unshift(newTask); local.set("cx_tasks", tasks); recordNotification("feedback", "New project task assigned", `${newTask.title} was assigned to ${newTask.assignee}.`); paint(); }, projectScope, clientScope));
     container.querySelector("[data-task-assignee]").addEventListener("change", event => container.querySelectorAll("[data-task-card]").forEach(card => card.hidden = event.target.value !== "Everyone" && card.dataset.assignee !== event.target.value));
