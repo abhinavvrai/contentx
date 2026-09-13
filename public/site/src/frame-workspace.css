@@ -75,7 +75,7 @@ html[data-theme="dark"] #app:is(.workspace-app,.dashboard-app,.account-app) {
 #app .workspace-rail .workspace-notification-link { position:relative; }
 #app .workspace-rail [data-notification-badge] { position:absolute; top:-3px; right:-5px; min-width:17px; height:17px; display:grid; place-items:center; padding:0 4px; border:2px solid #08090c; border-radius:99px; background:linear-gradient(135deg,#ff5421,#ff9b43); color:#fff; font:900 7px/1 inherit; box-shadow:0 3px 12px #ff5c2044; }
 #app .workspace-rail [data-notification-badge][hidden] { display:none!important; }
-#app .workspace-rail-user { margin-top:auto; background:#30251f; color:#ffc39f; font-size:11px; }
+#app .workspace-rail-user { margin-top:auto; background:linear-gradient(135deg,var(--fx-orange),#7b3cff); color:#fff; font-size:11px; font-weight:900; box-shadow:0 4px 14px #ff642625; }
 
 #app .workspace-sidebar {
   grid-column:2;
@@ -100,7 +100,7 @@ html[data-theme="dark"] #app:is(.workspace-app,.dashboard-app,.account-app) {
 #app .workspace-project-nav>a>span { width:30px; height:30px; border-radius:7px; }
 #app .workspace-storage { padding:10px; border-radius:8px; }
 #app .workspace-user { grid-template-columns:30px minmax(0,1fr) auto; padding:10px 6px 0; }
-#app .workspace-user>span { width:30px; height:30px; }
+#app .workspace-user>span { width:30px; height:30px; display:grid; place-items:center; border-radius:8px; background:linear-gradient(135deg,var(--fx-orange),#7b3cff); color:#fff; font-size:11px; font-weight:900; box-shadow:0 4px 14px #ff642625; }
 #app .workspace-user b { font-size:10px; }
 #app .workspace-user small { font-size:8px; }
 
@@ -799,7 +799,7 @@ html.route-busy::after {
 #app .workspace-overview-art i:first-child { width:170px; height:66px; right:-12px; top:47px; }
 #app .workspace-overview-art i:nth-child(2) { width:120px; height:45px; left:12px; bottom:-4px; border-color:#8a5de075; }
 #app .workspace-overview-art i:nth-child(3) { width:12px; height:12px; right:20px; top:17px; border:0; background:linear-gradient(135deg,#ff6b2b,#ffac56); box-shadow:0 0 25px #ff6a2a80; }
-#app .workspace-overview-art span { position:absolute; left:15px; bottom:13px; color:#fff; font-size:25px; font-weight:950; letter-spacing:-.06em; }
+#app .workspace-overview-art span { position:absolute; left:14px; bottom:14px; width:48px; height:48px; display:grid; place-items:center; border-radius:13px; background:linear-gradient(135deg,#ff5c20,#7b3cff); color:#fff; font-size:16px; font-weight:950; letter-spacing:normal; box-shadow:0 8px 24px rgba(255,92,32,.35); }
 #app .workspace-overview-card>a>div:last-child { padding:12px 13px 10px; }
 #app .workspace-overview-card h2 { overflow:hidden; color:#fff; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
 #app .workspace-overview-card p { margin-top:5px; overflow:hidden; color:#9a9ca7; font-size:8px; text-overflow:ellipsis; white-space:nowrap; }
@@ -821,6 +821,7 @@ html.route-busy::after {
 #app .workspace-overview-grid.list .workspace-overview-card { display:grid; grid-template-columns:120px minmax(0,1fr) 170px; align-items:center; }
 #app .workspace-overview-grid.list .workspace-overview-card>a { display:grid; grid-column:1/3; grid-template-columns:120px minmax(0,1fr); align-items:center; }
 #app .workspace-overview-grid.list .workspace-overview-art { height:76px; }
+#app .workspace-overview-grid.list .workspace-overview-art span { width:38px; height:38px; font-size:13px; border-radius:10px; }
 #app .workspace-overview-grid.list .workspace-overview-card footer { margin-right:12px; border:0; }
 #app .workspace-overview-grid.list .workspace-overview-new { min-height:78px; flex-direction:row; gap:10px; }
 #app .workspace-overview-grid.list .workspace-overview-new :is(b,small) { margin:0; }
@@ -1014,7 +1015,7 @@ html[data-theme="dark"] #app .dashboard-shell { grid-template-columns:58px 218px
 #app.review-app button.cx-rail-brand { background:linear-gradient(135deg,var(--fx-orange),var(--fx-amber)); color:#fff; box-shadow:0 8px 22px #ff692a2e; }
 #app :is(.cx-app-rail,.review-global-rail) nav button:hover,#app :is(.cx-app-rail,.review-global-rail) nav button.active { background:#23242c; color:#fff; }
 #app .cx-rail-bottom { display:grid; gap:7px; margin-top:auto; }
-#app :is(.cx-app-rail,.review-global-rail) .cx-rail-avatar { background:#3a241c; color:#ffb08b; font:900 8px/1 inherit; }
+#app :is(.cx-app-rail,.review-global-rail) .cx-rail-avatar { background:linear-gradient(135deg,var(--fx-orange),#7b3cff); color:#fff; font:900 8px/1 inherit; box-shadow:0 4px 14px #ff642625; }
 html[data-theme="dark"] #app .dash-sidebar { position:fixed; inset:0 auto 0 58px; width:218px; padding:12px 10px; background:#111218; }
 #app .dash-workspace { min-height:52px; display:grid; grid-template-columns:1fr auto; align-content:center; padding:3px 8px 12px; border-bottom:1px solid var(--fx-line); }
 #app .dash-workspace strong { font-size:11px; }
@@ -1061,7 +1062,7 @@ html[data-theme="dark"] #app .project-card { min-height:268px; overflow:hidden; 
 #app .cx-project-poster::after { width:220px; height:96px; left:-80px; bottom:-40px; }
 #app .cx-project-poster i:first-child { width:180px; height:75px; right:-28px; top:46px; }
 #app .cx-project-poster i:nth-child(2) { width:150px; height:58px; left:4px; bottom:-10px; }
-#app .cx-project-poster span { position:absolute; left:16px; bottom:14px; color:#fff; font:950 24px/1 inherit; letter-spacing:-.06em; opacity:.92; }
+#app .cx-project-poster span { position:absolute; left:14px; bottom:14px; width:48px; height:48px; display:grid; place-items:center; border-radius:13px; background:linear-gradient(135deg,#ff5c20,#7b3cff); color:#fff; font:950 16px/1 inherit; letter-spacing:normal; box-shadow:0 8px 24px rgba(255,92,32,.35); }
 #app .cx-lock { position:absolute; top:11px; right:11px; z-index:2; width:24px; height:24px; display:grid; place-items:center; border:1px solid #ffffff19; border-radius:6px; background:#111218a8; color:#ccc; font-size:12px; }
 #app .project-card .card-hover-arrow { z-index:3; right:12px; bottom:12px; top:auto; color:#fff; font-size:8px; }
 #app .cx-card-copy { padding:12px 13px 9px; }
@@ -1080,6 +1081,7 @@ html[data-theme="dark"] #app .project-card { min-height:268px; overflow:hidden; 
 #app .project-grid:is(.cx-list-view, .project-list-view) { grid-template-columns:1fr; gap:10px; }
 #app .project-grid:is(.cx-list-view, .project-list-view) .project-card { min-height:72px; display:grid; grid-template-columns:110px minmax(0,1fr) 210px; align-items:center; gap:14px; padding:12px 18px; }
 #app .project-grid:is(.cx-list-view, .project-list-view) .project-card-top { min-height:52px; margin:0; display:flex; align-items:center; gap:10px; }
+#app .project-grid:is(.cx-list-view, .project-list-view) .cx-project-poster span { width:36px; height:36px; font-size:12px; border-radius:9px; left:8px; bottom:8px; }
 #app .project-grid:is(.cx-list-view, .project-list-view) .cx-card-copy { padding:0 16px; }
 #app .project-grid:is(.cx-list-view, .project-list-view) .project-card>footer { margin:0; border:0; padding:0; display:flex; align-items:center; justify-content:flex-end; gap:12px; }
 
