@@ -27,6 +27,8 @@ const workspaceIcon = name => {
     folder:'<path d="M3.5 7.5h6l1.7 2H20v9H3.5z"/><path d="M3.5 7.5V5h6l1.5 2"/>',
     trash:'<path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13M10 10v7M14 10v7"/>',
     restore:'<path d="M5 8V4m0 0h4M5 4l3 3a7 7 0 1 1-2 7"/>',
+    settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+    users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   };
   return `<svg class="workspace-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name] || paths.projects}</svg>`;
 };
@@ -142,7 +144,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
          <a class="workspace-notification-link" href="#workspace?panel=account&view=notifications" aria-label="Notifications" title="Notifications">${workspaceIcon("bell")}<span data-notification-badge hidden></span></a>
         <a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account" aria-label="Account and notifications" title="Account">${workspaceIcon("account")}</a>
       </nav>
-      <a class="workspace-rail-user${user.avatarUrl ? " has-image" : ""}" data-account-avatar href="#workspace?panel=account" aria-label="Open account" title="Account">${userAvatar(user)}</a>
+      <a class="workspace-rail-settings ${accountPanel ? "active" : ""}" href="#workspace?panel=account" aria-label="Account settings" title="Settings">${workspaceIcon("settings")}</a>
     </aside>
     <aside class="workspace-sidebar">
       <a class="workspace-brand" href="#home"><span>CX</span><b>Content X</b></a>
@@ -154,7 +156,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       <div class="workspace-user"><span class="${user.avatarUrl ? "has-image" : ""}" data-account-avatar>${userAvatar(user)}</span><div><b data-account-name>${escapeHTML(user.name)}</b><small data-account-email>${escapeHTML(user.email)}</small></div><a href="#workspace?panel=account" aria-label="Account settings">•••</a></div>
     </aside>
     <main class="workspace-main">
-      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">${workspaceIcon("menu")}</button><div><span>All projects</span>${accountPanel ? `<b>/ Account</b>` : project ? `<i>/</i><b>${escapeHTML(project.name)}</b>` : ""}</div>${project && !accountPanel ? `<label class="workspace-global-search"><span>${workspaceIcon("search")}</span><input type="search" data-global-file-search placeholder="Search files" aria-label="Search this project"></label>` : `<button class="workspace-command-trigger" type="button" data-command-menu><span>${workspaceIcon("search")}</span> Quick find <kbd>Ctrl K</kbd></button>`}<div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button subtle" type="button" data-project-activity>Activity</button><button class="workspace-button subtle" type="button" data-project-settings aria-label="Project settings" title="Project settings">•••</button><button class="workspace-button" type="button" data-share-project ${project.status === "archived" ? "disabled" : ""}>Share</button><button class="workspace-button primary" type="button" data-upload-files ${project.status === "archived" ? "disabled" : ""}>${workspaceIcon("plus")} Add</button>` : `<button class="workspace-button primary workspace-create-project" type="button" data-create-free-project><span aria-hidden="true">＋</span><b>Create project</b></button>`}</div></header>
+      <header class="workspace-topbar"><button type="button" data-workspace-menu aria-label="Open project menu">${workspaceIcon("menu")}</button><div><span>All projects</span>${accountPanel ? `<b>/ Account</b>` : project ? `<i>/</i><b>${escapeHTML(project.name)}</b>` : ""}</div>${project && !accountPanel ? `<label class="workspace-global-search"><span>${workspaceIcon("search")}</span><input type="search" data-global-file-search placeholder="Search files" aria-label="Search this project"></label>` : `<button class="workspace-command-trigger" type="button" data-command-menu><span>${workspaceIcon("search")}</span> Quick find <kbd>Ctrl K</kbd></button>`}<div>${accountPanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : project ? `<button class="workspace-button subtle" type="button" data-project-activity>Activity</button><button class="workspace-button subtle" type="button" data-project-settings aria-label="Project settings" title="Project settings">•••</button><button class="workspace-button" type="button" data-invite-member ${project.status === "archived" ? "disabled" : ""}>＋ Invite</button><button class="workspace-button" type="button" data-share-project ${project.status === "archived" ? "disabled" : ""}>Share</button><button class="workspace-button primary" type="button" data-upload-files ${project.status === "archived" ? "disabled" : ""}>${workspaceIcon("plus")} Add</button>` : `<button class="workspace-button primary workspace-create-project" type="button" data-create-free-project><span aria-hidden="true">＋</span><b>Create project</b></button>`}</div></header>
       ${accountPanel ? `<section class="workspace-account-surface" data-workspace-account></section>` : project ? projectSurface(project, files, folders, projectData.permissions?.canUpload !== false, comments, true, projectData.revisionPolicy, project.status === "active", projectData.permissions) : projects.length ? workspaceOverview(projects, storage) : emptyWorkspace()}
     </main>
   </div><nav class="workspace-mobile-nav" aria-label="Mobile workspace navigation"><a href="#home"><span>CX</span><small>Home</small></a><a class="${!accountPanel ? "active" : ""}" href="#workspace">${workspaceIcon("projects")}<small>Projects</small></a><button type="button" data-command-menu>${workspaceIcon("search")}<small>Search</small></button><a href="#workspace?panel=account&view=notifications">${workspaceIcon("bell")}<small>Alerts</small></a><a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account">${workspaceIcon("account")}<small>Account</small></a></nav><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
@@ -226,6 +228,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       features:["1 additional revision round", `Attached to ${button.dataset.fileName}`, "Timestamped feedback and version history stay in this workspace"],
     });
   }));
+  root.querySelectorAll("[data-invite-member]").forEach(button => button.addEventListener("click", () => openInviteMemberModal(root, project, user)));
   root.querySelectorAll("[data-share-project]").forEach(button => button.addEventListener("click", () => openSharePanel(root, project, shares, files)));
   root.querySelectorAll("[data-project-activity]").forEach(button => button.addEventListener("click", () => openActivityPanel(root, project)));
   root.querySelector("[data-recycle-bin]")?.addEventListener("click", () => openRecycleBinModal(root, project, actions));
@@ -776,6 +779,172 @@ function openCreateProjectModal(root, actions) {
       error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Create project";
     }
   });
+}
+
+function getProjectMembers(projectId, user) {
+  const key = `cx_project_members_${projectId}`;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return [{
+    id: "owner",
+    name: user?.name || "Project Owner",
+    email: user?.email || "owner@example.com",
+    position: user?.roleTitle || "Creative Director / Lead",
+    access: "full",
+    role: "owner",
+    invitedAt: Date.now()
+  }];
+}
+
+function saveProjectMembers(projectId, members) {
+  try {
+    localStorage.setItem(`cx_project_members_${projectId}`, JSON.stringify(members));
+  } catch {}
+}
+
+function openInviteMemberModal(root, project, user) {
+  const layer = root.querySelector("[data-workspace-layer]");
+  let members = getProjectMembers(project.id, user);
+
+  function renderMembersList() {
+    const container = layer.querySelector("[data-members-list]");
+    const countEl = layer.querySelector("[data-members-count]");
+    if (countEl) countEl.textContent = String(members.length);
+    if (!container) return;
+
+    container.innerHTML = members.map(m => `
+      <div class="workspace-member-row" data-member-id="${escapeHTML(m.id)}">
+        <span class="workspace-member-avatar">${escapeHTML((m.name || "U").slice(0, 1).toUpperCase())}</span>
+        <div class="workspace-member-info">
+          <div class="workspace-member-heading">
+            <b>${escapeHTML(m.name)}</b>
+            <span class="workspace-member-position">${escapeHTML(m.position || "Collaborator")}</span>
+            <span class="workspace-member-role-badge ${m.role === "owner" ? "owner" : "invited"}">${m.role === "owner" ? "Owner" : "Invited"}</span>
+          </div>
+          <small class="workspace-member-email">${escapeHTML(m.email)} · ${m.access === "full" ? "Full access" : m.access === "view" ? "View only" : "Review &amp; comment"}</small>
+        </div>
+        ${m.role !== "owner" ? `<button class="workspace-member-remove" type="button" data-remove-member="${escapeHTML(m.id)}" title="Remove member" aria-label="Remove member">×</button>` : ""}
+      </div>
+    `).join("");
+
+    container.querySelectorAll("[data-remove-member]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idToRemove = btn.dataset.removeMember;
+        members = members.filter(item => item.id !== idToRemove);
+        saveProjectMembers(project.id, members);
+        renderMembersList();
+      });
+    });
+  }
+
+  layer.innerHTML = `
+    <div class="workspace-modal-backdrop">
+      <div class="workspace-share-modal workspace-invite-modal" role="dialog" aria-modal="true" aria-label="Invite to project">
+        <button type="button" data-close-invite aria-label="Close">×</button>
+        <div class="workspace-settings-header">
+          <p class="workspace-kicker">TEAM &amp; COLLABORATION</p>
+          <h2>Invite to ${escapeHTML(project.name)}</h2>
+          <p class="workspace-settings-sub">Invite editors, clients, or team members and assign their role and position in this production.</p>
+        </div>
+        <form class="workspace-invite-form" data-invite-form>
+          <div class="workspace-invite-grid">
+            <label class="workspace-field">
+              <span class="workspace-field-label"><span>Collaborator name</span></span>
+              <input name="memberName" required maxlength="100" placeholder="e.g. Maya Chen">
+            </label>
+            <label class="workspace-field">
+              <span class="workspace-field-label"><span>Email address</span></span>
+              <input name="memberEmail" type="email" required maxlength="254" placeholder="collaborator@example.com">
+            </label>
+          </div>
+          <div class="workspace-invite-grid">
+            <label class="workspace-field">
+              <span class="workspace-field-label"><span>Position / Title</span><span class="workspace-optional">optional</span></span>
+              <input name="memberPosition" list="cx-position-suggestions" maxlength="80" placeholder="e.g. Lead Editor, Client Reviewer">
+              <datalist id="cx-position-suggestions">
+                <option value="Lead Editor">
+                <option value="Assistant Editor">
+                <option value="Client Producer / Reviewer">
+                <option value="Executive Producer">
+                <option value="Colorist">
+                <option value="Sound Designer">
+                <option value="Motion Designer / VFX">
+                <option value="Creative Director">
+              </datalist>
+            </label>
+            <label class="workspace-field">
+              <span class="workspace-field-label"><span>Access level</span></span>
+              <select name="memberAccess">
+                <option value="review" selected>Review &amp; comment — timestamp feedback</option>
+                <option value="full">Full access — upload &amp; manage</option>
+                <option value="view">View only — download &amp; stream</option>
+              </select>
+            </label>
+          </div>
+          <p role="alert" class="workspace-invite-notice" data-invite-notice hidden></p>
+          <button class="workspace-button primary workspace-invite-submit" type="submit">＋ Send project invitation</button>
+        </form>
+        <div class="workspace-members-section">
+          <header class="workspace-members-header">
+            <b>Project members (<span data-members-count>1</span>)</b>
+            <small>Active collaborators on this project</small>
+          </header>
+          <div class="workspace-members-list" data-members-list></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const close = () => { layer.innerHTML = ""; };
+  layer.querySelector("[data-close-invite]").addEventListener("click", close);
+  layer.querySelector(".workspace-modal-backdrop").addEventListener("click", event => { if (event.target === event.currentTarget) close(); });
+
+  const form = layer.querySelector("[data-invite-form]");
+  const notice = layer.querySelector("[data-invite-notice]");
+
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const name = String(data.get("memberName") || "").trim();
+    const email = String(data.get("memberEmail") || "").trim().toLowerCase();
+    const position = String(data.get("memberPosition") || "").trim();
+    const access = String(data.get("memberAccess") || "review");
+
+    if (!name || !email) return;
+
+    if (members.some(m => m.email.toLowerCase() === email)) {
+      notice.textContent = `${email} is already a member of this project.`;
+      notice.className = "workspace-invite-notice error";
+      notice.hidden = false;
+      return;
+    }
+
+    const newMember = {
+      id: "m_" + Date.now(),
+      name,
+      email,
+      position: position || "Collaborator",
+      access,
+      role: "invited",
+      invitedAt: Date.now()
+    };
+
+    members.push(newMember);
+    saveProjectMembers(project.id, members);
+    renderMembersList();
+    form.reset();
+
+    notice.textContent = `Invitation sent to ${name} (${position || "Collaborator"}).`;
+    notice.className = "workspace-invite-notice success";
+    notice.hidden = false;
+  });
+
+  renderMembersList();
 }
 
 function openProjectSettingsModal(root, project, actions) {

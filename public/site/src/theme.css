@@ -747,3 +747,91 @@ html[data-theme="light"] #app.admin-app :is(.admin-columns>section,.owner-activi
 @media (prefers-reduced-motion:reduce) {
   .global-theme-toggle { transition:none; }
 }
+
+/* Preserve rich Content X fiery orange background animation in light mode */
+html[data-theme="light"] #app .cx-orbit i {
+  border-color: rgba(255, 120, 50, 0.45);
+  background: radial-gradient(ellipse at 35% 8%, rgba(255, 174, 76, 0.45), rgba(255, 100, 37, 0.28) 35%, rgba(255, 138, 73, 0.12) 65%);
+  box-shadow: inset 0 3px 7px rgba(255, 199, 127, 0.7), inset 0 -18px 36px rgba(255, 92, 32, 0.15), 0 -5px 25px rgba(255, 101, 29, 0.35);
+}
+html[data-theme="light"] #app .cx-satellite {
+  background: radial-gradient(circle at 28% 22%, #ffe7ae, #ff8d27 24%, #e04b16 52%, #9e2a06 82%);
+  box-shadow: 0 16px 36px rgba(255, 92, 32, 0.35);
+}
+html[data-theme="light"] #app .cx-story-halo {
+  background: radial-gradient(ellipse, rgba(255, 99, 27, 0.32), rgba(224, 75, 22, 0.18) 46%, transparent 70%);
+}
+html[data-theme="light"] #app .cx-story-rings i {
+  border-color: #ff7a2e;
+  background: linear-gradient(180deg, rgba(255, 191, 113, 0.5), rgba(230, 86, 22, 0.3) 45%, rgba(255, 91, 32, 0.35));
+  box-shadow: inset 0 2px 4px rgba(255, 194, 120, 0.8), 0 9px 15px rgba(255, 92, 32, 0.2);
+}
+
+/* Light mode rail settings icon */
+html[data-theme="light"] #app .workspace-rail-settings {
+  color: #626873;
+}
+html[data-theme="light"] #app .workspace-rail-settings:hover,
+html[data-theme="light"] #app .workspace-rail-settings.active {
+  background: #eceef2;
+  color: #ff5c20;
+}
+
+/* Light mode invite modal & member list */
+html[data-theme="light"] #app .workspace-invite-modal {
+  background: #fff;
+  border-color: #dfe2e7;
+  color: #17191f;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.14);
+}
+html[data-theme="light"] #app .workspace-members-section {
+  border-top-color: #e6e9ef;
+}
+html[data-theme="light"] #app .workspace-members-header b {
+  color: #17191f;
+}
+html[data-theme="light"] #app .workspace-members-header small {
+  color: #707681;
+}
+html[data-theme="light"] #app .workspace-member-row {
+  background: #f8f9fb;
+  border-color: #e2e5eb;
+}
+html[data-theme="light"] #app .workspace-member-row:hover {
+  border-color: #d0d5dd;
+}
+html[data-theme="light"] #app .workspace-member-heading b {
+  color: #17191f;
+}
+html[data-theme="light"] #app .workspace-member-position {
+  background: rgba(255, 92, 32, 0.1);
+  border-color: rgba(255, 92, 32, 0.25);
+  color: #e64a19;
+}
+html[data-theme="light"] #app .workspace-member-role-badge.owner {
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+}
+html[data-theme="light"] #app .workspace-member-role-badge.invited {
+  background: #e9ecef;
+  color: #555b66;
+}
+html[data-theme="light"] #app .workspace-member-email {
+  color: #6c7380;
+}
+html[data-theme="light"] #app .workspace-member-remove {
+  color: #888e99;
+}
+html[data-theme="light"] #app .workspace-member-remove:hover {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+}
+html[data-theme="light"] #app .account-onboarding-grid select {
+  background: #fff;
+  border-color: #d1d5db;
+  color: #17191f;
+}
+html[data-theme="light"] #app .account-onboarding-grid label {
+  color: #4b5563;
+}
+
