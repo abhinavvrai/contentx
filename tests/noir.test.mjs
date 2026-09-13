@@ -44,6 +44,11 @@ test("dark styling is set before script execution and visitors can save their di
   assert.match(theme, /html\[data-theme="light"\] #app \.admin-shell>main/);
   assert.match(theme, /html\[data-theme="light"\] #app :is\(\.account-story/);
   assert.match(theme, /\.provider-dashboard-grid>aside/);
+  assert.match(features, /document\.startViewTransition/);
+  assert.match(features, /theme-is-switching/);
+  assert.match(theme, /html\[data-theme="light"\] #app \.hero/);
+  assert.match(theme, /html\[data-theme="light"\] #app \.cx-orbit i/);
+  assert.match(theme, /contact-grid \.em-scene--frames/);
 });
 
 test("the new stylesheet parses and key text/button palettes exceed 4.5:1", async () => {

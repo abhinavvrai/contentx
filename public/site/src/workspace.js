@@ -1,5 +1,5 @@
 import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspace.js?v=organize-access-2";
-import { bindWorkspaceOrganizer, openUnifiedSearch } from "./workspace-organizer.js?v=frame-native-20";
+import { bindWorkspaceOrganizer, openUnifiedSearch } from "./workspace-organizer.js?v=centered-dialogs-1";
 import { openReviewRoom } from "./review-room.js?v=frame-native-20";
 import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-20";
 

@@ -217,6 +217,7 @@ function pushServerNotification(type, title, message, meta = {}) {
 }
 
 export function initTheme() {
+  let transitionTimer;
   const applyTheme = value => {
     const theme = value === "light" ? "light" : "dark";
     document.documentElement.dataset.theme = theme;
@@ -258,7 +259,13 @@ export function initTheme() {
     if (!event.target.closest?.("[data-theme-control]")) return;
     const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     try { localStorage.setItem("cx_theme", next); } catch {}
-    applyTheme(next);
+    const reducedMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    const commitTheme = () => applyTheme(next);
+    document.documentElement.classList.add("theme-is-switching");
+    clearTimeout(transitionTimer);
+    if (document.startViewTransition && !reducedMotion) document.startViewTransition(commitTheme);
+    else commitTheme();
+    transitionTimer = setTimeout(() => document.documentElement.classList.remove("theme-is-switching"), 420);
   });
 }
 

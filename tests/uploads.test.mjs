@@ -342,6 +342,20 @@ test("adds free account workspaces with 50 GB quota and review comments", async 
   assert.match(account, /Open free workspace/);
 });
 
+test("centers organizer dialogs and keeps project controls grouped", async () => {
+  const [organizer, styles] = await Promise.all([
+    readFile(new URL("../public/site/src/workspace-organizer.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/site/src/workspace-organizer.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(styles, /\.organizer-dialog\[open\]\{position:fixed;inset:0;margin:auto\}/);
+  assert.match(styles, /organizer-folder-favorite\[hidden\]/);
+  assert.match(styles, /organizer-control-group/);
+  assert.match(organizer, /Workflow stage/);
+  assert.match(organizer, /Save current/);
+  assert.match(organizer, /folderFavorite\.hidden=!folder/);
+});
+
 test("keeps the workspace usable through transient refresh and upload failures", async () => {
   const [workspace, styles] = await Promise.all([
     readFile(new URL("../public/site/src/workspace.js", import.meta.url), "utf8"),
