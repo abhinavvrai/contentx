@@ -34,6 +34,35 @@ Coupon reliability: discounts are created only in Content X admin and recalculat
 
 The complete accepted signed-in scope is tracked item-by-item in [APP_IMPROVEMENT_CHECKLIST.md](docs/APP_IMPROVEMENT_CHECKLIST.md), with the release history in [APP_WORKSPACE_ROADMAP.md](docs/APP_WORKSPACE_ROADMAP.md). There are 186 in-scope improvements, excluding all 15 public marketing/conversion items. The whole backlog is **not complete**: never turn a partial implementation or an unavailable provider into a completion claim.
 
+## Production-ready release 8 — 14 September 2026: Canonical USD Short-Form Pricing & Script Writing Studio
+
+This release updates the Content X short-form pricing system, introduces an in-workspace Notion/Docs-style Script Writing Studio, and resolves theme toggle collisions and lingering dark elements in light mode:
+
+1. **Canonical USD Short-Form Pricing System**:
+   - Exactly three plans: **Basic**, **Standard** (Most popular), and **Premium** (High-impact editing).
+   - USD remains the canonical pricing currency across client UI and backend calculations (`lib/razorpay.ts`). Approximate INR conversions are displayed for reference.
+   - Segmented quantity selector for **4, 8, and 12 videos** with live per-video rates and volume savings tags:
+     - **Basic**: 4 videos: $100 ($25/vid), 8 videos: $189 ($23.63/vid, 5% savings), 12 videos: $269 ($22.42/vid, 10% savings).
+     - **Standard**: 4 videos: $120 ($30/vid), 8 videos: $227 ($28.38/vid, 5% savings), 12 videos: $323 ($26.92/vid, 10% savings).
+     - **Premium**: 4 videos: $399 ($99.75/vid), 8 videos: $699 ($87.38/vid, 12% savings), 12 videos: $999 ($83.25/vid, 17% savings).
+   - Turnaround policy strip: 48h turnaround per video, dedicated creative lead, included revisions per video, and 100% quality guarantee.
+   - Custom bulk quote callout for orders requiring more than 12 videos.
+   - Distinct **"Join as Editor"** flow and banner completely separate from client pricing.
+   - Server-side price recalculation and order amount validation in `lib/razorpay.ts`.
+
+2. **Notion & Google Docs-Style Script Writing Studio** (`scripts-studio.js`):
+   - Multi-script management with draft, review, approved, and recording workflow statuses.
+   - Rich block and inline formatting: H1 scene headers, H2 shot cues, body text, bold, italic, underline, strikethrough, and color highlighters.
+   - Production cue tags: `[VO]`, `[B-ROLL]`, `[TALENT]`, `[SFX]`, and `[GRAPHIC]`.
+   - Real-time speech duration calculator calibrated to natural narration speed (~135 words per minute) alongside live word count.
+   - Script export to Markdown (`.md`), Plaintext (`.txt`), and quick copy to clipboard.
+   - Integrated into both creator workspace navigation and client project dashboard.
+
+3. **Theme Collision & Light Mode UI Polish**:
+   - Relocated theme toggles to dedicated non-interfering positions in review and workspace views (`.review-theme-toggle` and `.workspace-theme-toggle`), preventing any overlap with comment inputs or submission buttons.
+   - Fixed high-contrast dark bars and dark containers in light mode across the recycle bin modal, activity audit list, share manager, version picker, and undo notification toasts.
+   - Signed-in sessions landing without a URL hash now cleanly default to `#workspace` instead of marketing `#home`, with a clear "Website" return link in the sidebar.
+
 ## Production-ready release 7 — 13 September 2026
 
 This source release centers all project-organizer native dialogs in the viewport, removes the empty project-root favourite marker, and reorganizes Collection, Workflow stage, Saved view and Project structure controls into responsive labelled groups. Existing organizer actions and server authorization remain unchanged.

@@ -70,3 +70,197 @@ html[data-theme="light"] .admin-table .owner-project-row{border-color:#e3e5ea}ht
 
 /* The Google Identity Services button supplies its own complete visual treatment. */
 .account-provider-actions [data-google-button]{display:flex!important;width:100%!important;height:auto!important;min-height:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important}.account-provider-actions [data-google-button]>div{display:flex!important;width:100%!important;height:auto!important;justify-content:center}.account-provider-actions [data-google-button] iframe{display:block!important;width:100%!important;max-width:400px!important;height:44px!important;margin:0 auto!important}
+
+/* Canonical Short-Form USD Pricing Controls */
+.unified-qty-chips {
+  display: inline-flex;
+  gap: 6px;
+  margin: 14px 0 16px;
+  padding: 4px;
+  border: 1px solid #e1e1dd;
+  border-radius: 12px;
+  background: #f4f4f1;
+}
+.unified-qty-chips button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #63636c;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all var(--fx-fast);
+}
+.unified-qty-chips button:hover {
+  color: #17171b;
+  background: rgba(255, 255, 255, 0.6);
+}
+.unified-qty-chips button.active {
+  border-color: #d2d2ce;
+  background: #fff;
+  color: #ff5c20;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.cx-save-tag {
+  padding: 2px 5px;
+  border-radius: 99px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .02em;
+}
+.unified-plan-badge-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.badge-popular {
+  background: #fff0e9;
+  color: #e64a19;
+  border: 1px solid rgba(255, 92, 32, 0.3);
+}
+.badge-premium {
+  background: #f3e8ff;
+  color: #7c3aed;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+.unified-currency-note {
+  margin-top: 6px;
+  color: #8c8c96;
+  font-size: 11px;
+}
+.unified-turnaround-policy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px dashed #deded9;
+  border-radius: 10px;
+  background: #fafaf8;
+  font-size: 11px;
+  color: #55555e;
+}
+.unified-turnaround-policy span b {
+  color: #17171b;
+}
+.unified-more-videos {
+  margin-top: 20px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #f0f0ed;
+  text-align: center;
+}
+.unified-more-videos a {
+  color: #ff5c20;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.unified-more-videos a:hover {
+  text-decoration: underline;
+}
+
+html[data-theme="dark"] .unified-qty-chips {
+  border-color: #383a45;
+  background: #171821;
+}
+html[data-theme="dark"] .unified-qty-chips button {
+  color: #9da0af;
+}
+html[data-theme="dark"] .unified-qty-chips button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+html[data-theme="dark"] .unified-qty-chips button.active {
+  border-color: #4a4d5e;
+  background: #232532;
+  color: #ff7838;
+}
+html[data-theme="dark"] .cx-save-tag {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+html[data-theme="dark"] .unified-turnaround-policy {
+  border-color: #363948;
+  background: #191a24;
+  color: #a1a5b6;
+}
+html[data-theme="dark"] .unified-turnaround-policy span b {
+  color: #fff;
+}
+html[data-theme="dark"] .unified-more-videos {
+  background: #1c1d27;
+}
+
+.pricing-editor-banner {
+  margin-top: 36px;
+  padding: 24px 28px;
+  border: 1px solid #dfdfdc;
+  border-radius: 17px;
+  background: #fbfbf9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.pricing-editor-content {
+  max-width: 620px;
+}
+.pricing-editor-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 8px;
+}
+.pricing-editor-content h3 {
+  font-size: 18px;
+  font-weight: 900;
+  color: #17171b;
+  letter-spacing: -.03em;
+  margin: 0 0 6px;
+}
+.pricing-editor-content p {
+  margin: 0;
+  color: #717178;
+  font-size: 12px;
+  line-height: 1.5;
+}
+html[data-theme="dark"] .pricing-editor-banner {
+  border-color: #363948;
+  background: #191a24;
+}
+html[data-theme="dark"] .pricing-editor-badge {
+  background: rgba(79, 70, 229, 0.2);
+  color: #818cf8;
+}
+html[data-theme="dark"] .pricing-editor-content h3 {
+  color: #f3f3f4;
+}
+html[data-theme="dark"] .pricing-editor-content p {
+  color: #9da0af;
+}
+@media (max-width: 700px) {
+  .pricing-editor-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
+}

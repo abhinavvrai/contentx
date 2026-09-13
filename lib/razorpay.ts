@@ -24,6 +24,19 @@ export const servicePlans = {
   revision_long: { name: "Extra Long-form Revision Round", amount: 500 },
 } as const;
 
+export const CANONICAL_SHORTFORM_PRICES = {
+  Basic: { 4: 100, 8: 189, 12: 269 },
+  Standard: { 4: 120, 8: 227, 12: 323 },
+  Premium: { 4: 399, 8: 699, 12: 999 },
+} as const;
+
+export function getCanonicalShortformPrice(planName: string, quantity: number): number | null {
+  const norm = String(planName || "").trim().toLowerCase();
+  const key = norm.includes("premium") ? "Premium" : norm.includes("standard") || norm.includes("better") || norm.includes("growth") ? "Standard" : norm.includes("basic") ? "Basic" : null;
+  if (!key) return null;
+  return (CANONICAL_SHORTFORM_PRICES as Record<string, Record<number, number>>)[key]?.[quantity] ?? null;
+}
+
 export type PlanId = keyof typeof servicePlans;
 export type BillingMode = "monthly" | "one_off";
 
@@ -286,7 +299,9 @@ export function calculateOrder(input: {
   if (!isReelPlan && !isLongformPlan && !isPodcastPlan && billing !== "one_off") {
     throw new Error("Standalone services use one-time pricing.");
   }
-  if (isReelPlan && billing === "monthly" && quantity < 10) {
+  const canonicalShortformUsd = isReelPlan ? getCanonicalShortformPrice(plan.name, quantity) : null;
+  const isCanonicalShortform = canonicalShortformUsd !== null && (quantity === 4 || quantity === 8 || quantity === 12);
+  if (isReelPlan && billing === "monthly" && quantity < 10 && !isCanonicalShortform) {
     throw new Error("Monthly reel production starts at 10 videos.");
   }
   if (isPodcastPlan && billing === "monthly" && quantity < 2) {
@@ -339,7 +354,10 @@ export function calculateOrder(input: {
   const billingPremiumAmount = billing === "one_off" && usesBillingPremium ? Math.round(subtotalAmount * 0.2) : 0;
   const totalAmount = subtotalAmount + billingPremiumAmount;
   const currency = input.currency === "USD" ? "USD" : "INR";
-  const totalAmountMinor = currency === "USD" ? roundedUsdFromInr(totalAmount) * 100 : totalAmount * 100;
+  const canonicalTotalMinor = isCanonicalShortform && !addOns.length && !adjustments.length
+    ? (currency === "USD" ? canonicalShortformUsd * 100 : Math.round(canonicalShortformUsd * USD_INR_RATE * 100))
+    : (currency === "USD" ? roundedUsdFromInr(totalAmount) * 100 : totalAmount * 100);
+  const canonicalUsdAmount = isCanonicalShortform ? canonicalShortformUsd : (currency === "USD" ? roundedUsdFromInr(totalAmount) : Math.round(totalAmount / USD_INR_RATE));
 
   return {
     billing,
@@ -355,10 +373,11 @@ export function calculateOrder(input: {
     subtotalAmount,
     billingPremiumAmount,
     totalAmount,
+    canonicalUsdAmount,
     currency,
     settlementCurrency: "INR",
-    totalAmountPaise: totalAmountMinor,
-    totalAmountInrPaise: totalAmount * 100,
+    totalAmountPaise: canonicalTotalMinor,
+    totalAmountInrPaise: isCanonicalShortform ? Math.round(canonicalShortformUsd * USD_INR_RATE * 100) : totalAmount * 100,
   };
 }
 

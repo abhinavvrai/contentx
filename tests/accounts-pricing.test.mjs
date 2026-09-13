@@ -575,3 +575,49 @@ test("keeps production upload completion compatible with long R2 upload ids", as
   const uploadsRoute = await load("app/api/uploads/route.ts");
   assert.match(uploadsRoute, /cleanText\(input\.uploadId, 2048\)/);
 });
+
+test("supports canonical USD short-form pricing system with 4, 8 and 12 video tiers", async () => {
+  const [features, razorpay, commerceCss] = await Promise.all([
+    load("public/site/src/features.js"),
+    load("lib/razorpay.ts"),
+    load("public/site/src/commerce.css"),
+  ]);
+
+  // Server-side canonical prices matrix in lib/razorpay.ts
+  assert.match(razorpay, /CANONICAL_SHORTFORM_PRICES/);
+  assert.match(razorpay, /Basic:\s*\{\s*4:\s*100,\s*8:\s*189,\s*12:\s*269\s*\}/);
+  assert.match(razorpay, /Standard:\s*\{\s*4:\s*120,\s*8:\s*227,\s*12:\s*323\s*\}/);
+  assert.match(razorpay, /Premium:\s*\{\s*4:\s*399,\s*8:\s*699,\s*12:\s*999\s*\}/);
+  assert.match(razorpay, /function getCanonicalShortformPrice/);
+
+  // Client-side canonical prices in public/site/src/features.js
+  assert.match(features, /CANONICAL_SHORTFORM_PRICES/);
+  assert.match(features, /data-qty-choice="4"/);
+  assert.match(features, /data-qty-choice="8"/);
+  assert.match(features, /data-qty-choice="12"/);
+  assert.match(features, /5% volume savings/);
+  assert.match(features, /10% volume savings/);
+  assert.match(features, /12% savings/);
+  assert.match(features, /17% savings/);
+
+  // Turnaround policy strip and quality guarantee
+  assert.match(features, /unified-turnaround-policy/);
+  assert.match(features, /48h Turnaround/);
+  assert.match(features, /Dedicated Creative Lead/);
+  assert.match(features, /100% Quality Guaranteed/);
+
+  // Bulk quote flow
+  assert.match(features, /unified-more-videos/);
+  assert.match(features, /Get a custom bulk quote/);
+
+  // Separate Join as Editor modal/banner
+  assert.match(features, /pricing-editor-banner/);
+  assert.match(features, /Join as Editor/);
+  assert.match(features, /data-apply="Video Editor"/);
+
+  // Segmented chips and editor banner styling in commerce.css
+  assert.match(commerceCss, /\.unified-qty-chips/);
+  assert.match(commerceCss, /\.cx-save-tag/);
+  assert.match(commerceCss, /\.unified-turnaround-policy/);
+  assert.match(commerceCss, /\.pricing-editor-banner/);
+});

@@ -1,4 +1,5 @@
 import { recordNotification } from "./features.js";
+import { openScriptStudioModal } from "./scripts-studio.js";
 
 const local = {
   get(key, fallback) {
@@ -339,6 +340,11 @@ export function enhanceDashboardSuite(root, actions) {
   const taskButton = document.createElement("button"); taskButton.dataset.dash = "tasks"; taskButton.innerHTML = `<span>✓</span>Tasks <b>${tasks.filter(task => task.clientId === activeClient.id && task.status !== "Done").length}</b>`;
   nav.insertBefore(taskButton, nav.querySelector('[data-dash="messages"]') || null);
   taskButton.addEventListener("click", () => { setActiveNav(root, taskButton); renderTaskBoard(root.querySelector(".dash-main"), false, null, activeClient.id, actions); });
+  const scriptButton = document.createElement("button"); scriptButton.dataset.dash = "scripts"; scriptButton.innerHTML = `<span>¶</span>Scripts`;
+  nav.insertBefore(scriptButton, nav.querySelector('[data-dash="messages"]') || null);
+  scriptButton.addEventListener("click", () => {
+    openScriptStudioModal(root, getActiveProject(activeClient), [], actions);
+  });
   root.querySelector('[data-dash="reviews"]')?.addEventListener("click", event => { setActiveNav(root, event.currentTarget); renderWorkspaceCollection(root.querySelector(".dash-main"), "review", actions); });
   root.querySelector('[data-dash="approved"]')?.addEventListener("click", event => { setActiveNav(root, event.currentTarget); renderWorkspaceCollection(root.querySelector(".dash-main"), "approved", actions); });
   root.querySelector('[data-dash="assets"]')?.addEventListener("click", event => { setActiveNav(root, event.currentTarget); renderWorkspaceCollection(root.querySelector(".dash-main"), "assets", actions); });

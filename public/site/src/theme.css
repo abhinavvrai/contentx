@@ -128,6 +128,21 @@ html[data-theme="light"] .global-theme-toggle::before { content:"☾"; }
 .global-theme-toggle:hover { transform:translateY(-2px); border-color:#ff8a58; }
 .global-theme-toggle:focus-visible { outline:3px solid #ff8a5866; outline-offset:3px; }
 
+/* In review and workspace views, reposition toggle away from the comment panel and action buttons */
+#app.review-app ~ .global-theme-toggle,
+.global-theme-toggle.review-theme-toggle {
+  right: auto !important;
+  left: 78px !important;
+  bottom: 18px !important;
+}
+
+#app.workspace-app ~ .global-theme-toggle,
+.global-theme-toggle.workspace-theme-toggle {
+  right: auto !important;
+  left: 18px !important;
+  bottom: 64px !important;
+}
+
 /* The homepage keeps appearance beside its primary navigation action. */
 .site-nav .nav-theme-toggle {
   position:static;
@@ -859,4 +874,313 @@ html[data-theme="light"] #app .account-onboarding-grid select {
 }
 html[data-theme="light"] #app .account-onboarding-grid label {
   color: #4b5563;
+}
+
+/* Light mode styles for Recently Deleted / Recycle modal */
+html[data-theme="light"] #app .workspace-recycle-modal {
+  background: #fff;
+  border-color: #dfe2e7;
+  color: #17191f;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.14);
+}
+html[data-theme="light"] #app .workspace-recycle-list article {
+  background: #f8f9fb;
+  border-color: #e2e5eb;
+}
+html[data-theme="light"] #app .workspace-recycle-list article>span {
+  background: #fff0e9;
+  color: #ff5c20;
+}
+html[data-theme="light"] #app .workspace-recycle-list b {
+  color: #17191f;
+}
+html[data-theme="light"] #app .workspace-recycle-list small {
+  color: #666c77;
+}
+html[data-theme="light"] #app .workspace-recycle-empty {
+  background: #f8f9fb;
+  border-color: #e2e5eb;
+}
+html[data-theme="light"] #app .workspace-recycle-empty b {
+  color: #17191f;
+}
+html[data-theme="light"] #app .workspace-recycle-empty small {
+  color: #666c77;
+}
+html[data-theme="light"] #app .workspace-recycle-empty>span {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+/* Light mode styles for Project Activity list */
+html[data-theme="light"] #app .workspace-activity-modal {
+  background: #fff;
+  border-color: #dfe2e7;
+  color: #17191f;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.14);
+}
+html[data-theme="light"] #app .workspace-activity-list article {
+  background: #f8f9fb;
+  border-color: #e2e5eb;
+}
+html[data-theme="light"] #app .workspace-activity-list article>span {
+  background: #fff0e9;
+  color: #ff5c20;
+}
+html[data-theme="light"] #app .workspace-activity-list b {
+  color: #17191f;
+}
+html[data-theme="light"] #app .workspace-activity-list p {
+  color: #374151;
+}
+html[data-theme="light"] #app .workspace-activity-list small {
+  color: #666c77;
+}
+
+/* Light mode styles for Share modal & existing share rows */
+html[data-theme="light"] #app .workspace-share-modal {
+  background: #fff;
+  border-color: #dfe2e7;
+  color: #17191f;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.14);
+}
+html[data-theme="light"] #app .workspace-share-assets {
+  border-color: #e2e5eb;
+}
+html[data-theme="light"] #app .workspace-share-assets legend {
+  color: #17191f;
+}
+html[data-theme="light"] #app .workspace-share-assets label {
+  background: #f8f9fb;
+  border-color: #e2e5eb;
+}
+html[data-theme="light"] #app .workspace-share-assets b {
+  color: #17191f;
+}
+html[data-theme="light"] #app .workspace-share-assets span {
+  color: #ff5c20;
+}
+html[data-theme="light"] #app .workspace-existing-shares .workspace-share-row {
+  background: #f8f9fb;
+  border-color: #e2e5eb;
+}
+html[data-theme="light"] #app .workspace-share-row>header small,
+html[data-theme="light"] #app .workspace-share-row>header em {
+  color: #666c77;
+}
+html[data-theme="light"] #app .workspace-share-row>header>span {
+  background: #fff;
+  border-color: #d0d5dd;
+  color: #4b5563;
+}
+html[data-theme="light"] #app .workspace-share-row>details {
+  border-top-color: #e2e5eb;
+}
+html[data-theme="light"] #app .workspace-share-row>details>summary {
+  color: #ff5c20;
+}
+html[data-theme="light"] #app .workspace-share-row .mini-check {
+  background: #fff;
+  border-color: #e2e5eb;
+}
+
+/* Light mode styles for Permanent Delete warning aside */
+html[data-theme="light"] #app .workspace-delete-modal {
+  background: #fff;
+  border-color: #fed7d7;
+  color: #17191f;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.14);
+}
+html[data-theme="light"] #app .workspace-delete-modal>p strong {
+  color: #17191f;
+}
+html[data-theme="light"] #app .workspace-delete-modal>aside {
+  background: #fff5f5;
+  border-color: #fed7d7;
+}
+html[data-theme="light"] #app .workspace-delete-modal>aside b {
+  color: #c53030;
+}
+html[data-theme="light"] #app .workspace-delete-modal>aside small {
+  color: #742a2a;
+}
+html[data-theme="light"] #app .workspace-delete-modal>aside>span {
+  background: #feb2b2;
+  color: #9b2c2c;
+}
+
+/* Light mode styles for Version Picker & Undo Toast */
+html[data-theme="light"] .workspace-version-picker-button {
+  background: #f8f9fb;
+  border-color: #d0d5dd;
+  color: #17191f;
+}
+html[data-theme="light"] .workspace-version-picker {
+  background: #fff;
+  border-color: #dfe2e7;
+  color: #17191f;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.14);
+}
+html[data-theme="light"] .workspace-version-picker select {
+  background: #fff;
+  border-color: #d0d5dd;
+  color: #17191f;
+}
+html[data-theme="light"] .workspace-version-picker button {
+  background: #f1f3f7;
+  border-color: #d0d5dd;
+  color: #17191f;
+}
+html[data-theme="light"] .workspace-undo-toast {
+  background: #fff;
+  border-color: #d0d5dd;
+  color: #17191f;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+}
+html[data-theme="light"] .workspace-undo-toast button {
+  background: #f1f3f7;
+  border-color: #d0d5dd;
+  color: #17191f;
+}
+
+/* Light mode styles for Script Writing Studio */
+html[data-theme="light"] #app .workspace-scripts-nav {
+  border-top-color: #e2e5eb;
+}
+html[data-theme="light"] #app .workspace-scripts-nav header small {
+  color: #6c7380;
+}
+html[data-theme="light"] #app .workspace-scripts-nav header button {
+  background: #f8f9fb;
+  border-color: #d0d5dd;
+  color: #374151;
+}
+html[data-theme="light"] #app .workspace-scripts-nav>button.all {
+  background: #f8f9fb;
+  border-color: #e2e5eb;
+  color: #17191f;
+}
+html[data-theme="light"] #app .workspace-scripts-nav>button.all:hover {
+  background: #f0f2f6;
+  border-color: #ff5c20;
+}
+html[data-theme="light"] #app .workspace-scripts-nav>button.all em {
+  background: #eceef2;
+  color: #e64a19;
+}
+
+html[data-theme="light"] .script-studio-layer {
+  background: rgba(15, 23, 42, 0.45);
+}
+html[data-theme="light"] .script-studio-modal {
+  background: #fff;
+  border-color: #dfe2e7;
+  color: #17191f;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.18);
+}
+html[data-theme="light"] .script-studio-header {
+  background: #fcfcfd;
+  border-bottom-color: #e5e7eb;
+}
+html[data-theme="light"] .script-studio-title-group h2 {
+  color: #111827;
+}
+html[data-theme="light"] .script-studio-title-group small {
+  color: #6b7280;
+}
+html[data-theme="light"] .script-studio-close {
+  border-color: #d1d5db;
+  color: #4b5563;
+}
+html[data-theme="light"] .script-studio-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+  border-color: #ff5c20;
+}
+html[data-theme="light"] .script-studio-body {
+  background: #fff;
+}
+html[data-theme="light"] .script-studio-sidebar {
+  background: #f9fafb;
+  border-right-color: #e5e7eb;
+}
+html[data-theme="light"] .script-studio-sidebar-header {
+  border-bottom-color: #e5e7eb;
+}
+html[data-theme="light"] .script-studio-sidebar-header strong {
+  color: #111827;
+}
+html[data-theme="light"] .script-item {
+  background: #fff;
+  border-color: #e5e7eb;
+}
+html[data-theme="light"] .script-item:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+html[data-theme="light"] .script-item.active {
+  background: #fff8f5;
+  border-color: #ff5c20;
+}
+html[data-theme="light"] .script-item-title {
+  color: #111827;
+}
+html[data-theme="light"] .script-item-meta small {
+  color: #6b7280;
+}
+html[data-theme="light"] .script-studio-main {
+  background: #fff;
+}
+html[data-theme="light"] .script-meta-bar {
+  background: #fafafa;
+  border-bottom-color: #e5e7eb;
+}
+html[data-theme="light"] .script-title-input {
+  background: #fff;
+  border-color: #d1d5db;
+  color: #111827;
+}
+html[data-theme="light"] .script-status-select,
+html[data-theme="light"] .script-folder-select {
+  background: #fff;
+  border-color: #d1d5db;
+  color: #111827;
+}
+html[data-theme="light"] .script-editor-toolbar {
+  background: #f9fafb;
+  border-bottom-color: #e5e7eb;
+}
+html[data-theme="light"] .script-editor-toolbar button {
+  background: #fff;
+  border-color: #d1d5db;
+  color: #374151;
+}
+html[data-theme="light"] .script-editor-toolbar button:hover {
+  border-color: #ff5c20;
+  color: #ff5c20;
+  background: #fff;
+}
+html[data-theme="light"] .toolbar-sep {
+  background: #e5e7eb;
+}
+html[data-theme="light"] .toolbar-label {
+  color: #6b7280;
+}
+html[data-theme="light"] .script-editor-content {
+  color: #1f2937;
+}
+html[data-theme="light"] .script-editor-content h1 {
+  color: #111827;
+  border-bottom-color: #e5e7eb;
+}
+html[data-theme="light"] .script-editor-content h2 {
+  color: #1f2937;
+}
+html[data-theme="light"] .script-teleprompter-footer {
+  background: #fafafa;
+  border-top-color: #e5e7eb;
+}
+html[data-theme="light"] .teleprompter-timer small,
+html[data-theme="light"] .teleprompter-stats {
+  color: #6b7280;
 }

@@ -250,6 +250,10 @@ export function initTheme() {
       control.classList.remove("nav-theme-toggle");
       document.body.append(control);
     }
+    const isReview = Boolean(document.querySelector("#app.review-app") || location.hash === "#review");
+    const isWorkspace = Boolean(document.querySelector("#app.workspace-app") || location.hash.startsWith("#workspace"));
+    control.classList.toggle("review-theme-toggle", isReview);
+    control.classList.toggle("workspace-theme-toggle", isWorkspace && !isReview);
     applyTheme(document.documentElement.dataset.theme);
   };
   placeControl();
@@ -367,6 +371,31 @@ function enhancePricingSelections(pricing, actions) {
   renderPresets();
 }
 
+const CANONICAL_SHORTFORM_PRICES = {
+  Basic: {
+    4: { usd: 100, rate: "25.00", save: null },
+    8: { usd: 189, rate: "23.63", save: "5% volume savings" },
+    12: { usd: 269, rate: "22.42", save: "10% volume savings" },
+  },
+  Standard: {
+    4: { usd: 120, rate: "30.00", save: null },
+    8: { usd: 227, rate: "28.38", save: "5% volume savings" },
+    12: { usd: 323, rate: "26.92", save: "10% volume savings" },
+  },
+  Premium: {
+    4: { usd: 399, rate: "99.75", save: null },
+    8: { usd: 699, rate: "87.38", save: "12% savings" },
+    12: { usd: 999, rate: "83.25", save: "17% savings" },
+  },
+};
+
+function getShortformPlanKey(name) {
+  const norm = String(name || "").toLowerCase();
+  if (norm.includes("premium")) return "Premium";
+  if (norm.includes("standard") || norm.includes("better") || norm.includes("growth")) return "Standard";
+  return "Basic";
+}
+
 function setupUnifiedPricing(pricing, actions, data) {
   const packages = {
     video: [
@@ -411,9 +440,9 @@ function setupUnifiedPricing(pricing, actions, data) {
       { id:"long_rush_delivery", name:"Priority Delivery", price:1000, copy:"Priority placement in the production queue." },
     ],
   };
-  const state = { billing:"monthly", service:"video", quantity:10, planId:"basic_reel", selectedAddOns:new Set(), addOnsRevealed:false, deliveryFormat:"Vertical 9:16", durationMinutes:10, rawFootageMinutes:60 };
+  const state = { billing:"monthly", service:"video", quantity:8, planId:"basic_reel", selectedAddOns:new Set(), addOnsRevealed:false, deliveryFormat:"Vertical 9:16", durationMinutes:10, rawFootageMinutes:60 };
   pricing.dataset.pricingRestored = "unified";
-  pricing.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple, flexible pricing</p><h2>Choose the work. Add only what you <em>need.</em></h2><p>Monthly production is shown first. One-off work stays available with a 20% flexibility premium, and pricing switches automatically by visitor region.</p></div><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="monthly" class="active">Monthly</button><button type="button" data-unified-billing="one_off">Per reel</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Short-form</button><button type="button" data-unified-service="longform">Long-form</button><button type="button" data-unified-service="podcast">Podcast</button></div></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a short-form package</strong><small>Switch between the tabs, then expand add-ons if needed.</small></div></header><div class="unified-package-browser" data-unified-packages></div></div><div class="unified-step" data-quantity-step><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Monthly short-form production starts at 10.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>10</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div><label class="unified-volume-slider"><span>Package volume</span><input type="range" min="10" max="30" value="10" data-unified-slider><small><b data-unified-slider-min>10</b><b data-unified-slider-max>30</b></small></label><div class="longform-controls" data-longform-controls hidden><label><span>Final video length</span><input type="range" min="10" max="60" step="5" value="10" data-duration-slider><small><b data-duration-value>10 min</b><em data-duration-note>Long-form starts at ₹5,000 for 10 minutes.</em></small></label><label><span>Raw footage to review</span><input type="range" min="60" max="600" step="15" value="60" data-raw-slider><small><b data-raw-value>1 hr</b><em>Extra raw footage is priced in 15-minute bands at ₹200 each.</em></small></label></div></div></section><aside class="unified-summary"><span data-unified-badge>MONTHLY PRODUCTION</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons / scope <b data-unified-addons-total></b></span><span data-unified-premium-line hidden>One-off +20% <b data-unified-premium></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">Revision rounds follow the selected package. Extra short-form rounds are ₹300; extra long-form rounds are ₹500.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
+  pricing.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple, flexible pricing</p><h2>Choose the work. Add only what you <em>need.</em></h2><p>Monthly production is shown first. One-off work stays available with a 20% flexibility premium, and pricing switches automatically by visitor region.</p></div><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="monthly" class="active">Monthly</button><button type="button" data-unified-billing="one_off">Per reel</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Short-form</button><button type="button" data-unified-service="longform">Long-form</button><button type="button" data-unified-service="podcast">Podcast</button></div></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a short-form package</strong><small>Switch between the tabs, then expand add-ons if needed.</small></div></header><div class="unified-package-browser" data-unified-packages></div></div><div class="unified-step" data-quantity-step><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Monthly short-form production starts at 10.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>10</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div><label class="unified-volume-slider"><span>Package volume</span><input type="range" min="10" max="30" value="10" data-unified-slider><small><b data-unified-slider-min>10</b><b data-unified-slider-max>30</b></small></label><div class="longform-controls" data-longform-controls hidden><label><span>Final video length</span><input type="range" min="10" max="60" step="5" value="10" data-duration-slider><small><b data-duration-value>10 min</b><em data-duration-note>Long-form starts at ₹5,000 for 10 minutes.</em></small></label><label><span>Raw footage to review</span><input type="range" min="60" max="600" step="15" value="60" data-raw-slider><small><b data-raw-value>1 hr</b><em>Extra raw footage is priced in 15-minute bands at ₹200 each.</em></small></label></div></div></section><aside class="unified-summary"><span data-unified-badge>MONTHLY PRODUCTION</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons / scope <b data-unified-addons-total></b></span><span data-unified-premium-line hidden>One-off +20% <b data-unified-premium></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">Revision rounds follow the selected package. Extra short-form rounds are ₹300; extra long-form rounds are ₹500.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div><div class="pricing-editor-banner"><div class="pricing-editor-content"><span class="pricing-editor-badge">For Creators & Editors</span><h3>Looking to edit or create with Content X?</h3><p>We work with world-class video editors, motion designers and thumbnail artists. Explore open opportunities, submit your portfolio, and get placed on high-impact creator accounts.</p></div><button type="button" class="pill pill-dark" data-apply="Video Editor">Join as Editor →</button></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
     ["Content Strategy & Planning", "Plan", "Content pillars, audience positioning, monthly calendar, campaign concepts, hooks and performance review."],
     ["Social Media Management", "Manage", "Scheduling, publishing, captions, hashtag research, comment management and monthly reporting."],
     ["Full Content Team", "Full service", "Strategy, scripts, editing, covers, scheduling and one accountable Content X manager."],
@@ -465,6 +494,11 @@ function setupUnifiedPricing(pricing, actions, data) {
   const billingPremiumAmount = amount => state.billing === "one_off" ? Math.round(amount * 0.2) : 0;
   const amountWithBilling = amount => amount + billingPremiumAmount(amount);
   const packageRange = item => {
+    if (state.service === "video") {
+      const planKey = getShortformPlanKey(item.name);
+      const canonical = CANONICAL_SHORTFORM_PRICES[planKey];
+      if (canonical) return `$${canonical[4].usd}–$${canonical[12].usd}`;
+    }
     const start = amountWithBilling(item.price);
     if (item.maxPrice) return `${money(start)}–${money(amountWithBilling(item.maxPrice))}`;
     if (String(item.range || "").toLowerCase().startsWith("from")) return `from ${money(start)}`;
@@ -474,11 +508,67 @@ function setupUnifiedPricing(pricing, actions, data) {
   function renderPackages() {
     pricing.querySelector("[data-package-heading]").textContent = `Choose a ${serviceLabel()} package`;
     const plan = selectedPackage();
+    const isVideo = state.service === "video";
+    const planKey = getShortformPlanKey(plan.name);
+    const canonicalTable = isVideo ? CANONICAL_SHORTFORM_PRICES[planKey] : null;
+    const currentCanonical = canonicalTable ? (canonicalTable[state.quantity] || canonicalTable[8]) : null;
     const available = availableAddOnsForPlan();
     const premiumMotionClarity = plan.id === "premium_motion" ? `<div class="unified-package-note"><strong>₹3,500 Motion Plus</strong><small>Includes premium editing, B-roll, sound design, motion titles, animated callouts and branded 2D accents. The optional ₹1,500 upgrade is only for tracked graphics, masking, compositing and custom animated scenes—₹5,000 total.</small></div>` : "";
     const continueLabel = available.length && !state.addOnsRevealed ? `Show add-ons for ${plan.name}` : "Next: quantity & format";
-    packageContainer.innerHTML = `<div class="unified-plan-tabs" role="tablist" aria-label="${state.service} packages">${packages[state.service].map(item => `<button type="button" role="tab" aria-selected="${item.id === state.planId}" class="${item.id === state.planId ? "active" : ""}" data-plan-tab="${item.id}">${item.name}<small>${packageRange(item)}</small></button>`).join("")}</div><article class="unified-plan-detail"><p class="unified-plan-label">${plan.tag}</p><div class="unified-plan-price"><strong>${money(amountWithBilling(plan.price))}</strong><span>starting per ${serviceSingular()}${state.billing === "one_off" ? " · one-off +20%" : ""}</span></div><p class="unified-plan-copy">${plan.summary}</p><div class="unified-plan-meta"><span>◷ <b>${plan.delivery}</b></span><span>⟳ <b>${plan.revisions}</b></span></div><ul>${plan.includes.map(feature => `<li><b>✓</b>${feature}</li>`).join("")}${(plan.unavailable || []).map(feature => `<li class="unavailable"><b>—</b>${feature}</li>`).join("")}</ul>${premiumMotionClarity}${available.length ? `<details class="unified-package-addons" data-package-addons ${state.addOnsRevealed || state.selectedAddOns.size ? "open" : ""}><summary><span>Optional upgrades for ${plan.name}</span><b>${state.selectedAddOns.size ? `${state.selectedAddOns.size} selected` : "Choose add-ons"} ↓</b></summary><div class="unified-addon-grid" data-unified-addons></div></details>` : `<div class="unified-package-note"><strong>No paid upgrade needed for this package.</strong><small>Core inclusions are already bundled into the selected package.</small></div>`}<button type="button" class="unified-plan-continue" data-plan-continue>${continueLabel}<span>→</span></button></article>`;
+
+    const planBadge = isVideo
+      ? (planKey === "Standard"
+        ? `<span class="unified-plan-badge-tag badge-popular">Most Popular · Better Finish</span>`
+        : planKey === "Premium"
+        ? `<span class="unified-plan-badge-tag badge-premium">High-Impact Editing · Motion Ready</span>`
+        : `<span class="unified-plan-badge-tag">Budget · Clean Cuts</span>`)
+      : "";
+
+    const videoQtySelector = isVideo && canonicalTable
+      ? `<div class="unified-qty-selector-wrap" style="margin:16px 0 14px">
+          <small style="display:block;margin-bottom:8px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#85858d;">Choose Video Quantity</small>
+          <div class="unified-qty-chips" role="group" aria-label="Choose quantity">
+            <button type="button" class="${state.quantity === 4 ? "active" : ""}" data-qty-choice="4">4 videos</button>
+            <button type="button" class="${state.quantity === 8 ? "active" : ""}" data-qty-choice="8">8 videos <span class="cx-save-tag">${canonicalTable[8].save}</span></button>
+            <button type="button" class="${state.quantity === 12 ? "active" : ""}" data-qty-choice="12">12 videos <span class="cx-save-tag">${canonicalTable[12].save}</span></button>
+          </div>
+        </div>`
+      : "";
+
+    const priceHtml = isVideo && currentCanonical
+      ? `<div class="unified-plan-price"><strong>$${currentCanonical.usd}</strong><span>($${currentCanonical.rate}/video · ${state.quantity} videos)</span></div><small class="unified-currency-note">USD Canonical · approx. ₹${Math.round(currentCanonical.usd * USD_INR_RATE).toLocaleString("en-IN")}</small>`
+      : `<div class="unified-plan-price"><strong>${money(amountWithBilling(plan.price))}</strong><span>starting per ${serviceSingular()}${state.billing === "one_off" ? " · one-off +20%" : ""}</span></div>`;
+
+    const turnaroundPolicy = isVideo
+      ? `<div class="unified-turnaround-policy">
+          <span>⚡ <b>48h Turnaround</b> per video</span>
+          <span>👤 <b>Dedicated Creative Lead</b></span>
+          <span>🔄 <b>${plan.revisions}</b> per video</span>
+          <span>🎯 <b>100% Quality Guaranteed</b></span>
+        </div>`
+      : "";
+
+    const moreVideosCallout = isVideo
+      ? `<div class="unified-more-videos">
+          <span>Need more than 12 videos or custom scope? </span>
+          <a href="${data.whatsapp || "#contact-form"}" target="_blank" rel="noreferrer">Get a custom bulk quote →</a>
+        </div>`
+      : "";
+
+    packageContainer.innerHTML = `<div class="unified-plan-tabs" role="tablist" aria-label="${state.service} packages">${packages[state.service].map(item => {
+      const isVid = state.service === "video";
+      const k = getShortformPlanKey(item.name);
+      const tbl = isVid ? CANONICAL_SHORTFORM_PRICES[k] : null;
+      const tabPrice = tbl ? `$${tbl[4].usd}–$${tbl[12].usd}` : packageRange(item);
+      return `<button type="button" role="tab" aria-selected="${item.id === state.planId}" class="${item.id === state.planId ? "active" : ""}" data-plan-tab="${item.id}">${item.name}<small>${tabPrice}</small></button>`;
+    }).join("")}</div><article class="unified-plan-detail">${planBadge}<p class="unified-plan-label">${plan.tag}</p>${videoQtySelector}${priceHtml}${turnaroundPolicy}<p class="unified-plan-copy">${plan.summary}</p><div class="unified-plan-meta"><span>◷ <b>${plan.delivery}</b></span><span>⟳ <b>${plan.revisions}</b></span></div><ul>${plan.includes.map(feature => `<li><b>✓</b>${feature}</li>`).join("")}${(plan.unavailable || []).map(feature => `<li class="unavailable"><b>—</b>${feature}</li>`).join("")}</ul>${premiumMotionClarity}${available.length ? `<details class="unified-package-addons" data-package-addons ${state.addOnsRevealed || state.selectedAddOns.size ? "open" : ""}><summary><span>Optional upgrades for ${plan.name}</span><b>${state.selectedAddOns.size ? `${state.selectedAddOns.size} selected` : "Choose add-ons"} ↓</b></summary><div class="unified-addon-grid" data-unified-addons></div></details>` : `<div class="unified-package-note"><strong>No paid upgrade needed for this package.</strong><small>Core inclusions are already bundled into the selected package.</small></div>`}${moreVideosCallout}<button type="button" class="unified-plan-continue" data-plan-continue>${continueLabel}<span>→</span></button></article>`;
+
     packageContainer.querySelectorAll("[data-plan-tab]").forEach(button => button.addEventListener("click", () => { state.planId = button.dataset.planTab; state.addOnsRevealed = false; keepOnlyAvailableAddOns(); renderPackages(); updateSummary(); }));
+    packageContainer.querySelectorAll("[data-qty-choice]").forEach(btn => btn.addEventListener("click", () => {
+      state.quantity = Number(btn.dataset.qtyChoice);
+      renderPackages();
+      updateSummary();
+    }));
     renderAddOns();
     packageContainer.querySelector("[data-plan-continue]").addEventListener("click", () => {
       const details = packageContainer.querySelector("[data-package-addons]");
@@ -508,6 +598,14 @@ function setupUnifiedPricing(pricing, actions, data) {
 
   function updateSummary() {
     const plan = selectedPackage();
+    const isVideo = state.service === "video";
+    const planKey = getShortformPlanKey(plan.name);
+    const canonicalTable = isVideo ? CANONICAL_SHORTFORM_PRICES[planKey] : null;
+    if (isVideo && ![4, 8, 12].includes(state.quantity)) {
+      state.quantity = state.quantity <= 6 ? 4 : state.quantity <= 10 ? 8 : 12;
+    }
+    const currentCanonical = canonicalTable ? (canonicalTable[state.quantity] || canonicalTable[8]) : null;
+
     if (state.service === "longform") {
       state.durationMinutes = Math.max(Number(plan.includedMinutes || 10), state.durationMinutes);
       state.rawFootageMinutes = Math.max(Number(plan.includedRawMinutes || 60), state.rawFootageMinutes);
@@ -534,17 +632,29 @@ function setupUnifiedPricing(pricing, actions, data) {
       pricing.querySelector("[data-raw-value]").textContent = formatRawDuration(state.rawFootageMinutes);
       pricing.querySelector("[data-duration-note]").textContent = `Long-form starts at ${money(5000)} for 10 minutes.`;
     }
-    pricing.querySelector("[data-unified-badge]").textContent = state.billing === "monthly" ? "MONTHLY PRODUCTION" : `ONE-OFF PER ${serviceSingular().toUpperCase()}`;
+    pricing.querySelector("[data-unified-badge]").textContent = isVideo ? "USD CANONICAL PRODUCTION" : (state.billing === "monthly" ? "MONTHLY PRODUCTION" : `ONE-OFF PER ${serviceSingular().toUpperCase()}`);
     pricing.querySelector("[data-unified-summary-name]").textContent = plan.name;
-    pricing.querySelector("[data-unified-summary-meta]").textContent = `${state.quantity} ${state.quantity === 1 ? serviceSingular() : servicePlural()} · ${state.deliveryFormat}${state.service === "longform" ? ` · ${state.durationMinutes} min final · ${formatRawDuration(state.rawFootageMinutes)} raw` : ""}`;
+    pricing.querySelector("[data-unified-summary-meta]").textContent = isVideo && currentCanonical
+      ? `${state.quantity} videos · ${state.deliveryFormat} · 48h turnaround`
+      : `${state.quantity} ${state.quantity === 1 ? serviceSingular() : servicePlural()} · ${state.deliveryFormat}${state.service === "longform" ? ` · ${state.durationMinutes} min final · ${formatRawDuration(state.rawFootageMinutes)} raw` : ""}`;
     pricing.querySelector("[data-unified-summary-list]").innerHTML = plan.includes.slice(0, 3).map(item => `<li><span>✓</span>${item}</li>`).join("") + extras.map(item => `<li><span>+</span>${item.name}</li>`).join("");
-    pricing.querySelector("[data-unified-base]").textContent = money(base);
-    pricing.querySelector("[data-unified-addons-total]").textContent = extrasTotal ? money(extrasTotal) : money(0);
-    const premiumLine = pricing.querySelector("[data-unified-premium-line]");
-    premiumLine.hidden = !premium;
-    pricing.querySelector("[data-unified-premium]").textContent = premium ? money(premium) : money(0);
-    pricing.querySelector("[data-unified-total]").textContent = money(total);
-    pricing.querySelector("[data-unified-effective]").textContent = `${money(Math.round(total / state.quantity))} per ${serviceSingular()}`;
+
+    if (isVideo && currentCanonical) {
+      pricing.querySelector("[data-unified-base]").textContent = `$${currentCanonical.usd}`;
+      pricing.querySelector("[data-unified-addons-total]").textContent = extrasTotal ? money(extrasTotal) : "$0";
+      const premiumLine = pricing.querySelector("[data-unified-premium-line]");
+      premiumLine.hidden = true;
+      pricing.querySelector("[data-unified-total]").textContent = `$${currentCanonical.usd}`;
+      pricing.querySelector("[data-unified-effective]").textContent = `$${currentCanonical.rate} per video (approx. ₹${Math.round(currentCanonical.usd * USD_INR_RATE).toLocaleString("en-IN")})`;
+    } else {
+      pricing.querySelector("[data-unified-base]").textContent = money(base);
+      pricing.querySelector("[data-unified-addons-total]").textContent = extrasTotal ? money(extrasTotal) : money(0);
+      const premiumLine = pricing.querySelector("[data-unified-premium-line]");
+      premiumLine.hidden = !premium;
+      pricing.querySelector("[data-unified-premium]").textContent = premium ? money(premium) : money(0);
+      pricing.querySelector("[data-unified-total]").textContent = money(total);
+      pricing.querySelector("[data-unified-effective]").textContent = `${money(Math.round(total / state.quantity))} per ${serviceSingular()}`;
+    }
   }
 
   function switchService(service) {
@@ -554,10 +664,10 @@ function setupUnifiedPricing(pricing, actions, data) {
     state.addOnsRevealed = false;
     state.durationMinutes = service === "longform" ? 10 : state.durationMinutes;
     state.rawFootageMinutes = service === "longform" ? 60 : state.rawFootageMinutes;
-    state.quantity = Math.max(minimumQuantity(), state.billing === "monthly" ? minimumQuantity() : 1);
+    state.quantity = service === "video" ? 8 : Math.max(minimumQuantity(), state.billing === "monthly" ? minimumQuantity() : 1);
     pricing.querySelectorAll("[data-unified-service]").forEach(button => button.classList.toggle("active", button.dataset.unifiedService === service));
     pricing.querySelector('[data-unified-billing="one_off"]').textContent = oneOffLabel();
-    pricing.querySelector("[data-quantity-note]").textContent = state.billing === "monthly" ? `Monthly ${serviceLabel()} production starts at ${minimumQuantity()}.` : `Choose between 1 and ${maximumQuantity()} ${servicePlural()}.`;
+    pricing.querySelector("[data-quantity-note]").textContent = service === "video" ? "Choose 4, 8 or 12 videos. 48-hour turnaround." : (state.billing === "monthly" ? `Monthly ${serviceLabel()} production starts at ${minimumQuantity()}.` : `Choose between 1 and ${maximumQuantity()} ${servicePlural()}.`);
     renderPackages(); renderFormats(); updateSummary();
   }
 
@@ -570,20 +680,77 @@ function setupUnifiedPricing(pricing, actions, data) {
   }));
   pricing.querySelectorAll("[data-unified-service]").forEach(button => button.addEventListener("click", () => switchService(button.dataset.unifiedService)));
   pricing.querySelectorAll("[data-unified-quantity]").forEach(button => button.addEventListener("click", () => {
+    if (state.service === "video") {
+      const tiers = [4, 8, 12];
+      const isPlus = button.dataset.unifiedQuantity === "plus";
+      let idx = tiers.indexOf(state.quantity);
+      if (idx === -1) idx = 1;
+      idx = isPlus ? Math.min(tiers.length - 1, idx + 1) : Math.max(0, idx - 1);
+      state.quantity = tiers[idx];
+      renderPackages();
+      updateSummary();
+      return;
+    }
     state.quantity = Math.min(maximumQuantity(), Math.max(minimumQuantity(), state.quantity + (button.dataset.unifiedQuantity === "plus" ? 1 : -1)));
     updateSummary();
   }));
-  volumeSlider.addEventListener("input", () => { state.quantity = Number(volumeSlider.value); updateSummary(); });
+  volumeSlider.addEventListener("input", () => {
+    if (state.service === "video") {
+      const val = Number(volumeSlider.value);
+      state.quantity = val <= 6 ? 4 : val <= 10 ? 8 : 12;
+      renderPackages();
+      updateSummary();
+      return;
+    }
+    state.quantity = Number(volumeSlider.value);
+    updateSummary();
+  });
   durationSlider.addEventListener("input", () => { state.durationMinutes = Number(durationSlider.value); updateSummary(); });
   rawSlider.addEventListener("input", () => { state.rawFootageMinutes = Number(rawSlider.value); updateSummary(); });
   formatSelect.addEventListener("change", () => { state.deliveryFormat = formatSelect.value; updateSummary(); });
   pricing.querySelector("[data-unified-checkout]").addEventListener("click", () => {
     const plan = selectedPackage();
+    const isVideo = state.service === "video";
+    const planKey = getShortformPlanKey(plan.name);
+    const canonicalTable = isVideo ? CANONICAL_SHORTFORM_PRICES[planKey] : null;
+    const currentCanonical = canonicalTable ? (canonicalTable[state.quantity] || canonicalTable[8]) : null;
     const extras = [...selectedAddOnObjects(), ...scopeAdjustments()];
+
+    if (isVideo && currentCanonical) {
+      actions.openCheckout({
+        id: plan.id,
+        name: `${plan.name} · ${state.quantity} videos`,
+        price: currentCanonical.usd,
+        canonicalUsdAmount: currentCanonical.usd,
+        currency: "USD",
+        basePrice: currentCanonical.usd,
+        quantity: state.quantity,
+        billing: state.billing,
+        contentType: state.service,
+        deliveryFormat: state.deliveryFormat,
+        addOns: extras,
+        unit: state.billing === "monthly" ? "month" : "project",
+        badge: `${state.quantity} videos · $${currentCanonical.rate}/vid`,
+        features: [
+          `${state.quantity} short-form videos (${state.deliveryFormat})`,
+          `48h turnaround per video`,
+          `${plan.revisions} included per video`,
+          `Dedicated Creative Lead`,
+          ...(currentCanonical.save ? [currentCanonical.save] : []),
+          ...plan.includes,
+          ...extras.map(item => `${item.name} (+${money(item.price)} each)`)
+        ]
+      });
+      return;
+    }
+
     const subtotal = (plan.price + extras.reduce((sum, item) => sum + item.price, 0)) * state.quantity;
     const premium = billingPremiumAmount(subtotal);
     const total = subtotal + premium;
     actions.openCheckout({ id:plan.id, name:`${plan.name} · ${state.quantity} ${state.quantity === 1 ? serviceSingular() : servicePlural()}`, price:total, basePrice:plan.price, quantity:state.quantity, billing:state.billing, contentType:state.service, deliveryFormat:state.deliveryFormat, durationMinutes:state.service === "longform" ? state.durationMinutes : undefined, rawFootageMinutes:state.service === "longform" ? state.rawFootageMinutes : undefined, addOns:extras, unit:state.billing === "monthly" ? "month" : "project", badge:state.billing === "monthly" ? "Monthly production" : "One-time project +20%", features:[`${plan.revisions} included`, ...plan.includes, ...(state.service === "longform" ? [`Final length selected: ${state.durationMinutes} minutes`, `Raw footage selected: ${formatRawDuration(state.rawFootageMinutes)}`] : []), ...(premium ? [`One-off flexibility premium: ${money(premium)}`] : []), ...extras.map(item => `${item.name} (+${money(item.price)} each)`)] });
+  });
+  pricing.querySelectorAll("[data-apply]").forEach(btn => {
+    btn.addEventListener("click", () => openApplication(btn.dataset.apply));
   });
   renderPackages(); renderAddOns(); renderFormats(); updateSummary();
 }
@@ -612,6 +779,7 @@ export function renderAccess(root, actions) {
 
 export function renderCheckout(root, actions) {
   const plan = store.get("cx_checkout", monthlyPlans[1]);
+  const formatCheckoutPrice = price => plan.currency === "USD" ? `$${Number(price).toLocaleString("en-US")}` : money(price);
   const checkoutCopy = plan.revisionPurchase
     ? { back: "Back to workspace", eyebrow: "Additional revision round", secure: "Revision attached to this video", note: "After verified payment, one additional revision round is added only to the selected video and its existing version history.", success: "Your additional revision round is active for this video." }
     : plan.marketplace
@@ -620,7 +788,7 @@ export function renderCheckout(root, actions) {
       ? { back: "Back to review", eyebrow: "Hands-off review add-on", secure: "Content X managed review", note: "Your paid request goes directly to the review desk for brief checks, consolidated feedback, revision follow-up and final quality approval.", success: "Your managed review is paid and queued with the Content X review desk." }
       : { back: "Back to pricing", eyebrow: "Activate your workspace", secure: "Payment-gated access", note: "Your client workspace opens only after a successful payment record is created.", success: "Your Content X workspace is active." };
   root.className = "checkout-app";
-  root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span>Secure test checkout</span></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="test-banner"><strong>TEST MODE</strong><span>No real payment will be charged. Completing this form unlocks the dashboard on this device.</span></div><form><h3>Contact information</h3><div class="field-pair"><label>Full name<input name="name" required value="Meera Kapoor"></label><label>WhatsApp<input name="phone" required value="+91 98765 43210"></label></div><label>Email<input name="email" type="email" required value="demo@apexfitness.in"></label><h3>Payment method</h3><div class="payment-tabs"><label><input type="radio" name="method" value="UPI" checked><span>UPI</span></label><label><input type="radio" name="method" value="Card"><span>Card</span></label><label><input type="radio" name="method" value="Bank transfer"><span>Bank transfer</span></label></div><div class="payment-fields"><label>UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123"></label></div><label class="terms"><input type="checkbox" required><span>I agree to the scope, two included revisions per video, and ₹300 for each additional revision round.</span></label><button class="pill pill-hot pay-button" type="submit">Complete test payment · ${money(plan.price)}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge)}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-total"><span>Package total<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><strong>${money(plan.price)}</strong></div><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">Enter workspace →</button></div></div>`;
+  root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span>Secure test checkout</span></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="test-banner"><strong>TEST MODE</strong><span>No real payment will be charged. Completing this form unlocks the dashboard on this device.</span></div><form><h3>Contact information</h3><div class="field-pair"><label>Full name<input name="name" required value="Meera Kapoor"></label><label>WhatsApp<input name="phone" required value="+91 98765 43210"></label></div><label>Email<input name="email" type="email" required value="demo@apexfitness.in"></label><h3>Payment method</h3><div class="payment-tabs"><label><input type="radio" name="method" value="UPI" checked><span>UPI</span></label><label><input type="radio" name="method" value="Card"><span>Card</span></label><label><input type="radio" name="method" value="Bank transfer"><span>Bank transfer</span></label></div><div class="payment-fields"><label>UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123"></label></div><label class="terms"><input type="checkbox" required><span>I agree to the scope, two included revisions per video, and ₹300 for each additional revision round.</span></label><button class="pill pill-hot pay-button" type="submit">Complete test payment · ${formatCheckoutPrice(plan.price)}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge)}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-total"><span>Package total<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><strong>${formatCheckoutPrice(plan.price)}</strong></div><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">Enter workspace →</button></div></div>`;
   root.querySelector('input[name="name"]').value = "";
   root.querySelector('input[name="phone"]').value = "";
   root.querySelector('input[name="email"]').value = "";
@@ -670,7 +838,7 @@ export function renderCheckout(root, actions) {
   paymentForm.querySelector(".payment-fields").remove();
   paymentForm.querySelector(".terms").insertAdjacentHTML("beforebegin", `<div class="checkout-coupon"><label>Coupon code <span>optional</span><input name="couponCode" maxlength="32" autocomplete="off" placeholder="Enter your code"></label><small data-coupon-feedback>Discounts are checked securely before Razorpay opens.</small></div>`);
   const payButton = paymentForm.querySelector(".pay-button");
-  payButton.textContent = `Pay securely with Razorpay · ${money(plan.price)}`;
+  payButton.textContent = `Pay securely with Razorpay · ${formatCheckoutPrice(plan.price)}`;
   fetch("/api/auth", { cache:"no-store", credentials:"same-origin" }).then(response => response.json()).then(({ user }) => {
     if (!user) return;
     paymentForm.elements.name.value = user.name || "";
@@ -679,7 +847,7 @@ export function renderCheckout(root, actions) {
   paymentForm.addEventListener("submit", async event => {
     event.preventDefault();
     const contact = Object.fromEntries(new FormData(paymentForm));
-    const restore = () => { payButton.disabled = false; payButton.textContent = `Pay securely with Razorpay · ${money(plan.price)}`; };
+    const restore = () => { payButton.disabled = false; payButton.textContent = `Pay securely with Razorpay · ${formatCheckoutPrice(plan.price)}`; };
     payButton.disabled = true;
     payButton.textContent = "Preparing secure payment…";
     try {
@@ -688,7 +856,7 @@ export function renderCheckout(root, actions) {
         fetch("/api/payments/razorpay/order", {
           method:"POST",
           headers:{ "Content-Type":"application/json" },
-          body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.billing || (plan.unit === "month" ? "monthly" : "one_off"), addOns:(plan.addOns || []).map(item => item.id).filter(id => !["longform_extra_minutes", "longform_raw_review"].includes(id)), durationMinutes:plan.durationMinutes, rawFootageMinutes:plan.rawFootageMinutes, currency:activeCurrency, contentType:plan.contentType || "video", deliveryFormat:plan.deliveryFormat || "", projectId:plan.projectId, assetId:plan.assetId, name:contact.name, email:contact.email, phone:contact.phone, couponCode:contact.couponCode })
+          body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.billing || (plan.unit === "month" ? "monthly" : "one_off"), addOns:(plan.addOns || []).map(item => item.id).filter(id => !["longform_extra_minutes", "longform_raw_review"].includes(id)), durationMinutes:plan.durationMinutes, rawFootageMinutes:plan.rawFootageMinutes, currency:plan.currency || activeCurrency, contentType:plan.contentType || "video", deliveryFormat:plan.deliveryFormat || "", projectId:plan.projectId, assetId:plan.assetId, name:contact.name, email:contact.email, phone:contact.phone, couponCode:contact.couponCode })
         })
       ]);
       const config = await configResponse.json(), order = await orderResponse.json();

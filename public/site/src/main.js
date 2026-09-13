@@ -53,7 +53,16 @@ const actions = {
 async function renderRoute() {
   const renderVersion = ++routeRenderVersion;
   const motionRender = ++cinematicRender;
-  const route = location.hash.slice(1) || "home";
+  let route = location.hash.slice(1);
+  if (!route) {
+    await refreshAccountSession();
+    if (accountUser()) {
+      route = "workspace";
+      history.replaceState(null, "", `${location.pathname}${location.search}#workspace`);
+    } else {
+      route = "home";
+    }
+  }
   const stale = () => renderVersion !== routeRenderVersion;
   document.documentElement.classList.add("route-busy");
   try {
