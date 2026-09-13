@@ -10,7 +10,7 @@ Live site:
 
 Current source release label (publish and live verification required before calling it live):
 
-- `frame-native-20-production-ready-6` (13 September 2026; local release candidate)
+- `frame-native-20-production-ready-7` (13 September 2026; local release candidate)
 
 Important: do not write private passwords, OTPs, API keys, Razorpay secrets, Google client secrets, access codes or owner credentials in this file. Keep secrets in the proper environment variable system only.
 
@@ -34,13 +34,13 @@ Coupon reliability: discounts are created only in Content X admin and recalculat
 
 The complete accepted signed-in scope is tracked item-by-item in [APP_IMPROVEMENT_CHECKLIST.md](docs/APP_IMPROVEMENT_CHECKLIST.md), with the release history in [APP_WORKSPACE_ROADMAP.md](docs/APP_WORKSPACE_ROADMAP.md). There are 186 in-scope improvements, excluding all 15 public marketing/conversion items. The whole backlog is **not complete**: never turn a partial implementation or an unavailable provider into a completion claim.
 
-## Production-ready release 6 candidate — 13 September 2026
+## Production-ready release 7 candidate — 13 September 2026
 
 This source release centers all project-organizer native dialogs in the viewport, removes the empty project-root favourite marker, and reorganizes Collection, Workflow stage, Saved view and Project structure controls into responsive labelled groups. Existing organizer actions and server authorization remain unchanged.
 
 The homepage light appearance now keeps the hero artwork on the same cinematic dark palette used in dark mode while the surrounding interface changes theme. Theme changes use a short View Transition cross-fade where supported, with a reduced-motion-safe CSS fallback. The contact-section frame artwork uses a soft light-mode mask and shadow so its dark card edge blends into the white canvas instead of ending abruptly.
 
-Local verification: all 104 unit/regression tests pass, the clean vinext production build succeeds, Wrangler 4.92.0 strict dry-run succeeds with the existing D1/R2/assets bindings, and browser review confirms the dark and light hero compositions plus the feathered contact illustration. Publication is still pending: do not describe release 6 as live until its release commit is pushed to GitHub `main`, Cloudflare finishes deployment, and the live domain is checked with a fresh release query.
+Local verification: all 104 unit/regression tests pass, the clean vinext production build succeeds, Wrangler 4.92.0 strict dry-run succeeds with the existing D1/R2/assets bindings, and browser review confirms the dark and light hero compositions plus the feathered contact illustration. Release 6 production review then exposed a cramped 1105px organizer row, so release 7 expands the two-column responsive breakpoint to 1280px. Do not describe release 7 as live until its release commit is pushed to GitHub `main`, Cloudflare finishes deployment, and the live domain is checked with a fresh release query.
 
 ## Production-ready release 4 — 13 September 2026
 

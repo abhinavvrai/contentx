@@ -351,6 +351,7 @@ test("centers organizer dialogs and keeps project controls grouped", async () =>
   assert.match(styles, /\.organizer-dialog\[open\]\{position:fixed;inset:0;margin:auto\}/);
   assert.match(styles, /organizer-folder-favorite\[hidden\]/);
   assert.match(styles, /organizer-control-group/);
+  assert.match(styles, /@media\(max-width:1280px\)\{\.organizer-bar\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}\}/);
   assert.match(organizer, /Workflow stage/);
   assert.match(organizer, /Save current/);
   assert.match(organizer, /folderFavorite\.hidden=!folder/);

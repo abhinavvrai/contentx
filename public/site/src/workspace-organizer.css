@@ -8,5 +8,5 @@
 
 /* Project organizer: aligned control groups with predictable actions. */
 .organizer-folder-favorite[hidden],.organizer-folder-favorite:empty{display:none!important}.organizer-bar{display:grid;grid-template-columns:minmax(230px,1.25fr) minmax(155px,.75fr) minmax(240px,1.2fr) minmax(145px,.7fr);align-items:end;gap:12px;padding:14px 0 18px}.organizer-control-group{min-width:0;display:grid;gap:7px}.organizer-control-group>span{color:#c1bfca;font-size:11px;font-weight:750;letter-spacing:.035em}.organizer-control-group>div{min-width:0;display:flex;align-items:center;gap:7px}.organizer-control-group select{min-width:0;flex:1}.organizer-control-group button{flex:0 0 auto}.organizer-structure-group button{width:100%}
-@media(max-width:1100px){.organizer-bar{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1280px){.organizer-bar{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.organizer-bar{grid-template-columns:1fr}.organizer-control-group>div{width:100%}.organizer-control-group select{max-width:none}}
