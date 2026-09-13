@@ -4,7 +4,7 @@ Last updated: 13 September 2026
 Production URL: https://contentx.co.in/  
 GitHub repository: https://github.com/abhinavvrai/contentx  
 Production branch: `main`  
-Last verified feature checkpoint: see the deployment evidence in `README.md`. Current source release: `frame-native-20-production-ready-4`. Older checkpoints below are historical.
+Last verified feature checkpoint: `d5d9a4a` / Cloudflare `09346c84-66d8-46c8-9949-7eb73ecd0aad`; see live evidence in `README.md`. Current release: `frame-native-20-production-ready-4`. Older checkpoints below are historical.
 
 Current continuation rule: use `docs/APP_IMPROVEMENT_CHECKLIST.md` as the complete 186-item app backlog. Public marketing/conversion is excluded. Release 18 adds organization and reliability work but does not complete the entire list. Historical prototype descriptions below must not override newer server-backed implementation notes.
 
