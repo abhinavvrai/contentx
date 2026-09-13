@@ -1,27 +1,27 @@
-/* Restore the original vivid Content X orange; keep the permanent black canvas. */
-html[data-theme="dark"] {
+/* Restore the original vivid Content X orange; shared across themes. */
+:root {
   --em-start:#ff5c20;
   --em-end:#ff9b35;
   --em-ink:#241109;
   --em-gradient:linear-gradient(115deg,var(--em-start),#ff7828 55%,var(--em-end));
 }
-html[data-theme="dark"] body :is(.pill-hot,.pay-button,.brand-mark,.workspace-brand>span),
-html[data-theme="dark"] #app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary),
-html[data-theme="dark"] #app [data-feedback-demo] {
-  background:var(--em-gradient); color:var(--em-ink); border-color:#ff883f;
+body :is(.pill-hot,.pay-button,.brand-mark,.workspace-brand>span),
+#app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary),
+#app [data-feedback-demo] {
+  background:var(--em-gradient); color:#fff; border-color:#ff883f;
   box-shadow:0 7px 26px #ff5c202e;
 }
 /* Keep the compact orange brand marks crisp against the gradient. */
-html[data-theme="dark"] body :is(.brand-mark,.workspace-brand>span,.preloader__mark),
-html[data-theme="dark"] body :is(.brand-mark,.workspace-brand>span,.preloader__mark) * {
+body :is(.brand-mark,.workspace-brand>span,.preloader__mark),
+body :is(.brand-mark,.workspace-brand>span,.preloader__mark) * {
   color:var(--em-ink)!important;
   text-shadow:none!important;
 }
-/* Orange actions use white labels everywhere, including nested arrows/icons. */
-html[data-theme="dark"] body :is(.pill-hot,.pay-button,.support-fab),
-html[data-theme="dark"] body :is(.pill-hot,.pay-button,.support-fab) *,
-html[data-theme="dark"] #app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary,[data-feedback-demo]),
-html[data-theme="dark"] #app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary,[data-feedback-demo]) * {
+/* Orange actions use white labels everywhere, including nested arrows/icons across all themes. */
+body :is(.pill-hot,.pay-button,.support-fab),
+body :is(.pill-hot,.pay-button,.support-fab) *,
+#app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary,[data-feedback-demo],.unified-plan-continue),
+#app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary,[data-feedback-demo],.unified-plan-continue) * {
   color:#fff!important;
   text-shadow:0 1px 2px #6b2100!important;
 }
@@ -33,30 +33,30 @@ html[data-theme="dark"] #app [data-package-volume] {
 html[data-theme="dark"] #app :is(.new-project-card,.project-create-card) :is(strong,p,small) {
   color:#f4f1f4;
 }
-html[data-theme="dark"] #app.marketing-app { width:100%; overflow:hidden; }
-html[data-theme="dark"] body :is(.pill-hot,.pay-button):hover,
-html[data-theme="dark"] #app :is(.workspace-button.primary,[data-feedback-demo]):hover {
-  background:linear-gradient(115deg,#ff702c,#ffae4c); color:var(--em-ink); border-color:#ffb35e;
+#app.marketing-app { width:100%; overflow:hidden; }
+body :is(.pill-hot,.pay-button):hover,
+#app :is(.workspace-button.primary,[data-feedback-demo],.unified-plan-continue):hover {
+  background:linear-gradient(115deg,#ff702c,#ffae4c); color:#fff!important; border-color:#ffb35e;
   box-shadow:0 9px 32px #ff5c2045;
 }
 /* Replace the legacy peach/dark CTA treatment on colored product surfaces. */
-html[data-theme="dark"] #app :is(.feature-banner,.market-hero,.cta-section,.market-teaser-grid,.support-panel,.dash-header,.project-header,.review-header) :is(.pill-light,.pill-dark,.pill-outline) {
+#app :is(.feature-banner,.market-hero,.cta-section,.market-teaser-grid,.support-panel,.dash-header,.project-header,.review-header) :is(.pill-light,.pill-dark,.pill-outline) {
   background:var(--em-gradient); color:#fff!important; border-color:#ff883f;
   text-shadow:0 1px 2px #6b2100!important; box-shadow:0 9px 30px #ff5c2038;
 }
-html[data-theme="dark"] #app :is(.feature-banner,.market-hero,.cta-section,.market-teaser-grid,.support-panel,.dash-header,.project-header,.review-header) :is(.pill-light,.pill-dark,.pill-outline) * {
+#app :is(.feature-banner,.market-hero,.cta-section,.market-teaser-grid,.support-panel,.dash-header,.project-header,.review-header) :is(.pill-light,.pill-dark,.pill-outline) * {
   color:#fff!important; text-shadow:0 1px 2px #6b2100!important;
 }
-html[data-theme="dark"] #app :is(.feature-banner,.market-hero,.cta-section,.market-teaser-grid,.support-panel,.dash-header,.project-header,.review-header) :is(.pill-light,.pill-dark,.pill-outline):hover {
+#app :is(.feature-banner,.market-hero,.cta-section,.market-teaser-grid,.support-panel,.dash-header,.project-header,.review-header) :is(.pill-light,.pill-dark,.pill-outline):hover {
   background:linear-gradient(115deg,#ff702c,#ffae4c); color:#fff!important; border-color:#ffb35e;
   box-shadow:0 12px 36px #ff5c2050;
 }
-html[data-theme="dark"] #app :is(.hero .accent,.section-heading em,.creator-suite-copy h2 em,.faq-section h2 em,.contact-grid h2 em,.market-hero h1 em,.provider-intro h1 em,.dash-header h1 em,.sx-pulse h2 em) {
+#app :is(.hero .accent,.section-heading em,.creator-suite-copy h2 em,.faq-section h2 em,.contact-grid h2 em,.market-hero h1 em,.provider-intro h1 em,.dash-header h1 em,.sx-pulse h2 em) {
   color:#ff7828;
   background:linear-gradient(105deg,#ff6425 8%,#ff973b 60%,#ffbd69);
   background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent;
 }
-html[data-theme="dark"] #app :is(.eyebrow span,.progress-row em,.workspace-storage em,.preloader__line span) { background:var(--em-gradient); }
+#app :is(.eyebrow span,.progress-row em,.workspace-storage em), body .preloader__line span { background:var(--em-gradient); }
 html[data-theme="dark"] #app .hero {
   background:radial-gradient(ellipse at 90% 32%,#a039152f,transparent 52%),radial-gradient(ellipse at 76% 70%,#ff6c171c,transparent 60%),#101014;
 }
