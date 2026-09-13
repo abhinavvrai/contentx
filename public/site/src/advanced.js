@@ -541,18 +541,16 @@ function renderClientShares(root, client, project) {
   area.querySelectorAll("[data-private-manage-share]").forEach(button => button.addEventListener("click", () => toast("Client-specific share controls opened.")));
 }
 
-export function enhanceAdminSuite(root, actions) {
+export function enhanceAdminSuite(root) {
   if (root.dataset.advancedAdmin || !root.querySelector(".admin-content")) return;
   root.dataset.advancedAdmin = "true";
   const nav = root.querySelector(".admin-shell>aside nav");
   const tasks = getTasks();
   const workflow = document.createElement("button"); workflow.dataset.adminWorkflow = ""; workflow.setAttribute("aria-label", `Workflow and tasks, ${tasks.filter(task => task.status !== "Done").length} open`); workflow.innerHTML = `<span>✓</span>Workflow & tasks`; const settingsGroup = nav.querySelector('[data-owner-group="settings"]'); if (settingsGroup) settingsGroup.before(workflow); else nav.append(workflow);
   workflow.addEventListener("click", () => { nav.querySelectorAll("button").forEach(button => button.classList.toggle("active", button === workflow)); renderOwnerWorkflow(root.querySelector(".admin-content")); });
-  nav.querySelector('[data-admin="clients"]')?.addEventListener("click", () => renderClientDirectory(root.querySelector(".admin-content"), actions));
   nav.querySelector('[data-admin="team"]')?.addEventListener("click", () => renderTeamAccess(root.querySelector(".admin-content")));
   root.addEventListener("click", event => {
-    if (event.target.closest("[data-add-client]")) openNewClientModal(actions, () => renderClientDirectory(root.querySelector(".admin-content"), actions));
-    else if (event.target.textContent.trim().startsWith("+ Invite teammate")) openInviteTeammate();
+    if (event.target.textContent.trim().startsWith("+ Invite teammate")) openInviteTeammate();
     else if (event.target.textContent.trim().startsWith("Manage projects")) workflow.click();
     else if (event.target.textContent.trim().startsWith("Manage access")) openClientAccess(event.target.closest("article")?.querySelector("h3")?.textContent || "Client");
   });

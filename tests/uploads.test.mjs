@@ -334,6 +334,8 @@ test("adds free account workspaces with 50 GB quota and review comments", async 
   assert.match(workspace, /Your free review workspace is ready/);
   assert.match(workspace, /50 GB/);
   assert.match(workspace, /Create project/);
+  assert.match(workspace, /workspace-create-project/);
+  assert.match(workspace, /title="Project settings"/);
   assert.match(workspace, /workspace-comments/);
   assert.match(workspace, /create-comment/);
   assert.match(workspace, /data-comment-complete/);

@@ -1,13 +1,13 @@
 import { studio } from "./data.js?v=revision-bands-1";
 import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=frame-native-20";
-import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=frame-native-20-production-ready-4";
+import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=frame-native-20-production-ready-5";
 import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=client-path-2";
-import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js?v=comparison-feedback-1";
+import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js?v=live-client-directory-1";
 import { initProductPolish, polishRoute } from "./polish.js?v=admin-title-1";
 import { enhanceCreatorTools } from "./creator-tools.js?v=frame-native-3";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=owner-session-files-1";
 import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-native-20-auth-provider-2";
-import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=client-flow-4";
+import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=client-flow-5";
 import { enhanceStudioDashboard } from "./studio-workspace.js?v=organize-access-2";
 
 // Load decorative motion independently so a missing effect cannot block the app.
@@ -100,7 +100,7 @@ async function renderRoute() {
     else if (route === "talent") renderTalentProfile(root, actions);
     else if (route === "offer-services") renderProviderOnboarding(root, actions);
     else if (route === "provider-workspace") renderProviderWorkspace(root, actions);
-    else if (route === "owner") { await renderAdmin(root, actions); enhanceMarketplaceAdmin(root); enhanceAdminSuite(root, actions); enhanceUploadAdmin(root); }
+    else if (route === "owner") { await renderAdmin(root, actions); enhanceMarketplaceAdmin(root); enhanceAdminSuite(root); enhanceUploadAdmin(root); }
     else { renderMarketing(root, studio, actions); enhanceMarketing(root, actions, studio); enhanceMarketplaceMarketing(root, actions); }
     if (stale()) return;
     polishRoute(root, route);

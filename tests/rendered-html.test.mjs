@@ -73,7 +73,7 @@ test("ships the advanced review command center and shared task workflow", async 
     readFile(new URL("../public/site/src/advanced.css", import.meta.url), "utf8"),
   ]);
 
-  assert.match(index, /advanced\.css\?v=frame-native-20/);
+  assert.match(index, /advanced\.css\?v=live-client-directory-1/);
   assert.match(main, /enhanceReviewSuite/);
   assert.match(main, /enhanceDashboardSuite/);
   assert.match(main, /enhanceAdminSuite/);
@@ -83,6 +83,7 @@ test("ships the advanced review command center and shared task workflow", async 
   assert.match(advanced, /Keyboard shortcuts/);
   assert.match(advanced, /Workflow & tasks/);
   assert.match(advanced, /cx_tasks/);
+  assert.doesNotMatch(advanced, /querySelector\('\[data-admin="clients"\]'\)\?\.addEventListener/);
   assert.match(advancedStyles, /Content X advanced command center/);
   assert.match(advancedStyles, /comparison-grid/);
   assert.match(advancedStyles, /task-board/);
