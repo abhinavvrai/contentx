@@ -1,10 +1,10 @@
 # Content X Project Guide
 
-Last updated: 13 September 2026
+Last updated: 14 September 2026
 Production URL: https://contentx.co.in/  
 GitHub repository: https://github.com/abhinavvrai/contentx  
 Production branch: `main`  
-Last verified feature checkpoint: `d5d9a4a` / Cloudflare `09346c84-66d8-46c8-9949-7eb73ecd0aad`; see live evidence in `README.md`. Current source candidate: `frame-native-20-production-ready-7`; it is not live until GitHub/Cloudflare publication and production verification are recorded. Older checkpoints below are historical.
+Last verified feature checkpoint: application commits `59f5448` and `3b148ec`, serving release `frame-native-20-production-ready-7`; see live evidence in `README.md`. Older checkpoints below are historical.
 
 Current continuation rule: use `docs/APP_IMPROVEMENT_CHECKLIST.md` as the complete 186-item app backlog. Public marketing/conversion is excluded. Release 18 adds organization and reliability work but does not complete the entire list. Historical prototype descriptions below must not override newer server-backed implementation notes.
 
@@ -381,12 +381,12 @@ The real client workspace and account pages now map all nested cards, search con
 
 Apply `drizzle/0012_discount_codes.sql` once to production D1 before the application deployment. Never replay it against a database where those columns/tables already exist without first inspecting the schema. Runtime idempotent guards remain recovery support, not permission to skip the migration review. Share-link UI and API flows continue to require a real project ID; the browser guard redirects an impossible project-less attempt to project creation.
 
-## 23. Centered Organizer and Theme Transition — Release 7 Candidate
+## 23. Centered Organizer and Theme Transition — Release 7
 
-Current source candidate: `frame-native-20-production-ready-7`.
+Current production release: `frame-native-20-production-ready-7`.
 
 Project-organizer dialogs use explicit fixed viewport centering because the shared CSS reset removes the browser's default dialog margins. The project-root header must not render an empty favourite marker. Collection, workflow-stage, saved-view and template actions are grouped and responsive without changing their API calls or authorization boundaries. At viewports up to 1280px, the organizer uses a balanced two-column layout so the signed-in sidebar never squeezes the controls into a horizontally scrolling row.
 
 In light mode, the public homepage hero remains a deliberate dark cinematic island and uses the exact orbit/satellite palette from dark mode. Only the surrounding navigation and page sections change theme. User-triggered theme changes use the View Transition API when available, fall back to short color/background/border/shadow transitions, and disable animation for reduced-motion preferences. The contact frame scene is feathered only in light mode to avoid a hard clipped dark edge.
 
-No database migration, secret, binding or payment change is required for this candidate. Before calling it live, push the intended commit to GitHub `main`, wait for the configured Cloudflare deployment, and verify the release label, both themes, the signed-in real project organizer, and dialog centering on `contentx.co.in`.
+No database migration, secret, binding or payment change was required for this release. Application commits `59f5448` and `3b148ec` are on GitHub `main`; Cloudflare serves the release-7 marker. Production review covered the release label, both themes, the signed-in workspace, the compact-desktop organizer layout and viewport-centered dialogs on `contentx.co.in`.
