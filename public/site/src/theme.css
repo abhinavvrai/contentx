@@ -104,13 +104,13 @@ html[data-theme="light"] #app :is(.eyebrow span,.progress-row em,.workspace-stor
 
 /* One compact, accessible control on every route. */
 .global-theme-toggle {
+  display: none !important;
   position:fixed;
   z-index:240;
   right:22px;
   bottom:22px;
   width:44px;
   height:44px;
-  display:grid;
   place-items:center;
   padding:0;
   border:1px solid #3b3c46;

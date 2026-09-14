@@ -219,14 +219,16 @@ function pushServerNotification(type, title, message, meta = {}) {
 export function initTheme() {
   let transitionTimer;
   const applyTheme = value => {
-    const theme = value === "light" ? "light" : "dark";
+    // Light mode temporarily disabled per user direction; enforce dark mode across the entire app
+    const theme = "dark";
     document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "light" ? "#f4f5f7" : "#101014");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#101014");
     document.querySelectorAll("[data-theme-control]").forEach(button => {
-      const next = theme === "dark" ? "light" : "dark";
+      const next = "dark";
       button.setAttribute("aria-label", `Use ${next} mode`);
       button.setAttribute("title", `Use ${next} mode`);
-      button.setAttribute("aria-pressed", String(theme === "light"));
+      button.setAttribute("aria-pressed", "false");
+      button.style.display = "none";
     });
   };
   let savedTheme = "dark";
@@ -254,6 +256,7 @@ export function initTheme() {
     const isWorkspace = Boolean(document.querySelector("#app.workspace-app") || location.hash.startsWith("#workspace"));
     control.classList.toggle("review-theme-toggle", isReview);
     control.classList.toggle("workspace-theme-toggle", isWorkspace && !isReview);
+    control.style.display = "none";
     applyTheme(document.documentElement.dataset.theme);
   };
   placeControl();
@@ -261,13 +264,12 @@ export function initTheme() {
   if (app && typeof MutationObserver !== "undefined") new MutationObserver(placeControl).observe(app, { childList:true });
   document.addEventListener("click", event => {
     if (!event.target.closest?.("[data-theme-control]")) return;
-    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    const next = "dark";
     try { localStorage.setItem("cx_theme", next); } catch {}
-    const reducedMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     const commitTheme = () => applyTheme(next);
     document.documentElement.classList.add("theme-is-switching");
     clearTimeout(transitionTimer);
-    if (document.startViewTransition && !reducedMotion) document.startViewTransition(commitTheme);
+    if (document.startViewTransition) document.startViewTransition(commitTheme);
     else commitTheme();
     transitionTimer = setTimeout(() => document.documentElement.classList.remove("theme-is-switching"), 420);
   });
@@ -442,7 +444,7 @@ function setupUnifiedPricing(pricing, actions, data) {
   };
   const state = { billing:"monthly", service:"video", quantity:8, planId:"basic_reel", selectedAddOns:new Set(), addOnsRevealed:false, deliveryFormat:"Vertical 9:16", durationMinutes:10, rawFootageMinutes:60 };
   pricing.dataset.pricingRestored = "unified";
-  pricing.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple, flexible pricing</p><h2>Choose the work. Add only what you <em>need.</em></h2><p>Monthly production is shown first. One-off work stays available with a 20% flexibility premium, and pricing switches automatically by visitor region.</p></div><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="monthly" class="active">Monthly</button><button type="button" data-unified-billing="one_off">Per reel</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Short-form</button><button type="button" data-unified-service="longform">Long-form</button><button type="button" data-unified-service="podcast">Podcast</button></div></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a short-form package</strong><small>Switch between the tabs, then expand add-ons if needed.</small></div></header><div class="unified-package-browser" data-unified-packages></div></div><div class="unified-step" data-quantity-step><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Monthly short-form production starts at 10.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>10</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div><label class="unified-volume-slider"><span>Package volume</span><input type="range" min="10" max="30" value="10" data-unified-slider><small><b data-unified-slider-min>10</b><b data-unified-slider-max>30</b></small></label><div class="longform-controls" data-longform-controls hidden><label><span>Final video length</span><input type="range" min="10" max="60" step="5" value="10" data-duration-slider><small><b data-duration-value>10 min</b><em data-duration-note>Long-form starts at ₹5,000 for 10 minutes.</em></small></label><label><span>Raw footage to review</span><input type="range" min="60" max="600" step="15" value="60" data-raw-slider><small><b data-raw-value>1 hr</b><em>Extra raw footage is priced in 15-minute bands at ₹200 each.</em></small></label></div></div></section><aside class="unified-summary"><span data-unified-badge>MONTHLY PRODUCTION</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons / scope <b data-unified-addons-total></b></span><span data-unified-premium-line hidden>One-off +20% <b data-unified-premium></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">Revision rounds follow the selected package. Extra short-form rounds are ₹300; extra long-form rounds are ₹500.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div><div class="pricing-editor-banner"><div class="pricing-editor-content"><span class="pricing-editor-badge">For Creators & Editors</span><h3>Looking to edit or create with Content X?</h3><p>We work with world-class video editors, motion designers and thumbnail artists. Explore open opportunities, submit your portfolio, and get placed on high-impact creator accounts.</p></div><button type="button" class="pill pill-dark" data-apply="Video Editor">Join as Editor →</button></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
+  pricing.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple, flexible pricing</p><h2>High-retention video editing. <em>Zero overhead.</em></h2><p>Monthly production is shown first. One-off work stays available with a 20% flexibility premium, and pricing switches automatically by visitor region.</p></div><div class="cx-pricing-hero-toggle-wrap"><div class="cx-pricing-hero-toggle" role="tablist" aria-label="Select mode"><button type="button" class="active" data-service-intent="client"><span class="cx-toggle-dot"></span><span>Get Video Editing Service</span></button><button type="button" data-service-intent="creator"><span>Join as Creator / Editor</span><span class="cx-hiring-chip">We're hiring</span></button></div></div><div class="cx-lobby-section" data-client-pricing><div class="cx-lobby-pricing-grid"><article class="cx-lobby-card" data-lobby-card="Basic"><div class="cx-lobby-card-header"><span class="cx-lobby-card-title" data-lobby-title="Basic">Basic 8-pack</span><span class="cx-lobby-badge" data-lobby-badge="Basic">5% volume savings</span></div><div class="cx-lobby-rate-wrap"><div class="cx-lobby-rate" data-lobby-rate="Basic">$23.63</div><span class="cx-lobby-rate-unit">/video</span></div><p class="cx-lobby-subtitle">One request at a time. Pause or cancel anytime. Fast 48h delivery.</p><div class="cx-lobby-total-pill" data-lobby-total-pill="Basic"><span>Total $189 · 8 Videos (5% volume savings)</span><small class="cx-pill-inr">approx. ₹18,144</small></div><div class="cx-lobby-pack-switcher" role="group" aria-label="Basic package quantity"><button type="button" data-lobby-pack-btn="Basic" data-qty-choice="4">4 videos</button><button type="button" data-lobby-pack-btn="Basic" data-qty-choice="8" class="active">8 videos <span class="cx-save-tag">5% volume savings</span></button><button type="button" data-lobby-pack-btn="Basic" data-qty-choice="12">12 videos <span class="cx-save-tag">10% volume savings</span></button></div><ul class="cx-lobby-features"><li><span class="cx-sparkle">✦</span> Fast 48-72h turnaround</li><li><span class="cx-sparkle">✦</span> 1 active request at a time</li><li><span class="cx-sparkle">✦</span> Unlimited revisions</li><li><span class="cx-sparkle">✦</span> Clean cuts, pacing and zooms</li><li><span class="cx-sparkle">✦</span> Engaging captions and subtitles</li><li><span class="cx-sparkle">✦</span> Stickers, emojis and simple highlights</li><li><span class="cx-sparkle">✦</span> Light sound effects and music sync</li><li><span class="cx-sparkle">✦</span> 1080p social export (Vertical 9:16)</li></ul><button type="button" class="pill cx-lobby-buy-btn" data-lobby-buy="Basic">Buy Now</button></article><article class="cx-lobby-card cx-lobby-card--featured" data-lobby-card="Standard"><div class="cx-lobby-card-header"><span class="cx-lobby-card-title" data-lobby-title="Standard">Standard 8-pack</span><span class="cx-lobby-badge cx-lobby-badge--hot" data-lobby-badge="Standard">Most Popular · 5% savings</span></div><div class="cx-lobby-rate-wrap"><div class="cx-lobby-rate" data-lobby-rate="Standard">$28.38</div><span class="cx-lobby-rate-unit">/video</span></div><p class="cx-lobby-subtitle">One request at a time. Pause or cancel anytime. Fast 48h delivery.</p><div class="cx-lobby-total-pill cx-lobby-total-pill--featured" data-lobby-total-pill="Standard"><span>Total $227 · 8 Videos (5% volume savings)</span><small class="cx-pill-inr">approx. ₹21,792</small></div><div class="cx-lobby-pack-switcher" role="group" aria-label="Standard package quantity"><button type="button" data-lobby-pack-btn="Standard" data-qty-choice="4">4 videos</button><button type="button" data-lobby-pack-btn="Standard" data-qty-choice="8" class="active">8 videos <span class="cx-save-tag">5% volume savings</span></button><button type="button" data-lobby-pack-btn="Standard" data-qty-choice="12">12 videos <span class="cx-save-tag">10% volume savings</span></button></div><ul class="cx-lobby-features"><li><span class="cx-sparkle">✦</span> Fast 48h turnaround</li><li><span class="cx-sparkle">✦</span> 1 active request at a time</li><li><span class="cx-sparkle">✦</span> Unlimited revisions</li><li><span class="cx-sparkle">✦</span> Advanced motion graphics &amp; text styling</li><li><span class="cx-sparkle">✦</span> B-roll placement and visual cutaways</li><li><span class="cx-sparkle">✦</span> Sound effects and music accents</li><li><span class="cx-sparkle">✦</span> Hook variations for retention testing</li><li><span class="cx-sparkle">✦</span> Frame.io-accurate frame feedback</li><li><span class="cx-sparkle">✦</span> Dedicated Creative Lead</li><li><span class="cx-sparkle">✦</span> Source file included</li></ul><button type="button" class="pill pill-hot cx-lobby-buy-btn cx-lobby-buy-btn--featured" data-lobby-buy="Standard">Buy Now</button></article><article class="cx-lobby-card" data-lobby-card="Premium"><div class="cx-lobby-card-header"><span class="cx-lobby-card-title" data-lobby-title="Premium">Premium 4-pack</span><span class="cx-lobby-badge cx-lobby-badge--premium" data-lobby-badge="Premium">High-Impact · Motion Ready</span></div><div class="cx-lobby-rate-wrap"><div class="cx-lobby-rate" data-lobby-rate="Premium">$99.75</div><span class="cx-lobby-rate-unit">/video</span></div><p class="cx-lobby-subtitle">One request at a time. Pause or cancel anytime. Fast 24-48h delivery.</p><div class="cx-lobby-total-pill" data-lobby-total-pill="Premium"><span>Total $399 · 4 Videos</span><small class="cx-pill-inr">approx. ₹38,304</small></div><div class="cx-lobby-pack-switcher" role="group" aria-label="Premium package quantity"><button type="button" data-lobby-pack-btn="Premium" data-qty-choice="4" class="active">4 videos</button><button type="button" data-lobby-pack-btn="Premium" data-qty-choice="8">8 videos <span class="cx-save-tag">12% savings</span></button><button type="button" data-lobby-pack-btn="Premium" data-qty-choice="12">12 videos <span class="cx-save-tag">17% savings</span></button></div><ul class="cx-lobby-features"><li><span class="cx-sparkle">✦</span> Fast 24-48h priority turnaround</li><li><span class="cx-sparkle">✦</span> 1 active request at a time</li><li><span class="cx-sparkle">✦</span> Unlimited revisions</li><li><span class="cx-sparkle">✦</span> Retention-led premium edit &amp; viral pacing</li><li><span class="cx-sparkle">✦</span> Motion titles, animated callouts and branded 2D accents</li><li><span class="cx-sparkle">✦</span> Up to 10 relevant B-roll inserts</li><li><span class="cx-sparkle">✦</span> Full sound design and premium mix</li><li><span class="cx-sparkle">✦</span> Custom scroll-stopping cover design included</li><li><span class="cx-sparkle">✦</span> Dedicated Creative Director</li></ul><button type="button" class="pill cx-lobby-buy-btn" data-lobby-buy="Premium">Buy Now</button></article></div><div class="unified-turnaround-policy"><span>⚡ <b>48h Turnaround</b> per video</span><span>👤 <b>Dedicated Creative Lead</b></span><span>🔄 <b>Unlimited revisions</b> per video</span><span>🎯 <b>100% Quality Guaranteed</b></span></div><div class="unified-more-videos"><span>Need more than 12 videos or custom scope? </span><a href="${data.whatsapp || "#contact-form"}" target="_blank" rel="noreferrer">Get a custom bulk quote →</a></div></div><div class="cx-creator-hiring-section" data-creator-portal hidden><div class="pricing-editor-banner"><div class="pricing-editor-content"><span class="pricing-editor-badge">For Creators & Editors</span><h3>Looking to edit or create with Content X?</h3><p>We work with world-class video editors, motion designers and thumbnail artists. Explore open opportunities, submit your portfolio, and get placed on high-impact creator accounts.</p></div><button type="button" class="pill pill-dark" data-apply="Video Editor">Join as Editor →</button></div><div class="cx-hiring-roles-grid"><article class="cx-role-card"><span class="cx-role-tag">Open Role · Remote</span><h4>Short-Form Video Editor</h4><p>High-energy pacing, subtitles, zoom hooks, and seamless sound sync for Instagram Reels and YouTube Shorts.</p><ul><li>✦ Premiere Pro, DaVinci Resolve, or CapCut Pro</li><li>✦ Strong narrative rhythm and hook pacing</li><li>✦ Reliable 48h turnaround</li></ul><button class="pill pill-hot" type="button" data-apply="Short-Form Video Editor">Apply for this role →</button></article><article class="cx-role-card"><span class="cx-role-tag">Open Role · Remote</span><h4>Motion Graphic Designer</h4><p>Kinetic typography, animated callouts, 2D graphic assets, and dynamic UI mockups in After Effects.</p><ul><li>✦ After Effects &amp; Illustrator expertise</li><li>✦ Smooth easing, tracking &amp; compositing</li><li>✦ Branded design systems</li></ul><button class="pill pill-hot" type="button" data-apply="Motion Graphic Designer">Apply for this role →</button></article><article class="cx-role-card"><span class="cx-role-tag">Open Role · Remote</span><h4>Script Writer &amp; Hook Strategist</h4><p>Research, conceptualize, and write scroll-stopping 60-90 second video scripts with high retention hooks and CTAs.</p><ul><li>✦ Proven viral short-form frameworks</li><li>✦ Niche audience research</li><li>✦ Script-to-screen timing</li></ul><button class="pill pill-hot" type="button" data-apply="Script Writer">Apply for this role →</button></article><article class="cx-role-card"><span class="cx-role-tag">Open Role · Remote</span><h4>Thumbnail &amp; Cover Artist</h4><p>Design click-worthy YouTube thumbnails and Instagram Reel covers that drive 10%+ CTR across creator channels.</p><ul><li>✦ Photoshop &amp; Figma mastery</li><li>✦ Composition, facial lighting &amp; typography</li><li>✦ Rapid A/B variation delivery</li></ul><button class="pill pill-hot" type="button" data-apply="Thumbnail Artist">Apply for this role →</button></article></div></div><div class="unified-pricing-legacy-container" style="display:none;" aria-hidden="true"><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="monthly" class="active">Monthly</button><button type="button" data-unified-billing="one_off">Per reel</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Short-form</button><button type="button" data-unified-service="longform">Long-form</button><button type="button" data-unified-service="podcast">Podcast</button></div></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a short-form package</strong><small>Switch between the tabs, then expand add-ons if needed.</small></div></header><div class="unified-package-browser" data-unified-packages></div></div><div class="unified-step" data-quantity-step><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Monthly short-form production starts at 10.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>10</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div><label class="unified-volume-slider"><span>Package volume</span><input type="range" min="10" max="30" value="10" data-unified-slider><small><b data-unified-slider-min>10</b><b data-unified-slider-max>30</b></small></label><div class="longform-controls" data-longform-controls hidden><label><span>Final video length</span><input type="range" min="10" max="60" step="5" value="10" data-duration-slider><small><b data-duration-value>10 min</b><em data-duration-note>Long-form starts at ₹5,000 for 10 minutes.</em></small></label><label><span>Raw footage to review</span><input type="range" min="60" max="600" step="15" value="60" data-raw-slider><small><b data-raw-value>1 hr</b><em>Extra raw footage is priced in 15-minute bands at ₹200 each.</em></small></label></div></div></section><aside class="unified-summary"><span data-unified-badge>MONTHLY PRODUCTION</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons / scope <b data-unified-addons-total></b></span><span data-unified-premium-line hidden>One-off +20% <b data-unified-premium></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">Revision rounds follow the selected package. Extra short-form rounds are ₹300; extra long-form rounds are ₹500.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
     ["Content Strategy & Planning", "Plan", "Content pillars, audience positioning, monthly calendar, campaign concepts, hooks and performance review."],
     ["Social Media Management", "Manage", "Scheduling, publishing, captions, hashtag research, comment management and monthly reporting."],
     ["Full Content Team", "Full service", "Strategy, scripts, editing, covers, scheduling and one accountable Content X manager."],
@@ -749,6 +751,110 @@ function setupUnifiedPricing(pricing, actions, data) {
     const total = subtotal + premium;
     actions.openCheckout({ id:plan.id, name:`${plan.name} · ${state.quantity} ${state.quantity === 1 ? serviceSingular() : servicePlural()}`, price:total, basePrice:plan.price, quantity:state.quantity, billing:state.billing, contentType:state.service, deliveryFormat:state.deliveryFormat, durationMinutes:state.service === "longform" ? state.durationMinutes : undefined, rawFootageMinutes:state.service === "longform" ? state.rawFootageMinutes : undefined, addOns:extras, unit:state.billing === "monthly" ? "month" : "project", badge:state.billing === "monthly" ? "Monthly production" : "One-time project +20%", features:[`${plan.revisions} included`, ...plan.includes, ...(state.service === "longform" ? [`Final length selected: ${state.durationMinutes} minutes`, `Raw footage selected: ${formatRawDuration(state.rawFootageMinutes)}`] : []), ...(premium ? [`One-off flexibility premium: ${money(premium)}`] : []), ...extras.map(item => `${item.name} (+${money(item.price)} each)`)] });
   });
+
+  // EditLobby Cards Pack State & Interactivity
+  const cardPacks = {
+    Basic: 8,
+    Standard: 8,
+    Premium: 4,
+  };
+
+  function updateLobbyCard(planKey) {
+    const card = pricing.querySelector(`[data-lobby-card="${planKey}"]`);
+    if (!card) return;
+    const count = cardPacks[planKey];
+    const info = CANONICAL_SHORTFORM_PRICES[planKey][count];
+    const titleEl = card.querySelector(`[data-lobby-title="${planKey}"]`);
+    if (titleEl) titleEl.textContent = `${planKey} ${count}-pack`;
+
+    const badgeEl = card.querySelector(`[data-lobby-badge="${planKey}"]`);
+    if (badgeEl) {
+      if (planKey === "Standard" && count === 8) {
+        badgeEl.textContent = "Most Popular · 5% savings";
+        badgeEl.className = "cx-lobby-badge cx-lobby-badge--hot";
+      } else if (planKey === "Standard" && count === 12) {
+        badgeEl.textContent = "Save $120 with 12-pack";
+        badgeEl.className = "cx-lobby-badge cx-lobby-badge--hot";
+      } else if (planKey === "Premium" && count === 12) {
+        badgeEl.textContent = "Save $200 with 12-pack";
+        badgeEl.className = "cx-lobby-badge cx-lobby-badge--premium";
+      } else if (info.save) {
+        badgeEl.textContent = info.save;
+        badgeEl.className = planKey === "Premium" ? "cx-lobby-badge cx-lobby-badge--premium" : "cx-lobby-badge";
+      } else {
+        badgeEl.textContent = planKey === "Premium" ? "High-Impact · Motion Ready" : planKey === "Standard" ? "Better Finish" : "Clean Cuts";
+        badgeEl.className = planKey === "Premium" ? "cx-lobby-badge cx-lobby-badge--premium" : "cx-lobby-badge";
+      }
+    }
+
+    const rateEl = card.querySelector(`[data-lobby-rate="${planKey}"]`);
+    if (rateEl) rateEl.textContent = `$${info.rate}`;
+
+    const pillEl = card.querySelector(`[data-lobby-total-pill="${planKey}"]`);
+    if (pillEl) {
+      const saveStr = info.save ? ` (${info.save})` : "";
+      pillEl.innerHTML = `<span>Total $${info.usd} · ${count} Videos${saveStr}</span><small class="cx-pill-inr">approx. ₹${Math.round(info.usd * USD_INR_RATE).toLocaleString("en-IN")}</small>`;
+    }
+
+    card.querySelectorAll("[data-qty-choice]").forEach(btn => {
+      btn.classList.toggle("active", Number(btn.dataset.qtyChoice) === count);
+    });
+  }
+
+  pricing.querySelectorAll("[data-lobby-pack-btn]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const planKey = btn.dataset.lobbyPackBtn;
+      const count = Number(btn.dataset.qtyChoice);
+      cardPacks[planKey] = count;
+      updateLobbyCard(planKey);
+    });
+  });
+
+  pricing.querySelectorAll("[data-lobby-buy]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const planKey = btn.dataset.lobbyBuy;
+      const count = cardPacks[planKey];
+      const info = CANONICAL_SHORTFORM_PRICES[planKey][count];
+      const plan = packages.video.find(p => getShortformPlanKey(p.name) === planKey) || packages.video[0];
+
+      actions.openCheckout({
+        id: `${planKey.toLowerCase()}_${count}`,
+        name: `${planKey} · ${count} videos`,
+        price: info.usd,
+        canonicalUsdAmount: info.usd,
+        currency: "USD",
+        basePrice: info.usd,
+        quantity: count,
+        billing: "monthly",
+        contentType: "video",
+        deliveryFormat: "Vertical 9:16",
+        addOns: [],
+        unit: "package",
+        badge: `${count} videos · $${info.rate}/vid`,
+        features: [
+          `${count} short-form videos (Vertical 9:16)`,
+          `Fast 48h turnaround per video`,
+          `Unlimited revisions included`,
+          `Dedicated Creative Lead`,
+          ...(info.save ? [info.save] : []),
+          ...plan.includes
+        ]
+      });
+    });
+  });
+
+  // Intent Toggle (Get Service vs Join as Editor)
+  const clientSection = pricing.querySelector("[data-client-pricing]");
+  const creatorSection = pricing.querySelector("[data-creator-portal]");
+  pricing.querySelectorAll("[data-service-intent]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      pricing.querySelectorAll("[data-service-intent]").forEach(b => b.classList.toggle("active", b === btn));
+      const isClient = btn.dataset.serviceIntent === "client";
+      if (clientSection) clientSection.hidden = !isClient;
+      if (creatorSection) creatorSection.hidden = isClient;
+    });
+  });
+
   pricing.querySelectorAll("[data-apply]").forEach(btn => {
     btn.addEventListener("click", () => openApplication(btn.dataset.apply));
   });

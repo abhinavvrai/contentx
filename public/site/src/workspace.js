@@ -141,9 +141,8 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       <a class="workspace-rail-brand" href="#home" aria-label="Content X home">CX</a>
       <nav>
         <a class="${accountPanel ? "" : "active"}" href="#workspace" aria-label="Projects" title="Projects">${workspaceIcon("projects")}</a>
-         <button type="button" data-command-menu aria-label="Quick commands and search" title="Quick commands · Ctrl K">${workspaceIcon("search")}</button>
-         <a class="workspace-notification-link" href="#workspace?panel=account&view=notifications" aria-label="Notifications" title="Notifications">${workspaceIcon("bell")}<span data-notification-badge hidden></span></a>
-        <a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account" aria-label="Account and notifications" title="Account">${workspaceIcon("account")}</a>
+        <button type="button" data-command-menu aria-label="Quick commands and search" title="Quick commands · Ctrl K">${workspaceIcon("search")}</button>
+        <a class="workspace-notification-link" href="#workspace?panel=account&view=notifications" aria-label="Notifications" title="Notifications">${workspaceIcon("bell")}<span data-notification-badge hidden></span></a>
       </nav>
       <a class="workspace-rail-settings ${accountPanel ? "active" : ""}" href="#workspace?panel=account" aria-label="Account settings" title="Settings">${workspaceIcon("settings")}</a>
     </aside>
