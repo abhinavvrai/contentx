@@ -116,6 +116,12 @@ async function renderRoute() {
     enhanceCreatorTools(root, route);
     try { enhanceStudioDashboard(root); }
     catch (error) { console.warn("Dashboard presentation was skipped", error); }
+    const inPageTarget = document.getElementById(route);
+    if (inPageTarget) {
+      setTimeout(() => {
+        inPageTarget.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 60);
+    }
     Promise.all([cinematicReady, ambientReady]).then(() => {
       if (motionRender !== cinematicRender) return;
       try { cinematic?.enhanceCinematic(root); }
@@ -130,6 +136,20 @@ async function renderRoute() {
     if (!stale()) document.documentElement.classList.remove("route-busy");
   }
 }
+
+document.addEventListener("click", event => {
+  const anchor = event.target.closest('a[href^="#"]');
+  if (!anchor) return;
+  const targetId = anchor.getAttribute("href").slice(1);
+  if (["pricing", "workflow", "faq", "creator-tools"].includes(targetId)) {
+    const el = document.getElementById(targetId);
+    if (el) {
+      event.preventDefault();
+      history.replaceState(null, "", `#${targetId}`);
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+});
 
 window.addEventListener("hashchange", () => { void renderRoute(); });
 window.addEventListener("scroll", () => {

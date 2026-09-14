@@ -192,8 +192,8 @@ export function openScriptStudioModal(root, initialProject, folders = [], action
         </div>
         <div class="script-studio-head-actions">
           <button type="button" class="script-publish-toggle" data-toggle-publish title="Publish script and cut to website showcase">Publish to Website</button>
-          <button type="button" class="workspace-button subtle script-showcase-btn" data-preview-showcase title="Preview live public showcase">👁 Preview Showcase</button>
-          <button type="button" class="workspace-button subtle script-showcase-btn" data-copy-showcase-link title="Copy public showcase link">🔗 Copy Link</button>
+          <button type="button" class="workspace-button subtle script-showcase-btn" data-preview-showcase title="Preview live public showcase">Preview Showcase</button>
+          <button type="button" class="workspace-button subtle script-showcase-btn" data-copy-showcase-link title="Copy public showcase link">Copy Link</button>
           <button type="button" class="workspace-button subtle" data-export-md title="Download as Markdown">Export .md</button>
           <button type="button" class="workspace-button subtle" data-export-txt title="Download Plain Text">Export .txt</button>
           <button type="button" class="workspace-button" data-copy-script title="Copy Script to Clipboard">Copy to Clipboard</button>
@@ -290,7 +290,7 @@ export function openScriptStudioModal(root, initialProject, folders = [], action
           <div class="script-attachments-panel">
             <div class="script-attachments-head">
               <div class="attachments-label-group">
-                <span class="attachments-icon">🎬</span>
+                <span class="attachments-icon"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg></span>
                 <strong>Attached Video Cuts & Project Assets</strong>
                 <small data-attached-count>(0 items)</small>
               </div>
@@ -410,7 +410,7 @@ export function openScriptStudioModal(root, initialProject, folders = [], action
     attachmentsChips.innerHTML = [
       ...attached.map(asset => `
         <div class="attachment-chip chip-file" data-chip-id="${escapeHTML(asset.id)}">
-          <span class="chip-glyph">🎬</span>
+          <span class="chip-glyph">Video</span>
           <div class="chip-info">
             <strong title="${escapeHTML(asset.name)}">${escapeHTML(asset.name)}</strong>
             <small>Project Asset · ${formatBytes(asset.size)}</small>
@@ -423,7 +423,7 @@ export function openScriptStudioModal(root, initialProject, folders = [], action
       `),
       ...links.map(link => `
         <div class="attachment-chip chip-link" data-link-id="${escapeHTML(link.id)}">
-          <span class="chip-glyph">🔗</span>
+          <span class="chip-glyph">Link</span>
           <div class="chip-info">
             <strong title="${escapeHTML(link.title || link.url)}">${escapeHTML(link.title || link.url)}</strong>
             <small>${escapeHTML(link.platform || "Web Video")}</small>
@@ -516,7 +516,7 @@ export function openScriptStudioModal(root, initialProject, folders = [], action
         <strong class="script-item-title">${escapeHTML(s.title || "Untitled Script")}</strong>
         <div class="script-item-meta">
           <small>${calculateSpeechMetrics(s.content.replace(/<[^>]*>/g, "")).durationFormatted} teleprompter</small>
-          ${(s.videoLinks?.length || 0) + (s.attachedAssets?.length || 0) > 0 ? `<small class="script-item-has-video">🎬 Video attached</small>` : ""}
+          ${(s.videoLinks?.length || 0) + (s.attachedAssets?.length || 0) > 0 ? `<small class="script-item-has-video">Video attached</small>` : ""}
         </div>
       </article>
     `).join("");
@@ -814,8 +814,8 @@ function openShowcaseModal(script, project) {
           <span class="showcase-project-name">Project: ${escapeHTML(project.name)}</span>
           <h2>${escapeHTML(script.title)}</h2>
           <div class="showcase-meta-row">
-            <span>⏱ <b>${metrics.durationFormatted}</b> Teleprompter Speaking Duration</span>
-            <span>📝 <b>${metrics.words}</b> Words (~135 WPM standard)</span>
+            <span><b>${metrics.durationFormatted}</b> Teleprompter Speaking Duration</span>
+            <span><b>${metrics.words}</b> Words (~135 WPM standard)</span>
             <span class="showcase-live-badge">● Published on Website</span>
           </div>
         </div>
@@ -835,7 +835,7 @@ function openShowcaseModal(script, project) {
           </div>
         ` : `
           <div class="showcase-no-media-note">
-            <small>🎬 Attach a project cut or paste a YouTube / Loom link in Script Studio to embed the video player directly here.</small>
+            <small>Attach a project cut or paste a YouTube / Loom link in Script Studio to embed the video player directly here.</small>
           </div>
         `}
 
