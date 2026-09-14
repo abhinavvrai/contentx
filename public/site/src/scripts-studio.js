@@ -317,7 +317,7 @@ export function openScriptStudioModal(root, initialProject, folders = [], action
           <!-- Live Teleprompter Duration & Metrics Footer -->
           <footer class="script-teleprompter-footer">
             <div class="teleprompter-timer">
-              <span class="teleprompter-icon">⏱</span>
+              <span class="teleprompter-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M10 2h4"/><path d="m18 6 1.5-1.5"/></svg></span>
               <strong data-speech-duration>00:00</strong>
               <small>Est. speaking duration (~135 WPM teleprompter standard)</small>
             </div>
