@@ -1,12 +1,23 @@
 // Content X Script Writing Studio — Notion & Docs-style collaborative scriptwriter
-// Features: Scene/Shot headings, formatting, color highlights, production cues, live teleprompter duration, multi-script manager, export
+// Features: Scene/Shot headings, formatting, color highlights, production cues, live teleprompter duration, multi-script manager, project-asset linking, video previews, and Publish to Website showcase
 
 const SCRIPTS_KEY_PREFIX = "cx_scripts_";
 
 function getStorageScripts(projectId) {
   try {
     const raw = localStorage.getItem(`${SCRIPTS_KEY_PREFIX}${projectId}`);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length) {
+        return parsed.map(s => ({
+          ...s,
+          attachedAssets: Array.isArray(s.attachedAssets) ? s.attachedAssets : [],
+          videoLinks: Array.isArray(s.videoLinks) ? s.videoLinks : [],
+          published: Boolean(s.published),
+          publishedAt: s.publishedAt || null
+        }));
+      }
+    }
   } catch {}
   return defaultStarterScripts(projectId);
 }
@@ -26,6 +37,17 @@ function defaultStarterScripts(projectId) {
       folderId: "",
       title: "Launch Reel 01 — 3-Second Hook & Retention Curve",
       status: "Review",
+      attachedAssets: [],
+      videoLinks: [
+        {
+          id: "vl_demo",
+          title: "Rough Cut Draft — Vertical 9:16",
+          url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          platform: "YouTube"
+        }
+      ],
+      published: true,
+      publishedAt: now - 3600000,
       content: `<h1>Scene 1 · The Scroll-Stopping Hook</h1>
 <p><span class="cx-cue cue-vo">[VO]</span> Most creators edit videos like it's 2020. <mark class="cx-hl-orange">Here is why that is killing your retention in the first 3 seconds.</mark></p>
 <p><span class="cx-cue cue-broll">[B-ROLL]</span> Rapid fast-cut timeline montage of swipe-aways on mobile feed with motion blur whip pan.</p>
@@ -51,6 +73,10 @@ function defaultStarterScripts(projectId) {
       folderId: "",
       title: "Product Teaser — Behind The Scenes Cut",
       status: "Draft",
+      attachedAssets: [],
+      videoLinks: [],
+      published: false,
+      publishedAt: null,
       content: `<h1>Scene 1 · Studio Atmosphere</h1>
 <p><span class="cx-cue cue-broll">[B-ROLL]</span> Macro close-up of high-speed camera gimbal setup, ambient studio lighting turning orange.</p>
 <p><span class="cx-cue cue-vo">[VO]</span> What does it actually take to produce high-impact short-form videos every single day without burning out?</p>
@@ -76,6 +102,40 @@ function calculateSpeechMetrics(text) {
   return { words, chars, totalSeconds, durationFormatted };
 }
 
+function detectVideoPlatform(url) {
+  const u = String(url || "").toLowerCase();
+  if (u.includes("youtube.com") || u.includes("youtu.be")) return "YouTube";
+  if (u.includes("vimeo.com")) return "Vimeo";
+  if (u.includes("loom.com")) return "Loom";
+  if (u.includes("drive.google.com")) return "Google Drive";
+  if (u.includes("frame.io")) return "Frame.io";
+  if (/\.(mp4|mov|webm|m4v)($|\?)/.test(u)) return "Direct MP4";
+  return "Web Video";
+}
+
+function getVideoEmbedUrl(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtube.com")) {
+      const v = u.searchParams.get("v");
+      if (v) return `https://www.youtube-nocookie.com/embed/${v}`;
+    }
+    if (u.hostname.includes("youtu.be")) {
+      const v = u.pathname.slice(1);
+      if (v) return `https://www.youtube-nocookie.com/embed/${v}`;
+    }
+    if (u.hostname.includes("vimeo.com")) {
+      const v = u.pathname.split("/").filter(Boolean).pop();
+      if (v && /^\d+$/.test(v)) return `https://player.vimeo.com/video/${v}`;
+    }
+    if (u.hostname.includes("loom.com")) {
+      const v = u.pathname.split("/").filter(Boolean).pop();
+      if (v) return `https://www.loom.com/embed/${v}`;
+    }
+  } catch {}
+  return null;
+}
+
 function htmlToMarkdown(html) {
   const container = document.createElement("div");
   container.innerHTML = html;
@@ -97,8 +157,26 @@ function htmlToMarkdown(html) {
   return md.trim();
 }
 
-export function openScriptStudioModal(root, project, folders = [], actions = {}) {
-  const projectId = project.id;
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (value >= 1024 ** 3) return `${(value / 1024 ** 3).toFixed(1)} GB`;
+  if (value >= 1024 ** 2) return `${(value / 1024 ** 2).toFixed(1)} MB`;
+  if (value >= 1024) return `${Math.round(value / 1024)} KB`;
+  return `${value} B`;
+}
+
+export function openScriptStudioModal(root, initialProject, folders = [], actions = {}, files = [], allProjects = []) {
+  let activeProject = initialProject || (allProjects && allProjects.length ? {
+    id: allProjects[0].project_id || allProjects[0].id,
+    name: allProjects[0].name,
+    clientName: allProjects[0].clientName
+  } : { id: "default_project", name: "Default Project" });
+
+  let projectId = activeProject.id || activeProject.project_id;
+  const availableProjects = (allProjects && allProjects.length) ? allProjects : [
+    { project_id: projectId, name: activeProject.name || "Default Project" }
+  ];
+
   let scripts = getStorageScripts(projectId);
   let activeScriptId = scripts[0]?.id || null;
 
@@ -108,11 +186,14 @@ export function openScriptStudioModal(root, project, folders = [], actions = {})
     <section class="script-studio-modal" aria-labelledby="studio-script-title">
       <header class="script-studio-header">
         <div class="script-studio-title-group">
-          <span class="script-studio-badge">NOTION STUDIO</span>
+          <span class="script-studio-badge">NOTION STUDIO · CONTENT X</span>
           <h2 id="studio-script-title">Script Writing & Teleprompter Studio</h2>
-          <small>Project: ${escapeHTML(project.name)} · Write retention-led video scripts, add cues, and calculate live speech time.</small>
+          <small>Linked Project: <b class="script-active-proj-name">${escapeHTML(activeProject.name)}</b> · Scene breakdown, production cues, live teleprompter & video attachments</small>
         </div>
         <div class="script-studio-head-actions">
+          <button type="button" class="script-publish-toggle" data-toggle-publish title="Publish script and cut to website showcase">Publish to Website</button>
+          <button type="button" class="workspace-button subtle script-showcase-btn" data-preview-showcase title="Preview live public showcase">👁 Preview Showcase</button>
+          <button type="button" class="workspace-button subtle script-showcase-btn" data-copy-showcase-link title="Copy public showcase link">🔗 Copy Link</button>
           <button type="button" class="workspace-button subtle" data-export-md title="Download as Markdown">Export .md</button>
           <button type="button" class="workspace-button subtle" data-export-txt title="Download Plain Text">Export .txt</button>
           <button type="button" class="workspace-button" data-copy-script title="Copy Script to Clipboard">Copy to Clipboard</button>
@@ -124,7 +205,7 @@ export function openScriptStudioModal(root, project, folders = [], actions = {})
         <!-- Sidebar Script Browser -->
         <aside class="script-studio-sidebar">
           <div class="script-studio-sidebar-header">
-            <strong>Scripts (<span>${scripts.length}</span>)</strong>
+            <strong>Scripts (<span data-scripts-count>${scripts.length}</span>)</strong>
             <button type="button" class="script-new-btn" data-new-script title="Create new script">＋ New</button>
           </div>
           <div class="script-studio-list" data-script-list></div>
@@ -135,6 +216,15 @@ export function openScriptStudioModal(root, project, folders = [], actions = {})
           <div class="script-meta-bar">
             <div class="script-meta-left">
               <input type="text" class="script-title-input" data-script-title placeholder="Untitled Script" value="">
+              <div class="script-project-wrap">
+                <label>Project:</label>
+                <select class="script-project-select" data-script-project title="Link script to project">
+                  ${availableProjects.map(p => {
+                    const pid = p.project_id || p.id;
+                    return `<option value="${escapeHTML(pid)}" ${pid === projectId ? "selected" : ""}>${escapeHTML(p.name)}</option>`;
+                  }).join("")}
+                </select>
+              </div>
               <div class="script-status-dropdown-wrap">
                 <label>Status:</label>
                 <select class="script-status-select" data-script-status>
@@ -196,6 +286,29 @@ export function openScriptStudioModal(root, project, folders = [], actions = {})
             </div>
           </div>
 
+          <!-- Attached Video & Project Assets Panel -->
+          <div class="script-attachments-panel">
+            <div class="script-attachments-head">
+              <div class="attachments-label-group">
+                <span class="attachments-icon">🎬</span>
+                <strong>Attached Video Cuts & Project Assets</strong>
+                <small data-attached-count>(0 items)</small>
+              </div>
+              <div class="attachments-inputs-group">
+                ${files && files.length ? `
+                  <select class="script-attach-select" data-select-project-file>
+                    <option value="">＋ Attach project file...</option>
+                    ${files.map(f => `<option value="${escapeHTML(f.id)}" data-file-name="${escapeHTML(f.name)}" data-file-size="${f.size || 0}" data-file-type="${escapeHTML(f.type || "")}">${escapeHTML(f.name)} (${formatBytes(f.size || 0)})</option>`).join("")}
+                  </select>
+                  <button type="button" class="script-attach-btn" data-attach-file-btn>Attach File</button>
+                ` : ""}
+                <input type="url" class="script-video-url-input" data-video-url-input placeholder="Paste YouTube, Vimeo, Loom, or Drive link…">
+                <button type="button" class="script-attach-btn" data-add-url-btn>Add Link</button>
+              </div>
+            </div>
+            <div class="script-attachments-chips" data-attachments-chips></div>
+          </div>
+
           <!-- Document Content Editable Area -->
           <div class="script-editor-container">
             <div class="script-editor-content" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" data-editor-surface placeholder="Type your scene breakdown, hooks, and dialogue here…"></div>
@@ -227,10 +340,21 @@ export function openScriptStudioModal(root, project, folders = [], actions = {})
   const titleInput = layer.querySelector("[data-script-title]");
   const statusSelect = layer.querySelector("[data-script-status]");
   const folderSelect = layer.querySelector("[data-script-folder]");
+  const projectSelect = layer.querySelector("[data-script-project]");
   const saveIndicator = layer.querySelector("[data-save-status]");
   const speechDuration = layer.querySelector("[data-speech-duration]");
   const wordCountEl = layer.querySelector("[data-word-count]");
   const charCountEl = layer.querySelector("[data-char-count]");
+  const publishToggle = layer.querySelector("[data-toggle-publish]");
+  const previewShowcaseBtn = layer.querySelector("[data-preview-showcase]");
+  const copyShowcaseBtn = layer.querySelector("[data-copy-showcase-link]");
+  const attachmentsChips = layer.querySelector("[data-attachments-chips]");
+  const attachedCount = layer.querySelector("[data-attached-count]");
+  const selectProjectFile = layer.querySelector("[data-select-project-file]");
+  const attachFileBtn = layer.querySelector("[data-attach-file-btn]");
+  const videoUrlInput = layer.querySelector("[data-video-url-input]");
+  const addUrlBtn = layer.querySelector("[data-add-url-btn]");
+  const scriptsCountSpan = layer.querySelector("[data-scripts-count]");
 
   const close = () => {
     layer.remove();
@@ -271,6 +395,100 @@ export function openScriptStudioModal(root, project, folders = [], actions = {})
     charCountEl.textContent = `${metrics.chars} character${metrics.chars === 1 ? "" : "s"}`;
   }
 
+  function renderAttachments(script) {
+    if (!script) return;
+    const attached = script.attachedAssets || [];
+    const links = script.videoLinks || [];
+    const total = attached.length + links.length;
+    attachedCount.textContent = `(${total} item${total === 1 ? "" : "s"})`;
+
+    if (total === 0) {
+      attachmentsChips.innerHTML = `<p class="attachments-empty-hint">No video cut or asset attached yet. Select a project file or paste a video link above to review side-by-side with your script.</p>`;
+      return;
+    }
+
+    attachmentsChips.innerHTML = [
+      ...attached.map(asset => `
+        <div class="attachment-chip chip-file" data-chip-id="${escapeHTML(asset.id)}">
+          <span class="chip-glyph">🎬</span>
+          <div class="chip-info">
+            <strong title="${escapeHTML(asset.name)}">${escapeHTML(asset.name)}</strong>
+            <small>Project Asset · ${formatBytes(asset.size)}</small>
+          </div>
+          <div class="chip-actions">
+            ${asset.url ? `<button type="button" class="chip-action-btn chip-preview" data-preview-file="${escapeHTML(asset.id)}" title="Preview Video">▶ Play</button>` : ""}
+            <button type="button" class="chip-action-btn chip-remove" data-remove-asset="${escapeHTML(asset.id)}" title="Remove Attachment">✕</button>
+          </div>
+        </div>
+      `),
+      ...links.map(link => `
+        <div class="attachment-chip chip-link" data-link-id="${escapeHTML(link.id)}">
+          <span class="chip-glyph">🔗</span>
+          <div class="chip-info">
+            <strong title="${escapeHTML(link.title || link.url)}">${escapeHTML(link.title || link.url)}</strong>
+            <small>${escapeHTML(link.platform || "Web Video")}</small>
+          </div>
+          <div class="chip-actions">
+            <button type="button" class="chip-action-btn chip-preview" data-preview-link="${escapeHTML(link.id)}" title="Watch / Open">▶ Play</button>
+            <button type="button" class="chip-action-btn chip-remove" data-remove-link="${escapeHTML(link.id)}" title="Remove Link">✕</button>
+          </div>
+        </div>
+      `)
+    ].join("");
+
+    // Bind chip removals
+    attachmentsChips.querySelectorAll("[data-remove-asset]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idToRemove = btn.dataset.removeAsset;
+        script.attachedAssets = (script.attachedAssets || []).filter(a => a.id !== idToRemove);
+        saveStorageScripts(projectId, scripts);
+        renderAttachments(script);
+      });
+    });
+
+    attachmentsChips.querySelectorAll("[data-remove-link]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idToRemove = btn.dataset.removeLink;
+        script.videoLinks = (script.videoLinks || []).filter(l => l.id !== idToRemove);
+        saveStorageScripts(projectId, scripts);
+        renderAttachments(script);
+      });
+    });
+
+    // Bind chip previews
+    attachmentsChips.querySelectorAll("[data-preview-file]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const asset = (script.attachedAssets || []).find(a => a.id === btn.dataset.previewFile);
+        if (asset && asset.url) {
+          openVideoPreviewModal(asset.name, null, asset.url);
+        }
+      });
+    });
+
+    attachmentsChips.querySelectorAll("[data-preview-link]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const link = (script.videoLinks || []).find(l => l.id === btn.dataset.previewLink);
+        if (link && link.url) {
+          const embed = getVideoEmbedUrl(link.url);
+          if (embed) {
+            openVideoPreviewModal(link.title || "Video Preview", embed, null);
+          } else {
+            window.open(link.url, "_blank", "noopener,noreferrer");
+          }
+        }
+      });
+    });
+  }
+
+  function updatePublishUI(script) {
+    if (!script) return;
+    const isPub = Boolean(script.published);
+    publishToggle.classList.toggle("is-published", isPub);
+    publishToggle.textContent = isPub ? "● Published to Website" : "Publish to Website";
+    if (previewShowcaseBtn) previewShowcaseBtn.hidden = !isPub;
+    if (copyShowcaseBtn) copyShowcaseBtn.hidden = !isPub;
+  }
+
   function loadActiveScript(id) {
     activeScriptId = id;
     const script = scripts.find(s => s.id === id) || scripts[0];
@@ -281,19 +499,24 @@ export function openScriptStudioModal(root, project, folders = [], actions = {})
     folderSelect.value = script.folderId || "";
     editorSurface.innerHTML = script.content || "<p></p>";
     renderScriptList();
+    renderAttachments(script);
+    updatePublishUI(script);
     updateMetrics();
   }
 
   function renderScriptList() {
+    if (scriptsCountSpan) scriptsCountSpan.textContent = scripts.length;
     scriptList.innerHTML = scripts.map(s => `
       <article class="script-item ${s.id === activeScriptId ? "active" : ""}" data-script-id="${escapeHTML(s.id)}">
         <div class="script-item-head">
           <span class="script-status-pill status-${s.status.toLowerCase()}">${escapeHTML(s.status)}</span>
+          ${s.published ? `<span class="script-item-live-dot" title="Published to website showcase">● LIVE</span>` : ""}
           <button type="button" class="script-item-delete" data-delete-script="${escapeHTML(s.id)}" title="Delete script">×</button>
         </div>
         <strong class="script-item-title">${escapeHTML(s.title || "Untitled Script")}</strong>
         <div class="script-item-meta">
           <small>${calculateSpeechMetrics(s.content.replace(/<[^>]*>/g, "")).durationFormatted} teleprompter</small>
+          ${(s.videoLinks?.length || 0) + (s.attachedAssets?.length || 0) > 0 ? `<small class="script-item-has-video">🎬 Video attached</small>` : ""}
         </div>
       </article>
     `).join("");
@@ -329,6 +552,10 @@ export function openScriptStudioModal(root, project, folders = [], actions = {})
       folderId: "",
       title: `New Script ${scripts.length + 1}`,
       status: "Draft",
+      attachedAssets: [],
+      videoLinks: [],
+      published: false,
+      publishedAt: null,
       content: `<h1>Scene 1 · Hook</h1>\n<p><span class="cx-cue cue-vo">[VO]</span> Enter your opening hook here...</p>`,
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -336,6 +563,118 @@ export function openScriptStudioModal(root, project, folders = [], actions = {})
     scripts.unshift(newScript);
     saveStorageScripts(projectId, scripts);
     loadActiveScript(newScript.id);
+  });
+
+  // Switch / Link Project
+  projectSelect?.addEventListener("change", () => {
+    const newProjectId = projectSelect.value;
+    if (newProjectId === projectId) return;
+    const selectedProj = availableProjects.find(p => (p.project_id || p.id) === newProjectId);
+    if (!selectedProj) return;
+
+    // Switch active project context
+    activeProject = {
+      id: selectedProj.project_id || selectedProj.id,
+      name: selectedProj.name,
+      clientName: selectedProj.clientName
+    };
+    projectId = activeProject.id;
+    const nameLabel = layer.querySelector(".script-active-proj-name");
+    if (nameLabel) nameLabel.textContent = activeProject.name;
+
+    scripts = getStorageScripts(projectId);
+    activeScriptId = scripts[0]?.id || null;
+    loadActiveScript(activeScriptId);
+  });
+
+  // Attach Project File
+  attachFileBtn?.addEventListener("click", () => {
+    const fileId = selectProjectFile?.value;
+    if (!fileId) return;
+    const opt = selectProjectFile.selectedOptions[0];
+    const fileName = opt.dataset.fileName || opt.textContent;
+    const fileSize = Number(opt.dataset.fileSize || 0);
+    const fileType = opt.dataset.fileType || "video";
+
+    const active = scripts.find(s => s.id === activeScriptId);
+    if (!active) return;
+    active.attachedAssets = active.attachedAssets || [];
+    if (active.attachedAssets.some(a => a.id === fileId)) {
+      alert("This project asset is already attached.");
+      return;
+    }
+    active.attachedAssets.push({
+      id: fileId,
+      name: fileName,
+      size: fileSize,
+      type: fileType,
+      url: `/api/uploads?action=download&fileId=${encodeURIComponent(fileId)}`
+    });
+    saveStorageScripts(projectId, scripts);
+    renderAttachments(active);
+    selectProjectFile.value = "";
+  });
+
+  // Add External Video Link
+  addUrlBtn?.addEventListener("click", () => {
+    const url = videoUrlInput?.value.trim();
+    if (!url) return;
+    try {
+      new URL(url);
+    } catch {
+      alert("Please enter a valid video URL (e.g. https://youtube.com/...)");
+      return;
+    }
+
+    const active = scripts.find(s => s.id === activeScriptId);
+    if (!active) return;
+    active.videoLinks = active.videoLinks || [];
+    const platform = detectVideoPlatform(url);
+    active.videoLinks.push({
+      id: `link_${Date.now()}`,
+      title: `${platform} Cut`,
+      url,
+      platform
+    });
+    saveStorageScripts(projectId, scripts);
+    renderAttachments(active);
+    if (videoUrlInput) videoUrlInput.value = "";
+  });
+
+  // Publish to Website Toggle
+  publishToggle.addEventListener("click", () => {
+    const active = scripts.find(s => s.id === activeScriptId);
+    if (!active) return;
+    active.published = !active.published;
+    active.publishedAt = active.published ? Date.now() : null;
+    saveStorageScripts(projectId, scripts);
+    updatePublishUI(active);
+    renderScriptList();
+
+    if (active.published) {
+      openShowcaseModal(active, activeProject);
+    }
+  });
+
+  // Preview Showcase
+  previewShowcaseBtn.addEventListener("click", () => {
+    const active = scripts.find(s => s.id === activeScriptId);
+    if (active) openShowcaseModal(active, activeProject);
+  });
+
+  // Copy Showcase Link
+  copyShowcaseBtn.addEventListener("click", async () => {
+    const active = scripts.find(s => s.id === activeScriptId);
+    if (!active) return;
+    const link = `${window.location.origin}${window.location.pathname}#workspace?panel=showcase&script=${encodeURIComponent(active.id)}&project=${encodeURIComponent(projectId)}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      const old = copyShowcaseBtn.textContent;
+      copyShowcaseBtn.textContent = "Copied! ✓";
+      setTimeout(() => { if (copyShowcaseBtn.isConnected) copyShowcaseBtn.textContent = old; }, 1800);
+    } catch {
+      alert(`Showcase link: ${link}`);
+    }
   });
 
   // Editor inputs
@@ -429,6 +768,129 @@ export function openScriptStudioModal(root, project, folders = [], actions = {})
 
   // Initial load
   loadActiveScript(activeScriptId);
+}
+
+function openVideoPreviewModal(title, embedUrl, directUrl) {
+  const modal = document.createElement("div");
+  modal.className = "workspace-modal-backdrop script-video-preview-layer";
+  modal.innerHTML = `
+    <div class="script-video-preview-modal">
+      <header class="video-preview-header">
+        <strong>${escapeHTML(title)}</strong>
+        <button type="button" class="script-studio-close" data-close-preview aria-label="Close">×</button>
+      </header>
+      <div class="video-preview-content">
+        ${embedUrl ? `<iframe src="${embedUrl}?autoplay=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>` : `<video controls autoplay playsinline src="${escapeHTML(directUrl)}"></video>`}
+      </div>
+    </div>
+  `;
+  document.body.append(modal);
+  const close = () => modal.remove();
+  modal.querySelector("[data-close-preview]").addEventListener("click", close);
+  modal.addEventListener("click", e => { if (e.target === modal) close(); });
+}
+
+function openShowcaseModal(script, project) {
+  const modal = document.createElement("div");
+  modal.className = "workspace-modal-backdrop script-showcase-layer";
+  const metrics = calculateSpeechMetrics(script.content.replace(/<[^>]*>/g, ""));
+  const primaryLink = (script.videoLinks || [])[0];
+  const primaryAsset = (script.attachedAssets || [])[0];
+  const primaryVideoUrl = primaryLink?.url || primaryAsset?.url || null;
+  const embedUrl = primaryVideoUrl ? getVideoEmbedUrl(primaryVideoUrl) : null;
+  const showcaseLink = `${window.location.origin}${window.location.pathname}#workspace?panel=showcase&script=${encodeURIComponent(script.id)}&project=${encodeURIComponent(project.id)}`;
+
+  modal.innerHTML = `
+    <div class="script-showcase-modal">
+      <header class="showcase-header">
+        <div class="showcase-header-tag">
+          <span class="cx-showcase-pill">CONTENT X · PUBLIC SHOWCASE</span>
+          <span class="cx-verified-pill">✓ Verified Production</span>
+        </div>
+        <button type="button" class="script-studio-close" data-close-showcase aria-label="Close">×</button>
+      </header>
+      <div class="showcase-body">
+        <div class="showcase-hero">
+          <span class="showcase-project-name">Project: ${escapeHTML(project.name)}</span>
+          <h2>${escapeHTML(script.title)}</h2>
+          <div class="showcase-meta-row">
+            <span>⏱ <b>${metrics.durationFormatted}</b> Teleprompter Speaking Duration</span>
+            <span>📝 <b>${metrics.words}</b> Words (~135 WPM standard)</span>
+            <span class="showcase-live-badge">● Published on Website</span>
+          </div>
+        </div>
+
+        ${primaryVideoUrl ? `
+          <div class="showcase-media-frame">
+            ${embedUrl ? `<iframe src="${embedUrl}" allowfullscreen></iframe>` : `
+              <div class="showcase-external-video-card">
+                <span class="showcase-play-icon">▶</span>
+                <div class="showcase-video-info">
+                  <strong>${escapeHTML(primaryLink?.title || primaryAsset?.name || "Attached Video Cut")}</strong>
+                  <small>${escapeHTML(primaryLink?.platform || "Direct Video")}: ${escapeHTML(primaryVideoUrl)}</small>
+                </div>
+                <a href="${escapeHTML(primaryVideoUrl)}" target="_blank" rel="noopener noreferrer" class="workspace-button primary">Watch Cut ↗</a>
+              </div>
+            `}
+          </div>
+        ` : `
+          <div class="showcase-no-media-note">
+            <small>🎬 Attach a project cut or paste a YouTube / Loom link in Script Studio to embed the video player directly here.</small>
+          </div>
+        `}
+
+        <div class="showcase-script-card">
+          <div class="showcase-script-head">
+            <strong>Hook Breakdown & Production Cues</strong>
+            <button type="button" class="workspace-button subtle" data-copy-showcase-text>Copy Script</button>
+          </div>
+          <div class="showcase-script-content">
+            ${script.content}
+          </div>
+        </div>
+
+        <div class="showcase-share-footer">
+          <div class="showcase-share-input-group">
+            <input type="text" readonly value="${showcaseLink}" data-showcase-url-input>
+            <button type="button" class="workspace-button primary" data-btn-copy-url>Copy Public Link</button>
+          </div>
+          <div class="showcase-cta-strip">
+            <span>Want retention-led short-form videos edited like this?</span>
+            <a href="#pricing" class="workspace-button subtle" data-close-to-pricing>View Content X Plans →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.append(modal);
+
+  const close = () => modal.remove();
+  modal.querySelector("[data-close-showcase]").addEventListener("click", close);
+  modal.querySelectorAll("[data-close-to-pricing]").forEach(b => b.addEventListener("click", close));
+  modal.addEventListener("click", e => { if (e.target === modal) close(); });
+
+  modal.querySelector("[data-btn-copy-url]").addEventListener("click", async e => {
+    try {
+      await navigator.clipboard.writeText(showcaseLink);
+      const btn = e.currentTarget;
+      const old = btn.textContent;
+      btn.textContent = "Copied! ✓";
+      setTimeout(() => { if (btn.isConnected) btn.textContent = old; }, 1800);
+    } catch {
+      modal.querySelector("[data-showcase-url-input]")?.select();
+    }
+  });
+
+  modal.querySelector("[data-copy-showcase-text]")?.addEventListener("click", async e => {
+    const text = modal.querySelector(".showcase-script-content")?.innerText || "";
+    try {
+      await navigator.clipboard.writeText(text);
+      const btn = e.currentTarget;
+      const old = btn.textContent;
+      btn.textContent = "Copied ✓";
+      setTimeout(() => { if (btn.isConnected) btn.textContent = old; }, 1800);
+    } catch {}
+  });
 }
 
 export function getProjectScriptsCount(projectId) {
