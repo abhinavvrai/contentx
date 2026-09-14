@@ -141,12 +141,15 @@ document.addEventListener("click", event => {
   const anchor = event.target.closest('a[href^="#"]');
   if (!anchor) return;
   const targetId = anchor.getAttribute("href").slice(1);
-  if (["pricing", "workflow", "faq", "creator-tools"].includes(targetId)) {
+  if (["pricing", "workflow", "faq", "creator-tools", "work", "top"].includes(targetId)) {
     const el = document.getElementById(targetId);
     if (el) {
       event.preventDefault();
       history.replaceState(null, "", `#${targetId}`);
       el.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      event.preventDefault();
+      location.hash = targetId;
     }
   }
 });

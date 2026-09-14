@@ -94,8 +94,8 @@ export function renderMarketing(root, data, actions) {
   root.innerHTML = `
     <header class="site-nav">
       <a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a>
-      <nav aria-label="Main navigation"><a href="#workflow">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
-      <div class="nav-actions"><button class="text-button" data-action="login">Login</button><a class="pill pill-hot" href="#pricing">Start here <span>↓</span></a></div>
+      <nav aria-label="Main navigation"><a href="#workflow">How it works</a><a href="#pricing">Pricing</a><a href="#work">Selected work</a><a href="#faq">FAQ</a></nav>
+      <div class="nav-actions"><div class="cx-currency-ctrl" role="group" aria-label="Currency"><button type="button" class="active" data-currency-toggle="USD" title="USD canonical pricing">$ USD</button><button type="button" data-currency-toggle="INR" title="INR regional pricing">₹ INR</button></div><button class="text-button" data-action="workspace">Workspace</button><button class="text-button" data-action="login">Login</button><a class="pill pill-hot" href="#pricing">See plans <span>↓</span></a></div>
     </header>
     <main id="top">
       <section class="hero section-shell">
@@ -143,6 +143,18 @@ export function renderMarketing(root, data, actions) {
   root.querySelectorAll("[data-support-open]").forEach(btn => btn.addEventListener("click", () => root.querySelector("[data-support-panel]").hidden = false));
   root.querySelector("[data-support-close]")?.addEventListener("click", () => root.querySelector("[data-support-panel]").hidden = true);
   root.querySelector("[data-support-pricing]")?.addEventListener("click", () => { root.querySelector("[data-support-panel]").hidden = true; root.querySelector("#pricing")?.scrollIntoView({ behavior:"smooth" }); });
+  const initialCurrency = (() => {
+    try { return localStorage.getItem("cx_currency_v2") || "USD"; } catch { return "USD"; }
+  })();
+  root.querySelectorAll("[data-currency-toggle]").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.currencyToggle === initialCurrency);
+    btn.addEventListener("click", () => {
+      const cur = btn.dataset.currencyToggle;
+      root.querySelectorAll("[data-currency-toggle]").forEach(b => b.classList.toggle("active", b === btn));
+      try { localStorage.setItem("cx_currency_v2", cur); } catch {}
+      window.dispatchEvent(new CustomEvent("cx:currency-change", { detail: { currency: cur } }));
+    });
+  });
   root.querySelectorAll("[data-service-plan]").forEach(button => button.addEventListener("click", () => {
     const plan = checkoutPlans[button.dataset.servicePlan];
     if (plan) actions.openCheckout({ id: button.dataset.servicePlan, ...plan, unit: "project", badge: "Secure one-time payment" });
