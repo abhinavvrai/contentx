@@ -2248,6 +2248,7 @@ html[data-theme="light"] #app .folder-picker-count {
 }
 .order-summary > * { position: relative; z-index: 1; }
 .secure-note { padding-top: 2px; }
+.currency-note { display:block; margin-top:8px; color:var(--theme-muted, #8c8f98); font-size:12px; line-height:1.4; }
 .payment-success > div {
   border: 1px solid var(--theme-line, #34353f);
   box-shadow: 0 30px 90px rgba(0, 0, 0, .28);

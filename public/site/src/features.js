@@ -162,7 +162,17 @@ export function detectVisitorRegionalCurrency() {
   };
 }
 
-let activeCurrency = "USD";
+// Razorpay currently receives INR for India and USD for the United States (and
+// USD is the safe default for other regions). The server remains authoritative
+// via CF-IPCountry; this browser value only keeps the pre-checkout UI aligned.
+const detectedCheckoutCurrency = detectVisitorRegionalCurrency().currency;
+let activeCurrency = detectedCheckoutCurrency === "INR" ? "INR" : "USD";
+function formatRegionalUsd(usd, currency = activeCurrency) {
+  const amount = Number(usd || 0);
+  return currency === "INR"
+    ? `₹${Math.round(amount * USD_INR_RATE).toLocaleString("en-IN")}`
+    : `$${amount.toLocaleString("en-US")}`;
+}
 function roundedUsdFromInr(value) {
   const amount = Number(value || 0);
   if (!amount) return 0;
@@ -856,7 +866,7 @@ function setupUnifiedPricing(pricing, actions, data) {
 
     if (isVideo && currentCanonical) {
       const chargedPrice = currentCanonical.usd;
-      const checkoutCurrency = "USD";
+      const checkoutCurrency = activeCurrency;
 
       actions.openCheckout({
         id: plan.id,
@@ -864,8 +874,8 @@ function setupUnifiedPricing(pricing, actions, data) {
         price: chargedPrice,
         canonicalUsdAmount: currentCanonical.usd,
         currency: checkoutCurrency,
-        regionalCurrency: "USD",
-        regionalPrice: `$${currentCanonical.usd}`,
+        regionalCurrency: checkoutCurrency,
+        regionalPrice: formatRegionalUsd(currentCanonical.usd, checkoutCurrency),
         basePrice: chargedPrice,
         quantity: state.quantity,
         billing: state.billing,
@@ -988,7 +998,7 @@ function setupUnifiedPricing(pricing, actions, data) {
       const info = CANONICAL_SHORTFORM_PRICES[planKey][count];
       const plan = packages.video.find(p => getShortformPlanKey(p.name) === planKey) || packages.video[0];
       const chargedPrice = info.usd;
-      const checkoutCurrency = "USD";
+      const checkoutCurrency = activeCurrency;
 
       actions.openCheckout({
         id: `${planKey.toLowerCase()}_${count}`,
@@ -996,8 +1006,8 @@ function setupUnifiedPricing(pricing, actions, data) {
         price: chargedPrice,
         canonicalUsdAmount: info.usd,
         currency: checkoutCurrency,
-        regionalCurrency: "USD",
-        regionalPrice: `$${info.usd}`,
+        regionalCurrency: checkoutCurrency,
+        regionalPrice: formatRegionalUsd(info.usd, checkoutCurrency),
         basePrice: chargedPrice,
         quantity: count,
         billing: "monthly",
@@ -1063,9 +1073,10 @@ export function renderAccess(root, actions) {
 
 export function renderCheckout(root, actions) {
   const plan = store.get("cx_checkout", monthlyPlans[1]);
+  let checkoutCurrency = plan.currency === "INR" ? "INR" : activeCurrency;
   const formatCheckoutPrice = price => {
     const usd = plan.canonicalUsdAmount || (plan.currency === "USD" ? price : (price ? roundedUsdFromInr(price) : price));
-    return `$${Number(usd).toLocaleString("en-US")}`;
+    return formatRegionalUsd(usd, checkoutCurrency);
   };
   const checkoutCopy = plan.revisionPurchase
     ? { back: "Back to workspace", eyebrow: "Additional revision round", secure: "Revision attached to this video", note: "After verified payment, one additional revision round is added only to the selected video and its existing version history.", success: "Your additional revision round is active for this video." }
@@ -1075,7 +1086,7 @@ export function renderCheckout(root, actions) {
       ? { back: "Back to review", eyebrow: "Hands-off review add-on", secure: "Content X managed review", note: "Your paid request goes directly to the review desk for brief checks, consolidated feedback, revision follow-up and final quality approval.", success: "Your managed review is paid and queued with the Content X review desk." }
       : { back: "Back to pricing", eyebrow: "Activate your workspace", secure: "Payment-gated access", note: "Your client workspace opens only after a successful payment record is created.", success: "Your Content X workspace is active." };
   root.className = "checkout-app";
-  root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span>Secure test checkout</span></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="test-banner"><strong>TEST MODE</strong><span>No real payment will be charged. Completing this form unlocks the dashboard on this device.</span></div><form><h3>Contact information</h3><div class="field-pair"><label>Full name<input name="name" required value="Meera Kapoor"></label><label>WhatsApp<input name="phone" required value="+91 98765 43210"></label></div><label>Email<input name="email" type="email" required value="demo@apexfitness.in"></label><h3>Payment method</h3><div class="payment-tabs"><label><input type="radio" name="method" value="UPI" checked><span>UPI</span></label><label><input type="radio" name="method" value="Card"><span>Card</span></label><label><input type="radio" name="method" value="Bank transfer"><span>Bank transfer</span></label></div><div class="payment-fields"><label>UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123"></label></div><label class="terms"><input type="checkbox" required><span>I agree to the scope, two included revisions per video, and $30 for each additional revision round.</span></label><button class="pill pill-hot pay-button" type="submit">Complete test payment · ${formatCheckoutPrice(plan.price)}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge)}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-total"><span>Package total<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><strong>${formatCheckoutPrice(plan.price)}</strong></div><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">Enter workspace →</button></div></div>`;
+  root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span>Secure test checkout</span></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="test-banner"><strong>TEST MODE</strong><span>No real payment will be charged. Completing this form unlocks the dashboard on this device.</span></div><form><h3>Contact information</h3><div class="field-pair"><label>Full name<input name="name" required value="Meera Kapoor"></label><label>WhatsApp<input name="phone" required value="+91 98765 43210"></label></div><label>Email<input name="email" type="email" required value="demo@apexfitness.in"></label><h3>Payment method</h3><div class="payment-tabs"><label><input type="radio" name="method" value="UPI" checked><span>UPI</span></label><label><input type="radio" name="method" value="Card"><span>Card</span></label><label><input type="radio" name="method" value="Bank transfer"><span>Bank transfer</span></label></div><div class="payment-fields"><label>UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123"></label></div><label class="terms"><input type="checkbox" required><span>I agree to the scope, two included revisions per video, and $30 for each additional revision round.</span></label><button class="pill pill-hot pay-button" type="submit">Complete test payment · ${formatCheckoutPrice(plan.price)}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge)}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-total"><span>Package total<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><strong>${formatCheckoutPrice(plan.price)}</strong></div><small class="currency-note">Charged in ${checkoutCurrency}. Final currency is confirmed by Razorpay for your region.</small><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">Enter workspace →</button></div></div>`;
   root.querySelector('input[name="name"]').value = "";
   root.querySelector('input[name="phone"]').value = "";
   root.querySelector('input[name="email"]').value = "";
@@ -1125,6 +1136,14 @@ export function renderCheckout(root, actions) {
   paymentForm.querySelector(".payment-fields").remove();
   paymentForm.querySelector(".terms").insertAdjacentHTML("beforebegin", `<div class="checkout-coupon"><label>Coupon code <span>optional</span><input name="couponCode" maxlength="32" autocomplete="off" placeholder="Enter your code"></label><small data-coupon-feedback>Discounts are checked securely before Razorpay opens.</small></div>`);
   const payButton = paymentForm.querySelector(".pay-button");
+  const currencyNote = root.querySelector(".currency-note");
+  const applyCheckoutCurrency = currency => {
+    checkoutCurrency = currency === "INR" ? "INR" : "USD";
+    payButton.textContent = `Pay securely with Razorpay · ${formatCheckoutPrice(plan.price)}`;
+    const total = root.querySelector(".order-total strong");
+    if (total) total.textContent = formatCheckoutPrice(plan.price);
+    if (currencyNote) currencyNote.textContent = `Charged in ${checkoutCurrency}. Final currency is confirmed by Razorpay for your region.`;
+  };
   payButton.textContent = `Pay securely with Razorpay · ${formatCheckoutPrice(plan.price)}`;
   fetch("/api/auth", { cache:"no-store", credentials:"same-origin" }).then(response => response.json()).then(({ user }) => {
     if (!user) return;
@@ -1138,16 +1157,18 @@ export function renderCheckout(root, actions) {
     payButton.disabled = true;
     payButton.textContent = "Preparing secure payment…";
     try {
-      const [configResponse, orderResponse] = await Promise.all([
-        fetch("/api/payments/razorpay/config", { cache:"no-store" }),
-        fetch("/api/payments/razorpay/order", {
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.billing || (plan.unit === "month" ? "monthly" : "one_off"), addOns:(plan.addOns || []).map(item => item.id).filter(id => !["longform_extra_minutes", "longform_raw_review"].includes(id)), durationMinutes:plan.durationMinutes, rawFootageMinutes:plan.rawFootageMinutes, currency:plan.currency || activeCurrency, contentType:plan.contentType || "video", deliveryFormat:plan.deliveryFormat || "", projectId:plan.projectId, assetId:plan.assetId, name:contact.name, email:contact.email, phone:contact.phone, couponCode:contact.couponCode })
-        })
-      ]);
-      const config = await configResponse.json(), order = await orderResponse.json();
+      const configResponse = await fetch("/api/payments/razorpay/config", { cache:"no-store" });
+      const config = await configResponse.json();
+      if (!configResponse.ok) throw new Error(config.error || "Payment setup is unavailable. Please try again.");
+      applyCheckoutCurrency(config.currency || activeCurrency);
+      const orderResponse = await fetch("/api/payments/razorpay/order", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.billing || (plan.unit === "month" ? "monthly" : "one_off"), addOns:(plan.addOns || []).map(item => item.id).filter(id => !["longform_extra_minutes", "longform_raw_review"].includes(id)), durationMinutes:plan.durationMinutes, rawFootageMinutes:plan.rawFootageMinutes, currency:checkoutCurrency, contentType:plan.contentType || "video", deliveryFormat:plan.deliveryFormat || "", projectId:plan.projectId, assetId:plan.assetId, name:contact.name, email:contact.email, phone:contact.phone, couponCode:contact.couponCode })
+      });
+      const order = await orderResponse.json();
       if (!configResponse.ok || !orderResponse.ok) throw new Error(config.error || order.error || "Payment setup is unavailable. Please try again.");
+      applyCheckoutCurrency(order.currency || checkoutCurrency);
       const couponFeedback = paymentForm.querySelector("[data-coupon-feedback]");
       if (order.coupon && couponFeedback) {
         couponFeedback.textContent = `${order.coupon.code} applied · ${moneyMinor(order.coupon.discountPaise, order.currency)} saved`;

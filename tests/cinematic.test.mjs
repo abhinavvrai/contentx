@@ -35,7 +35,7 @@ test("motion is an optional, cache-versioned enhancement and keeps the loader fa
   assert.match(main, /motionRender !== cinematicRender/);
   assert.match(main, /finally\s*\{\s*loader\?\.classList\.add\("is-done"\)/);
   assert.match(index, /cinematic\.css\?v=empty-tail-1/);
-  assert.match(index, /main\.js\?v=payment-resend-theme-1/);
+  assert.match(index, /main\.js\?v=payment-region-1/);
   assert.match(main, /routeRenderVersion/);
   assert.match(main, /document\.documentElement\.classList\.add\("route-busy"\)/);
   assert.match(main, /if \(stale\(\)\) return/);

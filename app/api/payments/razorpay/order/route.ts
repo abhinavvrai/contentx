@@ -1,4 +1,4 @@
-import { applyCouponToOrder, calculateOrder, createRazorpayOrder, ensurePaymentSchema, json, revisionPolicyForPlan } from "../../../../../lib/razorpay";
+import { applyCouponToOrder, calculateOrder, createRazorpayOrder, ensurePaymentSchema, json, paymentRegionForRequest, revisionPolicyForPlan } from "../../../../../lib/razorpay";
 import { getDb } from "../../../../../db";
 import { paymentOrders } from "../../../../../db/schema";
 import { AccountError, ensureAccountSchema, getAccountDatabase, requireSameOrigin, requireSessionUser } from "../../../../../lib/auth";
@@ -44,6 +44,7 @@ export async function POST(request: Request) {
       const availableRounds = policy.included + Number(purchased?.purchased || 0);
       if (usedRounds < availableRounds) throw new AccountError(`This video still has ${availableRounds - usedRounds} revision round available.`, 409);
     }
+    const paymentRegion = paymentRegionForRequest(request);
     const baseOrder = calculateOrder({
       planId: input.planId || "",
       quantity: input.quantity,
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
       rawFootageMinutes: input.rawFootageMinutes,
       rawFootageHours: input.rawFootageHours,
       currency: input.currency,
+      requestCountry: paymentRegion.country,
     });
     const priced = await applyCouponToOrder(baseOrder, input.couponCode, user.email);
     const order = priced.order;

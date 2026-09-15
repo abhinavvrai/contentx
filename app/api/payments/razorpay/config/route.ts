@@ -1,8 +1,9 @@
-import { getRazorpayConfig, json } from "../../../../../lib/razorpay";
+import { getRazorpayConfig, json, paymentRegionForRequest } from "../../../../../lib/razorpay";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    return json({ keyId: getRazorpayConfig().keyId });
+    const region = paymentRegionForRequest(request);
+    return json({ keyId: getRazorpayConfig().keyId, currency: region.currency || "USD", country: region.country });
   } catch {
     return json({ error: "Payments are not configured yet." }, 503);
   }

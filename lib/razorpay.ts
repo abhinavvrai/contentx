@@ -2,6 +2,32 @@ import { env } from "cloudflare:workers";
 
 const RAZORPAY_API_BASE = "https://api.razorpay.com/v1";
 const USD_INR_RATE = 96;
+const PAYMENT_CURRENCIES = new Set(["INR", "USD"]);
+
+/**
+ * Cloudflare adds CF-IPCountry at the edge. We use it when available so a
+ * client cannot change the checkout currency by editing the browser payload.
+ * Local development and other hosts may not provide a country header, so the
+ * explicitly requested INR/USD value remains a safe fallback.
+ */
+export function paymentRegionForRequest(request: Request) {
+  const country = [
+    request.headers.get("CF-IPCountry"),
+    request.headers.get("x-vercel-ip-country"),
+    request.headers.get("x-country-code"),
+  ].map(value => String(value || "").trim().toUpperCase()).find(value => /^[A-Z]{2}$/.test(value)) || "";
+  const currency = country === "IN" ? "INR" : country === "US" ? "USD" : null;
+  return { country: country || null, currency };
+}
+
+function resolvePaymentCurrency(requested: unknown, country: unknown): "INR" | "USD" {
+  const countryCode = String(country || "").trim().toUpperCase();
+  if (countryCode === "IN") return "INR";
+  if (countryCode === "US") return "USD";
+  return PAYMENT_CURRENCIES.has(String(requested || "").trim().toUpperCase())
+    ? String(requested).trim().toUpperCase() as "INR" | "USD"
+    : "USD";
+}
 let paymentSchemaPromise: Promise<void> | null = null;
 
 export const servicePlans = {
@@ -278,6 +304,7 @@ export function calculateOrder(input: {
   rawFootageMinutes?: unknown;
   rawFootageHours?: unknown;
   currency?: unknown;
+  requestCountry?: unknown;
 }) {
   const plan = servicePlans[input.planId as PlanId];
   if (!plan) throw new Error("Choose a valid Content X service.");
@@ -353,7 +380,8 @@ export function calculateOrder(input: {
   const subtotalAmount = baseAmount + addOnAmount + adjustmentAmount;
   const billingPremiumAmount = billing === "one_off" && usesBillingPremium ? Math.round(subtotalAmount * 0.2) : 0;
   const totalAmount = subtotalAmount + billingPremiumAmount;
-  const currency = input.currency === "USD" ? "USD" : "INR";
+  // Legacy normalization: currency = input.currency === "USD" ? "USD" : "INR"
+  const currency = resolvePaymentCurrency(input.currency, input.requestCountry);
   const canonicalTotalMinor = isCanonicalShortform && !addOns.length && !adjustments.length
     ? (currency === "USD" ? canonicalShortformUsd * 100 : Math.round(canonicalShortformUsd * USD_INR_RATE * 100))
     : (currency === "USD" ? roundedUsdFromInr(totalAmount) * 100 : totalAmount * 100);

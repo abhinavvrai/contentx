@@ -83,14 +83,14 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/src/main.js"),
   ]);
   assert.match(page, /\/site\/index\.html\?v=frame-native-20/);
-  assert.match(html, /contentx-release" content="payment-resend-theme-1/);
-  assert.match(html, /main\.js\?v=payment-resend-theme-1/);
+  assert.match(html, /contentx-release" content="payment-region-1/);
+  assert.match(html, /main\.js\?v=payment-region-1/);
   assert.match(html, /commerce\.css\?v=frame-native-20-owner-drilldown-1/);
-  assert.match(html, /theme\.css\?v=payment-resend-theme-1/);
-  assert.match(main, /features\.js\?v=payment-resend-theme-1/);
+  assert.match(html, /theme\.css\?v=payment-region-1/);
+  assert.match(main, /features\.js\?v=payment-region-1/);
   assert.match(main, /marketplace\.js\?v=client-path-2/);
   assert.match(main, /uploads\.js\?v=owner-session-files-1/);
-  assert.match(main, /account\.js\?v=payment-resend-theme-1/);
+  assert.match(main, /account\.js\?v=payment-region-1/);
   assert.match(main, /ui\.js\?v=frame-native-20/);
 });
 
