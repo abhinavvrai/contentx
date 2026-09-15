@@ -25,9 +25,9 @@ export const servicePlans = {
 } as const;
 
 export const CANONICAL_SHORTFORM_PRICES = {
-  Basic: { 4: 100, 8: 189, 12: 269 },
-  Standard: { 4: 120, 8: 227, 12: 323 },
-  Premium: { 4: 399, 8: 699, 12: 999 },
+  Basic: { 4: 100, 8: 190, 12: 280 },
+  Standard: { 4: 140, 8: 265, 12: 380 },
+  Premium: { 4: 260, 8: 460, 12: 650 },
 } as const;
 
 export function getCanonicalShortformPrice(planName: string, quantity: number): number | null {

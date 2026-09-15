@@ -30,6 +30,24 @@ async function api(url, options = {}) {
   }
 }
 
+function startResendCountdown(button, label, seconds = 60, countdownLabel = label) {
+  if (!button) return () => {};
+  let remaining = Math.max(1, Number(seconds) || 60);
+  button.disabled = true;
+  button.textContent = `${countdownLabel} in ${remaining}s`;
+  const timer = window.setInterval(() => {
+    if (!button.isConnected) { window.clearInterval(timer); return; }
+    remaining -= 1;
+    if (remaining > 0) button.textContent = `${countdownLabel} in ${remaining}s`;
+    else {
+      button.disabled = false;
+      button.textContent = label;
+      window.clearInterval(timer);
+    }
+  }, 1000);
+  return () => window.clearInterval(timer);
+}
+
 export async function refreshAccountSession(force = false) {
   if (sessionChecked && !force) return currentUser;
   try {
@@ -216,16 +234,27 @@ function renderPasswordResetRequest(panel, returningTo) {
     try {
       const requestedEmail = new FormData(form).get("email");
       await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"request_password_reset", email:requestedEmail }) });
-      form.innerHTML = `<input type="hidden" name="email" value="${escapeHTML(requestedEmail)}"><div class="account-success"><span>✓</span><h3>Reset email queued.</h3><p>If this address has an account, the email is on its way. Most arrive in 1–2 minutes, but some inbox providers can take up to 10 minutes. Check Spam or Promotions too. The link expires in 60 minutes.</p><p class="account-form-error" role="alert" hidden></p><div class="account-success-actions"><button class="pill pill-dark" type="button" data-back-login>Return to sign in</button><button class="pill pill-dark" type="submit" data-reset-resend disabled>Resend in 60s</button></div></div>`;
+      form.innerHTML = `<input type="hidden" name="email" value="${escapeHTML(requestedEmail)}"><div class="account-success"><span>✓</span><h3>Reset email queued.</h3><p>If this address has an account, the email is on its way. Most arrive in 1–2 minutes, but some inbox providers can take up to 10 minutes. Check Spam or Promotions too. The link expires in 60 minutes.</p><p class="account-form-error" role="alert" hidden></p><div class="account-success-actions"><button class="pill pill-dark" type="button" data-back-login>Return to sign in</button><button class="pill pill-dark" type="button" data-reset-resend>Resend in 60s</button></div></div>`;
       form.querySelector("[data-back-login]").addEventListener("click", () => panel.closest(".account-card").querySelector('[data-account-tab="login"]').click());
       const resend = form.querySelector("[data-reset-resend]");
-      let remaining = 60;
-      const countdown = setInterval(() => {
-        if (!resend.isConnected) { clearInterval(countdown); return; }
-        remaining -= 1;
-        resend.textContent = remaining > 0 ? `Resend in ${remaining}s` : "Resend reset email";
-        if (remaining <= 0) { resend.disabled = false; clearInterval(countdown); }
-      }, 1000);
+      const resendError = form.querySelector("[role=alert]");
+      startResendCountdown(resend, "Resend reset email", 60, "Resend");
+      resend.addEventListener("click", async () => {
+        resend.disabled = true;
+        resend.textContent = "Sending secure link…";
+        resendError.hidden = true;
+        try {
+          await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"request_password_reset", email:requestedEmail }) });
+          resendError.textContent = "A new reset email was sent. Check your inbox or Spam folder.";
+          resendError.hidden = false;
+          startResendCountdown(resend, "Resend reset email", 60, "Resend");
+        } catch (failure) {
+          resendError.textContent = failure.message;
+          resendError.hidden = false;
+          resend.disabled = false;
+          resend.textContent = "Resend reset email";
+        }
+      });
     } catch (failure) {
       error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Send reset link →";
     }
@@ -267,19 +296,23 @@ function renderOtpAccess(panel, returningTo, register) {
 
 function renderOtpVerification(panel, returningTo, register, pending) {
   const email = String(pending.email || "");
-  panel.innerHTML = `<button class="account-inline-back" type="button">← Change details</button><p class="eyebrow"><span></span>Verify your identity</p><h2>Enter the code.</h2><p>We sent a 6-digit code to <strong>${escapeHTML(email)}</strong>.</p><form data-otp-verify><input type="hidden" name="email" value="${escapeHTML(email)}"><input type="hidden" name="otp" data-otp-value><div class="otp-box-grid" aria-label="Verification code">${Array.from({ length:6 }, (_, index) => `<input data-otp-box inputmode="numeric" autocomplete="${index === 0 ? "one-time-code" : "off"}" maxlength="1" aria-label="Digit ${index + 1}">`).join("")}</div><p class="account-form-error" role="alert" hidden></p><div class="otp-actions"><button type="button" class="account-inline-back" data-otp-resend>Resend code</button><button class="pill pill-hot" type="submit">${register ? "Verify & create account" : "Verify & continue"} →</button></div></form>`;
+  panel.innerHTML = `<button class="account-inline-back" type="button">← Change details</button><p class="eyebrow"><span></span>Verify your identity</p><h2>Enter the code.</h2><p>We sent a 6-digit code to <strong>${escapeHTML(email)}</strong>.</p><form data-otp-verify><input type="hidden" name="email" value="${escapeHTML(email)}"><input type="hidden" name="otp" data-otp-value><div class="otp-box-grid" aria-label="Verification code">${Array.from({ length:6 }, (_, index) => `<input data-otp-box inputmode="numeric" autocomplete="${index === 0 ? "one-time-code" : "off"}" maxlength="1" aria-label="Digit ${index + 1}">`).join("")}</div><p class="account-form-error" role="alert" hidden></p><div class="otp-actions"><button type="button" class="account-inline-back" data-otp-resend>Resend code</button><button class="pill pill-hot" type="submit">${register ? "Verify & create account" : "Verify & continue"} →</button></div><p class="account-form-error otp-resend-status" role="status" hidden></p></form>`;
   panel.querySelector(".account-inline-back").addEventListener("click", () => renderOtpAccess(panel, returningTo, register));
   bindOtpBoxes(panel.querySelector("[data-otp-verify]"));
   panel.querySelector("[data-otp-resend]").addEventListener("click", async event => {
     const button = event.currentTarget;
+    const status = panel.querySelector(".otp-resend-status");
     button.disabled = true; button.textContent = "Sending…";
+    if (status) status.hidden = true;
     try {
       await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"request_otp", email }) });
-      button.textContent = "Code sent ✓";
+      if (status) { status.textContent = "A new code was sent. Check your inbox."; status.hidden = false; }
+      startResendCountdown(button, "Resend code", 60);
     } catch (failure) {
-      button.textContent = failure.message;
+      if (status) { status.textContent = failure.message; status.hidden = false; }
+      button.disabled = false;
+      button.textContent = "Resend code";
     }
-    setTimeout(() => { button.disabled = false; button.textContent = "Resend code"; }, 3000);
   });
   panel.querySelector("[data-otp-verify]").addEventListener("submit", async event => {
     event.preventDefault();

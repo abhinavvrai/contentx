@@ -19,6 +19,7 @@ const formatBytes = bytes => {
 const fileGlyph = type => String(type || "").startsWith("video/") ? "▶" : String(type || "").startsWith("image/") ? "▧" : String(type || "").startsWith("audio/") ? "♫" : "◇";
 const workspaceIcon = name => {
   const paths = {
+    home:'<path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1V9.5z"/>',
     projects:'<path d="M4 7.5h6.5l1.6 2H20v9.5H4z"/><path d="M4 7.5V5h6l1.5 2"/>',
     search:'<circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 4 4"/>',
     bell:'<path d="M7 17h10l-1.2-2v-4a3.8 3.8 0 0 0-7.6 0v4z"/><path d="M10 19h4"/>',
@@ -145,7 +146,7 @@ export async function renderClientWorkspace(root, actions, route) {
 
 function workspaceOpeningShell() {
   return `<div class="workspace-shell workspace-opening-shell" aria-label="Opening workspace">
-    <aside class="workspace-rail"><span class="workspace-rail-brand">CX</span><nav><span></span><span></span><span></span></nav></aside>
+    <aside class="workspace-rail"><span class="workspace-rail-home" title="Back to Homepage">${workspaceIcon("home")}</span><nav><span></span><span></span><span></span></nav></aside>
     <aside class="workspace-sidebar"><div class="workspace-opening-brand"></div><div class="workspace-opening-nav"></div><div class="workspace-opening-nav short"></div><div class="workspace-opening-projects"></div></aside>
     <main class="workspace-main"><header class="workspace-topbar"><span class="workspace-opening-line compact"></span><span class="workspace-opening-line action"></span></header><section class="workspace-opening-content"><span class="workspace-opening-line title"></span><span class="workspace-opening-line subtitle"></span><div class="workspace-opening-toolbar"></div><div class="workspace-opening-cards"><i></i><i></i><i></i></div></section></main>
   </div>`;
@@ -161,7 +162,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   if (project) rememberRecentProject(project.id);
   root.innerHTML = `<div class="workspace-shell ${project && !accountPanel ? "project-open" : accountPanel ? "account-open" : showcasePanel ? "showcase-open" : scriptsPanel ? "scripts-open" : "overview-open"}">
     <aside class="workspace-rail" aria-label="Workspace tools">
-      <a class="workspace-rail-brand" href="#home" aria-label="Content X home">CX</a>
+      <a class="workspace-rail-home" href="#home" aria-label="Content X home" title="Back to Homepage">${workspaceIcon("home")}</a>
       <nav>
         <a class="${!accountPanel && !scriptsPanel && !showcasePanel ? "active" : ""}" href="#workspace" aria-label="Projects" title="Projects">${workspaceIcon("projects")}</a>
         <a class="workspace-rail-scripts ${scriptsPanel ? "active" : ""}" href="${selected ? `#workspace?project=${encodeURIComponent(selected.project_id || selected.id)}&panel=scripts` : "#workspace?panel=scripts"}" aria-label="Script Writing Studio" title="Script Writing Studio · Teleprompter & Viral Hooks">${workspaceIcon("script")}</a>

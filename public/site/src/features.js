@@ -78,9 +78,9 @@ function clientMessages(client) {
 }
 
 const monthlyPlans = [
-  { id: "monthly-starter", name: "Creator Starter", price: 13000, unit: "month", badge: "10 videos minimum", copy: "A consistent editing engine for creators building momentum.", features: ["10 short-form videos", "₹1,300 effective per video", "Captions & clean motion", "10 content ideas", "2 revisions per video"] },
-  { id: "monthly-growth", name: "Content Growth", price: 24000, unit: "month", badge: "Most popular", featured: true, copy: "Strategy, scripts and stronger edits in one monthly system.", features: ["20 short-form videos", "₹1,200 effective per video", "12 ready-to-shoot scripts", "Monthly content calendar", "Advanced captions & B-roll", "2 revisions per video"] },
-  { id: "monthly-full", name: "Full-Stack Social", price: 45000, unit: "month", badge: "Managed service", copy: "Your outsourced content team—from idea to scheduled post.", features: ["30 short-form videos", "Content strategy & scripts", "Covers and thumbnails", "Instagram scheduling", "Dedicated social manager", "Monthly performance review"] }
+  { id: "monthly-starter", name: "Creator Starter", price: 135, canonicalUsdAmount: 135, currency: "USD", unit: "month", badge: "10 videos minimum", copy: "A consistent editing engine for creators building momentum.", features: ["10 short-form videos", "$13.50 effective per video", "Captions & clean motion", "10 content ideas", "2 revisions per video"] },
+  { id: "monthly-growth", name: "Content Growth", price: 250, canonicalUsdAmount: 250, currency: "USD", unit: "month", badge: "Most popular", featured: true, copy: "Strategy, scripts and stronger edits in one monthly system.", features: ["20 short-form videos", "$12.50 effective per video", "12 ready-to-shoot scripts", "Monthly content calendar", "Advanced captions & B-roll", "2 revisions per video"] },
+  { id: "monthly-full", name: "Full-Stack Social", price: 470, canonicalUsdAmount: 470, currency: "USD", unit: "month", badge: "Managed service", copy: "Your outsourced content team—from idea to scheduled post.", features: ["30 short-form videos", "Content strategy & scripts", "Covers and thumbnails", "Instagram scheduling", "Dedicated social manager", "Monthly performance review"] }
 ];
 
 const talentRoles = [
@@ -93,23 +93,82 @@ const talentRoles = [
 ];
 
 const USD_INR_RATE = 96;
-const currencyStoreKey = "cx_currency_v2";
-function detectCurrency() {
-  const saved = store.get(currencyStoreKey, "");
-  if (saved === "USD" || saved === "INR") return saved;
-  const locale = (navigator.language || "").toLowerCase();
-  const countryLocales = (navigator.languages || []).join(" ").toLowerCase();
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-  if (locale.endsWith("-in") || countryLocales.includes("-in") || timezone === "Asia/Kolkata" || timezone === "Asia/Calcutta") return "INR";
-  return "USD";
+
+export function detectVisitorRegionalCurrency() {
+  const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").toLowerCase();
+  const lang = (navigator.language || "").toLowerCase();
+  const langs = (navigator.languages || []).join(" ").toLowerCase();
+
+  // India
+  if (tz.includes("kolkata") || tz.includes("calcutta") || lang.endsWith("-in") || langs.includes("-in")) {
+    return {
+      currency: "INR",
+      symbol: "₹",
+      format: usd => `₹${Math.round(usd * USD_INR_RATE).toLocaleString("en-IN")}`,
+      name: "INR"
+    };
+  }
+  // United Kingdom
+  if (tz.includes("london") || lang.endsWith("-gb") || langs.includes("-gb")) {
+    return {
+      currency: "GBP",
+      symbol: "£",
+      format: usd => `£${Math.round(usd * 0.79).toLocaleString("en-GB")}`,
+      name: "GBP"
+    };
+  }
+  // Eurozone
+  if (tz.startsWith("europe/") || lang.startsWith("de") || lang.startsWith("fr") || lang.startsWith("es") || lang.startsWith("it") || lang.startsWith("nl")) {
+    return {
+      currency: "EUR",
+      symbol: "€",
+      format: usd => `€${Math.round(usd * 0.92).toLocaleString("en-IE")}`,
+      name: "EUR"
+    };
+  }
+  // Canada
+  if (tz.includes("toronto") || tz.includes("vancouver") || tz.includes("montreal") || lang.endsWith("-ca") || langs.includes("-ca")) {
+    return {
+      currency: "CAD",
+      symbol: "CA$",
+      format: usd => `CA$${Math.round(usd * 1.36).toLocaleString("en-CA")}`,
+      name: "CAD"
+    };
+  }
+  // Australia
+  if (tz.startsWith("australia/") || lang.endsWith("-au") || langs.includes("-au")) {
+    return {
+      currency: "AUD",
+      symbol: "A$",
+      format: usd => `A$${Math.round(usd * 1.52).toLocaleString("en-AU")}`,
+      name: "AUD"
+    };
+  }
+  // UAE
+  if (tz.includes("dubai") || lang.endsWith("-ae") || langs.includes("-ae")) {
+    return {
+      currency: "AED",
+      symbol: "AED ",
+      format: usd => `AED ${Math.round(usd * 3.67).toLocaleString("en-AE")}`,
+      name: "AED"
+    };
+  }
+  // Default USD
+  return {
+    currency: "USD",
+    symbol: "$",
+    format: usd => `$${Number(usd).toLocaleString("en-US")}`,
+    name: "USD"
+  };
 }
-let activeCurrency = detectCurrency();
+
+let activeCurrency = "USD";
 function roundedUsdFromInr(value) {
   const amount = Number(value || 0);
   if (!amount) return 0;
   return Math.max(5, Math.ceil(amount / USD_INR_RATE / 5) * 5);
 }
-function money(value, currency = activeCurrency) {
+function money(value, currency = "USD") {
   const amount = Number(value || 0);
   if (currency === "USD") return `$${roundedUsdFromInr(amount).toLocaleString("en-US")}`;
   return `₹${Math.round(amount).toLocaleString("en-IN")}`;
@@ -219,16 +278,15 @@ function pushServerNotification(type, title, message, meta = {}) {
 export function initTheme() {
   let transitionTimer;
   const applyTheme = value => {
-    // Light mode temporarily disabled per user direction; enforce dark mode across the entire app
-    const theme = "dark";
+    const theme = value === "light" ? "light" : "dark";
     document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#101014");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "light" ? "#f4f5f7" : "#101014");
     document.querySelectorAll("[data-theme-control]").forEach(button => {
-      const next = "dark";
+      const next = theme === "dark" ? "light" : "dark";
       button.setAttribute("aria-label", `Use ${next} mode`);
       button.setAttribute("title", `Use ${next} mode`);
-      button.setAttribute("aria-pressed", "false");
-      button.style.display = "none";
+      button.setAttribute("aria-pressed", String(theme === "light"));
+      button.style.display = "";
     });
   };
   let savedTheme = "dark";
@@ -256,7 +314,7 @@ export function initTheme() {
     const isWorkspace = Boolean(document.querySelector("#app.workspace-app") || location.hash.startsWith("#workspace"));
     control.classList.toggle("review-theme-toggle", isReview);
     control.classList.toggle("workspace-theme-toggle", isWorkspace && !isReview);
-    control.style.display = "none";
+    control.style.display = "";
     applyTheme(document.documentElement.dataset.theme);
   };
   placeControl();
@@ -264,7 +322,7 @@ export function initTheme() {
   if (app && typeof MutationObserver !== "undefined") new MutationObserver(placeControl).observe(app, { childList:true });
   document.addEventListener("click", event => {
     if (!event.target.closest?.("[data-theme-control]")) return;
-    const next = "dark";
+    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     try { localStorage.setItem("cx_theme", next); } catch {}
     const commitTheme = () => applyTheme(next);
     document.documentElement.classList.add("theme-is-switching");
@@ -325,6 +383,84 @@ export function enhanceMarketing(root, actions, data = {}) {
   root.querySelectorAll("[data-apply]").forEach(btn => btn.addEventListener("click", () => openApplication(btn.dataset.apply)));
   root.querySelectorAll('[data-action="login"]').forEach(btn => { const replacement = btn.cloneNode(true); btn.replaceWith(replacement); replacement.addEventListener("click", actions.openAccess); });
   root.querySelectorAll('a[href^="mailto:"]').forEach(link => { link.href = "#contact-form"; link.textContent = link.textContent.trim() === "Email" ? "Website enquiry" : "Send a project brief"; });
+  enhanceScriptsShowcase(root, actions);
+}
+
+function enhanceScriptsShowcase(root, actions) {
+  const section = root.querySelector("#scripts");
+  if (!section) return;
+
+  const filterBtns = section.querySelectorAll("[data-site-hook-filter]");
+  const searchInput = section.querySelector("[data-site-hooks-search]");
+  const cards = section.querySelectorAll(".site-hook-card");
+
+  const applyFilters = () => {
+    const activeBtn = section.querySelector("[data-site-hook-filter].active");
+    const activeFilter = activeBtn?.dataset.siteHookFilter || "all";
+    const query = (searchInput?.value || "").trim().toLowerCase();
+
+    cards.forEach(card => {
+      const cat = card.dataset.siteHookCategory || "";
+      const matchesCat = activeFilter === "all" || cat === activeFilter;
+      const matchesQuery = !query || card.textContent.toLowerCase().includes(query);
+      card.hidden = !(matchesCat && matchesQuery);
+    });
+  };
+
+  filterBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      filterBtns.forEach(b => b.classList.toggle("active", b === btn));
+      applyFilters();
+    });
+  });
+
+  searchInput?.addEventListener("input", applyFilters);
+
+  section.querySelectorAll("[data-site-copy-hook]").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const card = btn.closest(".site-hook-card");
+      if (!card) return;
+      const formula = card.querySelector(".site-hook-structure p")?.textContent?.trim() || "";
+      const example = card.querySelector(".site-hook-example p")?.textContent?.trim() || "";
+      const textToCopy = `${formula}\n\nExample: ${example}`;
+
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = textToCopy;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+      }
+
+      const origText = btn.innerHTML;
+      btn.innerHTML = `<span>✓</span> Copied!`;
+      btn.classList.add("copied");
+      notify("Hook formula copied to clipboard!");
+      setTimeout(() => {
+        btn.innerHTML = origText;
+        btn.classList.remove("copied");
+      }, 1800);
+    });
+  });
+
+  cards.forEach(card => {
+    card.addEventListener("click", e => {
+      if (e.target.closest("button")) return;
+      const copyBtn = card.querySelector("[data-site-copy-hook]");
+      copyBtn?.click();
+    });
+  });
+
+  section.querySelectorAll("[data-studio-open]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      location.hash = "workspace?panel=scripts";
+    });
+  });
 }
 
 function enhancePricingSelections(pricing, actions) {
@@ -376,18 +512,18 @@ function enhancePricingSelections(pricing, actions) {
 const CANONICAL_SHORTFORM_PRICES = {
   Basic: {
     4: { usd: 100, rate: "25.00", save: null },
-    8: { usd: 200, rate: "25.00", save: "5% volume savings" },
+    8: { usd: 190, rate: "23.75", save: "5% volume savings" },
     12: { usd: 280, rate: "23.33", save: "10% volume savings" },
   },
   Standard: {
-    4: { usd: 130, rate: "32.50", save: null },
-    8: { usd: 250, rate: "31.25", save: "5% volume savings" },
-    12: { usd: 350, rate: "29.17", save: "10% volume savings" },
+    4: { usd: 140, rate: "35.00", save: null },
+    8: { usd: 265, rate: "33.13", save: "5% volume savings" },
+    12: { usd: 380, rate: "31.67", save: "10% volume savings" },
   },
   Premium: {
-    4: { usd: 399, rate: "99.75", save: null },
-    8: { usd: 699, rate: "87.38", save: "12% savings" },
-    12: { usd: 999, rate: "83.25", save: "17% savings" },
+    4: { usd: 260, rate: "65.00", save: null },
+    8: { usd: 460, rate: "57.50", save: "12% savings" },
+    12: { usd: 650, rate: "54.17", save: "17% savings" },
   },
 };
 
@@ -444,7 +580,7 @@ function setupUnifiedPricing(pricing, actions, data) {
   };
   const state = { billing:"monthly", service:"video", quantity:8, planId:"basic_reel", selectedAddOns:new Set(), addOnsRevealed:false, deliveryFormat:"Vertical 9:16", durationMinutes:10, rawFootageMinutes:60 };
   pricing.dataset.pricingRestored = "unified";
-  pricing.innerHTML = `<div class="section-heading centered"><div class="cx-lobby-eyebrow-pill"><span class="cx-lobby-pulse-dot"></span><span>TRANSPARENT PRICING</span></div><h2>High-retention video editing. <em>Zero overhead.</em></h2><p>Monthly production is shown first. One-off work stays available with a 20% flexibility premium, and pricing switches automatically by visitor region.</p></div><div class="cx-pricing-hero-toggle-wrap"><div class="cx-pricing-hero-toggle" role="tablist" aria-label="Select mode"><button type="button" class="active" data-service-intent="client"><span class="cx-toggle-dot"></span><span>Get Video Editing Service</span></button><button type="button" data-service-intent="creator"><span>Join as Creator / Editor</span><span class="cx-hiring-chip">We're hiring</span></button></div></div><div class="cx-lobby-section" data-client-pricing><div class="cx-lobby-pricing-grid"><article class="cx-lobby-card" data-lobby-card="Basic"><div class="cx-lobby-card-header"><span class="cx-lobby-card-title" data-lobby-title="Basic">Basic 8-pack</span><span class="cx-lobby-badge" data-lobby-badge="Basic">Standard 8-pack</span></div><div class="cx-lobby-rate-wrap"><div class="cx-lobby-rate" data-lobby-rate="Basic">$200</div><span class="cx-lobby-rate-unit">total</span></div><p class="cx-lobby-subtitle" data-lobby-subtitle="Basic">8 videos package · $25.00/video</p><div class="cx-lobby-total-pill" data-lobby-total-pill="Basic"><span>Full package · 8 Videos</span><small class="cx-pill-inr">approx. ₹19,200 · USD Canonical</small></div><div class="cx-lobby-pack-switcher" role="group" aria-label="Basic package quantity"><button type="button" data-lobby-pack-btn="Basic" data-qty-choice="4">4 videos</button><button type="button" data-lobby-pack-btn="Basic" data-qty-choice="8" class="active">8 videos</button><button type="button" data-lobby-pack-btn="Basic" data-qty-choice="12">12 videos <span class="cx-save-tag">Save $20</span></button></div><ul class="cx-lobby-features"><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Fast 48-72h turnaround</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> 1 active request at a time</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Unlimited revisions</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Clean cuts, pacing and zooms</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Engaging captions and subtitles</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Stickers, highlights and sound sync</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> 1080p social export (Vertical 9:16)</li></ul><button type="button" class="pill cx-lobby-buy-btn" data-lobby-buy="Basic">Choose Basic</button></article><article class="cx-lobby-card cx-lobby-card--featured" data-lobby-card="Standard"><div class="cx-lobby-card-header"><span class="cx-lobby-card-title" data-lobby-title="Standard">Standard 8-pack</span><span class="cx-lobby-badge cx-lobby-badge--hot" data-lobby-badge="Standard">Most Popular · 8-pack</span></div><div class="cx-lobby-rate-wrap"><div class="cx-lobby-rate" data-lobby-rate="Standard">$250</div><span class="cx-lobby-rate-unit">total</span></div><p class="cx-lobby-subtitle" data-lobby-subtitle="Standard">8 videos package · $31.25/video</p><div class="cx-lobby-total-pill cx-lobby-total-pill--featured" data-lobby-total-pill="Standard"><span>Full package · 8 Videos (Popular 8-pack)</span><small class="cx-pill-inr">approx. ₹24,000 · USD Canonical</small></div><div class="cx-lobby-pack-switcher" role="group" aria-label="Standard package quantity"><button type="button" data-lobby-pack-btn="Standard" data-qty-choice="4">4 videos</button><button type="button" data-lobby-pack-btn="Standard" data-qty-choice="8" class="active">8 videos</button><button type="button" data-lobby-pack-btn="Standard" data-qty-choice="12">12 videos <span class="cx-save-tag">Save $40</span></button></div><ul class="cx-lobby-features"><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Fast 48h turnaround</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> 1 active request at a time</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Unlimited revisions</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Advanced motion graphics &amp; text styling</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> B-roll placement and visual cutaways</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Sound design and music accents</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Dedicated Creative Lead</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Source file included</li></ul><button type="button" class="pill pill-hot cx-lobby-buy-btn cx-lobby-buy-btn--featured" data-lobby-buy="Standard">Choose Standard</button></article><article class="cx-lobby-card" data-lobby-card="Premium"><div class="cx-lobby-card-header"><span class="cx-lobby-card-title" data-lobby-title="Premium">Premium 4-pack</span><span class="cx-lobby-badge cx-lobby-badge--premium" data-lobby-badge="Premium">High-Impact · Motion Ready</span></div><div class="cx-lobby-rate-wrap"><div class="cx-lobby-rate" data-lobby-rate="Premium">$399</div><span class="cx-lobby-rate-unit">total</span></div><p class="cx-lobby-subtitle" data-lobby-subtitle="Premium">4 videos package · $99.75/video</p><div class="cx-lobby-total-pill" data-lobby-total-pill="Premium"><span>Full package · 4 Videos</span><small class="cx-pill-inr">approx. ₹38,304 · USD Canonical</small></div><div class="cx-lobby-pack-switcher" role="group" aria-label="Premium package quantity"><button type="button" data-lobby-pack-btn="Premium" data-qty-choice="4" class="active">4 videos</button><button type="button" data-lobby-pack-btn="Premium" data-qty-choice="8">8 videos <span class="cx-save-tag">Save $100</span></button><button type="button" data-lobby-pack-btn="Premium" data-qty-choice="12">12 videos <span class="cx-save-tag">Save $200</span></button></div><ul class="cx-lobby-features"><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Fast 24-48h priority turnaround</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> 1 active request at a time</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Unlimited revisions</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Retention-led premium edit &amp; viral pacing</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Motion titles, animated callouts &amp; 2D accents</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Up to 10 relevant B-roll inserts</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Full sound design and premium mix</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Custom scroll-stopping cover design included</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Dedicated Creative Director</li></ul><button type="button" class="pill cx-lobby-buy-btn" data-lobby-buy="Premium">Choose Premium</button></article></div><div class="unified-turnaround-policy"><span><b>48h Turnaround</b> per video</span><span><b>Dedicated Creative Lead</b></span><span><b>Unlimited revisions</b> per video</span><span><b>100% Quality Guaranteed</b></span></div><div class="cx-plan-compare-wrap"><div class="cx-plan-compare-head"><div class="cx-lobby-eyebrow-pill"><span class="cx-lobby-pulse-dot"></span><span>PLAN COMPARISON</span></div><h3>What's the Difference in Quality?</h3><p>Every tier is tailored for specific content goals—from high-volume consistency to viral, motion-heavy flagship videos.</p></div><div class="cx-plan-compare-table-wrap"><table class="cx-plan-compare-table"><thead><tr><th>Feature &amp; Scope</th><th>Basic</th><th class="cx-th-featured">Standard <span>Popular</span></th><th>Premium</th></tr></thead><tbody><tr><td>Ideal for</td><td>Clean talking head &amp; daily social volume</td><td class="cx-td-featured">Retention growth, pacing &amp; dynamic B-roll</td><td>Flagship brand launches &amp; viral storytelling</td></tr><tr><td>Turnaround time</td><td>48–72 hours</td><td class="cx-td-featured">Fast 48 hours</td><td>Priority 24–48 hours</td></tr><tr><td>Max video length</td><td>Up to 60 seconds</td><td class="cx-td-featured">Up to 90 seconds</td><td>Up to 180 seconds</td></tr><tr><td>Revision rounds</td><td>1 round included</td><td class="cx-td-featured">2 rounds included</td><td>3 rounds included</td></tr><tr><td>Pacing &amp; hook cutaways</td><td>Clean cuts &amp; zooms</td><td class="cx-td-featured">Retention-driven narrative pacing</td><td>High-impact viral hooks &amp; retention pacing</td></tr><tr><td>Captions &amp; subtitles</td><td>Engaging subtitles</td><td class="cx-td-featured">Custom styled &amp; branded typography</td><td>Kinetic animated typography &amp; highlights</td></tr><tr><td>B-Roll &amp; cutaways</td><td>Optional add-on</td><td class="cx-td-featured">Relevant visual B-roll &amp; cutaways</td><td>Up to 10 cinematic B-roll inserts</td></tr><tr><td>Sound design &amp; audio</td><td>Light sound effects &amp; music sync</td><td class="cx-td-featured">Rich sound accents &amp; audio balance</td><td>Full cinematic sound design &amp; master mix</td></tr><tr><td>Motion graphics</td><td>—</td><td class="cx-td-featured">Animated titles &amp; 2D callouts</td><td>Advanced 2D/3D motion graphics &amp; accents</td></tr><tr><td>Scroll-stopping cover</td><td>Optional add-on</td><td class="cx-td-featured">Optional add-on</td><td>Included free (High-CTR Cover)</td></tr><tr><td>Creative supervision</td><td>Creative Lead</td><td class="cx-td-featured">Dedicated Creative Lead</td><td>Dedicated Creative Director</td></tr><tr><td>Source project files</td><td>—</td><td class="cx-td-featured">Included free</td><td>Included free</td></tr></tbody><tfoot><tr><td></td><td><button type="button" class="pill cx-compare-cta" data-lobby-buy="Basic">Choose Basic</button></td><td class="cx-td-featured"><button type="button" class="pill pill-hot cx-compare-cta cx-compare-cta--featured" data-lobby-buy="Standard">Choose Standard</button></td><td><button type="button" class="pill cx-compare-cta" data-lobby-buy="Premium">Choose Premium</button></td></tr></tfoot></table></div></div><div class="unified-more-videos"><span>Need more than 12 videos or custom scope? </span><a href="${data.whatsapp || "#contact-form"}" target="_blank" rel="noreferrer">Get a custom bulk quote →</a></div></div><div class="cx-creator-hiring-section" data-creator-portal hidden><div class="pricing-editor-banner"><div class="pricing-editor-content"><span class="pricing-editor-badge">For Creators &amp; Editors</span><h3>Join the Content X Creative Network</h3><p>We partner with high-calibre video editors, motion graphic artists, scriptwriters, and thumbnail specialists. Enjoy steady pipeline volume, protected direct payouts, and remote autonomy.</p><div class="cx-hiring-perks-row"><span>Consistent project flow</span><span>Direct USD / INR payouts</span><span>Remote worldwide</span></div></div><button type="button" class="pill pill-dark" data-apply="Video Editor">Join as Editor →</button></div><div class="cx-hiring-roles-grid"><article class="cx-role-card"><span class="cx-role-tag">Open Role · Remote</span><h4>Short-Form Video Editor</h4><p>High-energy pacing, subtitles, zoom hooks, and seamless sound sync for Instagram Reels and YouTube Shorts.</p><ul><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Premiere Pro, DaVinci Resolve, or CapCut Pro</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Strong narrative rhythm and hook pacing</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Reliable 48h turnaround</li></ul><button class="pill pill-hot" type="button" data-apply="Short-Form Video Editor">Apply for this role →</button></article><article class="cx-role-card"><span class="cx-role-tag">Open Role · Remote</span><h4>Motion Graphic Designer</h4><p>Kinetic typography, animated callouts, 2D graphic assets, and dynamic UI mockups in After Effects.</p><ul><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> After Effects &amp; Illustrator expertise</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Smooth easing, tracking &amp; compositing</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Branded design systems</li></ul><button class="pill pill-hot" type="button" data-apply="Motion Graphic Designer">Apply for this role →</button></article><article class="cx-role-card"><span class="cx-role-tag">Open Role · Remote</span><h4>Script Writer &amp; Hook Strategist</h4><p>Research, conceptualize, and write scroll-stopping 60-90 second video scripts with high retention hooks and CTAs.</p><ul><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Proven viral short-form frameworks</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Niche audience research</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Script-to-screen timing</li></ul><button class="pill pill-hot" type="button" data-apply="Script Writer">Apply for this role →</button></article><article class="cx-role-card"><span class="cx-role-tag">Open Role · Remote</span><h4>Thumbnail &amp; Cover Artist</h4><p>Design click-worthy YouTube thumbnails and Instagram Reel covers that drive 10%+ CTR across creator channels.</p><ul><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Photoshop &amp; Figma mastery</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Composition, facial lighting &amp; typography</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Rapid A/B variation delivery</li></ul><button class="pill pill-hot" type="button" data-apply="Thumbnail Artist">Apply for this role →</button></article></div></div><div class="unified-pricing-legacy-container" style="display:none;" aria-hidden="true"><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="monthly" class="active">Monthly</button><button type="button" data-unified-billing="one_off">Per reel</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Short-form</button><button type="button" data-unified-service="longform">Long-form</button><button type="button" data-unified-service="podcast">Podcast</button></div></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a short-form package</strong><small>Switch between the tabs, then expand add-ons if needed.</small></div></header><div class="unified-package-browser" data-unified-packages></div></div><div class="unified-step" data-quantity-step><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Monthly short-form production starts at 10.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>10</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div><label class="unified-volume-slider"><span>Package volume</span><input type="range" min="10" max="30" value="10" data-unified-slider><small><b data-unified-slider-min>10</b><b data-unified-slider-max>30</b></small></label><div class="longform-controls" data-longform-controls hidden><label><span>Final video length</span><input type="range" min="10" max="60" step="5" value="10" data-duration-slider><small><b data-duration-value>10 min</b><em data-duration-note>Long-form starts at ₹5,000 for 10 minutes.</em></small></label><label><span>Raw footage to review</span><input type="range" min="60" max="600" step="15" value="60" data-raw-slider><small><b data-raw-value>1 hr</b><em>Extra raw footage is priced in 15-minute bands at ₹200 each.</em></small></label></div></div></section><aside class="unified-summary"><span data-unified-badge>MONTHLY PRODUCTION</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons / scope <b data-unified-addons-total></b></span><span data-unified-premium-line hidden>One-off +20% <b data-unified-premium></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">Revision rounds follow the selected package. Extra short-form rounds are ₹300; extra long-form rounds are ₹500.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
+  pricing.innerHTML = `<div class="section-heading centered"><div class="cx-lobby-eyebrow-pill"><span class="cx-lobby-pulse-dot"></span><span>TRANSPARENT PRICING</span></div><h2>High-retention video editing. <em>Zero overhead.</em></h2><p>Monthly production is shown first. One-off work stays available with a 20% flexibility premium, and pricing switches automatically by visitor region.</p></div><div class="cx-pricing-hero-toggle-wrap"><div class="cx-pricing-hero-toggle" role="tablist" aria-label="Select mode"><button type="button" class="active" data-service-intent="client"><span class="cx-toggle-dot"></span><span>Get Video Editing Service</span></button><button type="button" data-service-intent="creator"><span>Join as Creator / Editor</span><span class="cx-hiring-chip">We're hiring</span></button></div></div><div class="cx-lobby-section" data-client-pricing><div class="cx-lobby-pricing-grid"><article class="cx-lobby-card" data-lobby-card="Basic"><div class="cx-lobby-card-header"><span class="cx-lobby-card-title" data-lobby-title="Basic">Basic 8-pack</span><span class="cx-lobby-badge" data-lobby-badge="Basic">Save $10 with 8-pack</span></div><div class="cx-lobby-rate-wrap"><div class="cx-lobby-rate" data-lobby-rate="Basic">$190</div><span class="cx-lobby-rate-unit">total</span></div><p class="cx-lobby-subtitle" data-lobby-subtitle="Basic">8 videos package · $23.75/video</p><div class="cx-lobby-total-pill" data-lobby-total-pill="Basic"><span>Full package · 8 Videos · Save $10 (5% off)</span></div><div class="cx-lobby-pack-switcher" role="group" aria-label="Basic package quantity"><button type="button" data-lobby-pack-btn="Basic" data-qty-choice="4">4 videos</button><button type="button" data-lobby-pack-btn="Basic" data-qty-choice="8" class="active">8 videos <span class="cx-save-tag">Save $10</span></button><button type="button" data-lobby-pack-btn="Basic" data-qty-choice="12">12 videos <span class="cx-save-tag">Save $20</span></button></div><ul class="cx-lobby-features"><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Fast 48-72h turnaround</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> 1 active request at a time</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Unlimited revisions</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Clean cuts, pacing and zooms</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Engaging captions and subtitles</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Stickers, highlights and sound sync</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> 1080p social export (Vertical 9:16)</li></ul><button type="button" class="pill cx-lobby-buy-btn" data-lobby-buy="Basic">Choose Basic</button></article><article class="cx-lobby-card cx-lobby-card--featured" data-lobby-card="Standard"><div class="cx-lobby-card-header"><span class="cx-lobby-card-title" data-lobby-title="Standard">Standard 8-pack</span><span class="cx-lobby-badge cx-lobby-badge--hot" data-lobby-badge="Standard">Most Popular · 8-pack</span></div><div class="cx-lobby-rate-wrap"><div class="cx-lobby-rate" data-lobby-rate="Standard">$265</div><span class="cx-lobby-rate-unit">total</span></div><p class="cx-lobby-subtitle" data-lobby-subtitle="Standard">8 videos package · $33.13/video</p><div class="cx-lobby-total-pill cx-lobby-total-pill--featured" data-lobby-total-pill="Standard"><span>Full package · 8 Videos (Popular 8-pack)</span></div><div class="cx-lobby-pack-switcher" role="group" aria-label="Standard package quantity"><button type="button" data-lobby-pack-btn="Standard" data-qty-choice="4">4 videos</button><button type="button" data-lobby-pack-btn="Standard" data-qty-choice="8" class="active">8 videos <span class="cx-save-tag">Save $15</span></button><button type="button" data-lobby-pack-btn="Standard" data-qty-choice="12">12 videos <span class="cx-save-tag">Save $40</span></button></div><ul class="cx-lobby-features"><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Fast 48h turnaround</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> 1 active request at a time</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Unlimited revisions</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Advanced motion graphics &amp; text styling</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> B-roll placement and visual cutaways</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Sound design and music accents</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Dedicated Creative Lead</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Source file included</li></ul><button type="button" class="pill pill-hot cx-lobby-buy-btn cx-lobby-buy-btn--featured" data-lobby-buy="Standard">Choose Standard</button></article><article class="cx-lobby-card" data-lobby-card="Premium"><div class="cx-lobby-card-header"><span class="cx-lobby-card-title" data-lobby-title="Premium">Premium 4-pack</span><span class="cx-lobby-badge cx-lobby-badge--premium" data-lobby-badge="Premium">High-Impact · Motion Ready</span></div><div class="cx-lobby-rate-wrap"><div class="cx-lobby-rate" data-lobby-rate="Premium">$260</div><span class="cx-lobby-rate-unit">total</span></div><p class="cx-lobby-subtitle" data-lobby-subtitle="Premium">4 videos package · $65.00/video</p><div class="cx-lobby-total-pill" data-lobby-total-pill="Premium"><span>Full package · 4 Videos</span></div><div class="cx-lobby-pack-switcher" role="group" aria-label="Premium package quantity"><button type="button" data-lobby-pack-btn="Premium" data-qty-choice="4" class="active">4 videos</button><button type="button" data-lobby-pack-btn="Premium" data-qty-choice="8">8 videos <span class="cx-save-tag">Save $60</span></button><button type="button" data-lobby-pack-btn="Premium" data-qty-choice="12">12 videos <span class="cx-save-tag">Save $130</span></button></div><ul class="cx-lobby-features"><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Fast 24-48h priority turnaround</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> 1 active request at a time</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Unlimited revisions</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Retention-led premium edit &amp; viral pacing</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Motion titles, animated callouts &amp; 2D accents</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Up to 10 relevant B-roll inserts</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Full sound design and premium mix</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Custom scroll-stopping cover design included</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Dedicated Creative Director</li></ul><button type="button" class="pill cx-lobby-buy-btn" data-lobby-buy="Premium">Choose Premium</button></article></div><div class="unified-turnaround-policy"><span><b>48h Turnaround</b> per video</span><span><b>Dedicated Creative Lead</b></span><span><b>Unlimited revisions</b> per video</span><span><b>100% Quality Guaranteed</b></span></div><div class="cx-plan-compare-wrap"><div class="cx-plan-compare-head"><div class="cx-lobby-eyebrow-pill"><span class="cx-lobby-pulse-dot"></span><span>PLAN COMPARISON</span></div><h3>What's the Difference in Quality?</h3><p>Every tier is tailored for specific content goals—from high-volume consistency to viral, motion-heavy flagship videos.</p></div><div class="cx-plan-compare-table-wrap"><table class="cx-plan-compare-table"><thead><tr><th>Feature &amp; Scope</th><th>Basic</th><th class="cx-th-featured">Standard <span>Popular</span></th><th>Premium</th></tr></thead><tbody><tr><td>Ideal for</td><td>Clean talking head &amp; daily social volume</td><td class="cx-td-featured">Retention growth, pacing &amp; dynamic B-roll</td><td>Flagship brand launches &amp; viral storytelling</td></tr><tr><td>Turnaround time</td><td>48–72 hours</td><td class="cx-td-featured">Fast 48 hours</td><td>Priority 24–48 hours</td></tr><tr><td>Max video length</td><td>Up to 60 seconds</td><td class="cx-td-featured">Up to 90 seconds</td><td>Up to 180 seconds</td></tr><tr><td>Revision rounds</td><td>1 round included</td><td class="cx-td-featured">2 rounds included</td><td>3 rounds included</td></tr><tr><td>Pacing &amp; hook cutaways</td><td>Clean cuts &amp; zooms</td><td class="cx-td-featured">Retention-driven narrative pacing</td><td>High-impact viral hooks &amp; retention pacing</td></tr><tr><td>Captions &amp; subtitles</td><td>Engaging subtitles</td><td class="cx-td-featured">Custom styled &amp; branded typography</td><td>Kinetic animated typography &amp; highlights</td></tr><tr><td>B-Roll &amp; cutaways</td><td>Optional add-on</td><td class="cx-td-featured">Relevant visual B-roll &amp; cutaways</td><td>Up to 10 cinematic B-roll inserts</td></tr><tr><td>Sound design &amp; audio</td><td>Light sound effects &amp; music sync</td><td class="cx-td-featured">Rich sound accents &amp; audio balance</td><td>Full cinematic sound design &amp; master mix</td></tr><tr><td>Motion graphics</td><td>—</td><td class="cx-td-featured">Animated titles &amp; 2D callouts</td><td>Advanced 2D/3D motion graphics &amp; accents</td></tr><tr><td>Scroll-stopping cover</td><td>Optional add-on</td><td class="cx-td-featured">Optional add-on</td><td>Included free (High-CTR Cover)</td></tr><tr><td>Creative supervision</td><td>Creative Lead</td><td class="cx-td-featured">Dedicated Creative Lead</td><td>Dedicated Creative Director</td></tr><tr><td>Source project files</td><td>—</td><td class="cx-td-featured">Included free</td><td>Included free</td></tr></tbody><tfoot><tr><td></td><td><button type="button" class="pill cx-compare-cta" data-lobby-buy="Basic">Choose Basic</button></td><td class="cx-td-featured"><button type="button" class="pill pill-hot cx-compare-cta cx-compare-cta--featured" data-lobby-buy="Standard">Choose Standard</button></td><td><button type="button" class="pill cx-compare-cta" data-lobby-buy="Premium">Choose Premium</button></td></tr></tfoot></table></div></div><div class="unified-more-videos"><span>Need more than 12 videos or custom scope? </span><a href="${data.whatsapp || "#contact-form"}" target="_blank" rel="noreferrer">Get a custom bulk quote →</a></div></div><div class="cx-creator-hiring-section" data-creator-portal hidden><div class="pricing-editor-banner"><div class="pricing-editor-content"><span class="pricing-editor-badge">For Creators &amp; Editors</span><h3>Join the Content X Creative Network</h3><p>We partner with high-calibre video editors, motion graphic artists, scriptwriters, and thumbnail specialists. Enjoy steady pipeline volume, protected direct payouts, and remote autonomy.</p><div class="cx-hiring-perks-row"><span>Consistent project flow</span><span>Direct USD / INR payouts</span><span>Remote worldwide</span></div></div><button type="button" class="pill pill-dark" data-apply="Video Editor">Join as Editor →</button></div><div class="cx-hiring-roles-grid"><article class="cx-role-card"><span class="cx-role-tag">Open Role · Remote</span><h4>Short-Form Video Editor</h4><p>High-energy pacing, subtitles, zoom hooks, and seamless sound sync for Instagram Reels and YouTube Shorts.</p><ul><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Premiere Pro, DaVinci Resolve, or CapCut Pro</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Strong narrative rhythm and hook pacing</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Reliable 48h turnaround</li></ul><button class="pill pill-hot" type="button" data-apply="Short-Form Video Editor">Apply for this role →</button></article><article class="cx-role-card"><span class="cx-role-tag">Open Role · Remote</span><h4>Motion Graphic Designer</h4><p>Kinetic typography, animated callouts, 2D graphic assets, and dynamic UI mockups in After Effects.</p><ul><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> After Effects &amp; Illustrator expertise</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Smooth easing, tracking &amp; compositing</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Branded design systems</li></ul><button class="pill pill-hot" type="button" data-apply="Motion Graphic Designer">Apply for this role →</button></article><article class="cx-role-card"><span class="cx-role-tag">Open Role · Remote</span><h4>Script Writer &amp; Hook Strategist</h4><p>Research, conceptualize, and write scroll-stopping 60-90 second video scripts with high retention hooks and CTAs.</p><ul><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Proven viral short-form frameworks</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Niche audience research</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Script-to-screen timing</li></ul><button class="pill pill-hot" type="button" data-apply="Script Writer">Apply for this role →</button></article><article class="cx-role-card"><span class="cx-role-tag">Open Role · Remote</span><h4>Thumbnail &amp; Cover Artist</h4><p>Design click-worthy YouTube thumbnails and Instagram Reel covers that drive 10%+ CTR across creator channels.</p><ul><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Photoshop &amp; Figma mastery</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Composition, facial lighting &amp; typography</li><li><span class="cx-check-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg></span> Rapid A/B variation delivery</li></ul><button class="pill pill-hot" type="button" data-apply="Thumbnail Artist">Apply for this role →</button></article></div></div><div class="unified-pricing-legacy-container" style="display:none;" aria-hidden="true"><div class="pricing-primary-toggles"><div><small>How often?</small><div class="billing-toggle" role="tablist" aria-label="Billing type"><button type="button" data-unified-billing="monthly" class="active">Monthly</button><button type="button" data-unified-billing="one_off">Per reel</button></div></div><div><small>What are we making?</small><div class="billing-toggle service-toggle" role="tablist" aria-label="Content type"><button type="button" data-unified-service="video" class="active">Short-form</button><button type="button" data-unified-service="longform">Long-form</button><button type="button" data-unified-service="podcast">Podcast</button></div></div></div><div class="unified-pricing-builder"><section class="unified-builder-main"><div class="unified-step"><header><span>01</span><div><strong data-package-heading>Choose a short-form package</strong><small>Switch between the tabs, then expand add-ons if needed.</small></div></header><div class="unified-package-browser" data-unified-packages></div></div><div class="unified-step" data-quantity-step><header><span>02</span><div><strong>Choose quantity and format</strong><small data-quantity-note>Monthly short-form production starts at 10.</small></div></header><div class="unified-quantity-row"><label>Quantity <span><button type="button" data-unified-quantity="minus" aria-label="Decrease quantity">−</button><b data-unified-count>10</b><button type="button" data-unified-quantity="plus" aria-label="Increase quantity">+</button></span></label><label>Delivery format<select data-unified-format></select></label></div><label class="unified-volume-slider"><span>Package volume</span><input type="range" min="10" max="30" value="10" data-unified-slider><small><b data-unified-slider-min>10</b><b data-unified-slider-max>30</b></small></label><div class="longform-controls" data-longform-controls hidden><label><span>Final video length</span><input type="range" min="10" max="60" step="5" value="10" data-duration-slider><small><b data-duration-value>10 min</b><em data-duration-note>Long-form starts at ₹5,000 for 10 minutes.</em></small></label><label><span>Raw footage to review</span><input type="range" min="60" max="600" step="15" value="60" data-raw-slider><small><b data-raw-value>1 hr</b><em>Extra raw footage is priced in 15-minute bands at ₹200 each.</em></small></label></div></div></section><aside class="unified-summary"><span data-unified-badge>MONTHLY PRODUCTION</span><p>Your package</p><h3 data-unified-summary-name></h3><small data-unified-summary-meta></small><ul data-unified-summary-list></ul><div class="unified-total-lines"><span>Package <b data-unified-base></b></span><span>Add-ons / scope <b data-unified-addons-total></b></span><span data-unified-premium-line hidden>One-off +20% <b data-unified-premium></b></span></div><div class="calculated-total"><small>Total before payment</small><strong data-unified-total></strong><span data-unified-effective></span></div><p class="included-note">Revision rounds follow the selected package. Extra short-form rounds are ₹300; extra long-form rounds are ₹500.</p><button class="pill pill-hot" type="button" data-unified-checkout>Continue securely →</button></aside></div></div><section class="managed-services"><div class="managed-services-head"><p class="eyebrow"><span></span>Need more than editing?</p><h3>Build a complete content system.</h3><p>These managed services are scoped around your brand, publishing volume and goals.</p></div><div class="managed-service-grid">${[
     ["Content Strategy & Planning", "Plan", "Content pillars, audience positioning, monthly calendar, campaign concepts, hooks and performance review."],
     ["Social Media Management", "Manage", "Scheduling, publishing, captions, hashtag research, comment management and monthly reporting."],
     ["Full Content Team", "Full service", "Strategy, scripts, editing, covers, scheduling and one accountable Content X manager."],
@@ -538,7 +674,7 @@ function setupUnifiedPricing(pricing, actions, data) {
       : "";
 
     const priceHtml = isVideo && currentCanonical
-      ? `<div class="unified-plan-price"><strong>$${currentCanonical.usd}</strong><span>($${currentCanonical.rate}/video · ${state.quantity} videos)</span></div><small class="unified-currency-note">USD Canonical · approx. ₹${Math.round(currentCanonical.usd * USD_INR_RATE).toLocaleString("en-IN")}</small>`
+      ? `<div class="unified-plan-price"><strong>$${currentCanonical.usd}</strong><span>($${currentCanonical.rate}/video · ${state.quantity} videos)</span></div>`
       : `<div class="unified-plan-price"><strong>${money(amountWithBilling(plan.price))}</strong><span>starting per ${serviceSingular()}${state.billing === "one_off" ? " · one-off +20%" : ""}</span></div>`;
 
     const turnaroundPolicy = isVideo
@@ -647,7 +783,7 @@ function setupUnifiedPricing(pricing, actions, data) {
       const premiumLine = pricing.querySelector("[data-unified-premium-line]");
       premiumLine.hidden = true;
       pricing.querySelector("[data-unified-total]").textContent = `$${currentCanonical.usd}`;
-      pricing.querySelector("[data-unified-effective]").textContent = `$${currentCanonical.rate} per video (approx. ₹${Math.round(currentCanonical.usd * USD_INR_RATE).toLocaleString("en-IN")})`;
+      pricing.querySelector("[data-unified-effective]").textContent = `$${currentCanonical.rate} per video`;
     } else {
       pricing.querySelector("[data-unified-base]").textContent = money(base);
       pricing.querySelector("[data-unified-addons-total]").textContent = extrasTotal ? money(extrasTotal) : money(0);
@@ -719,13 +855,18 @@ function setupUnifiedPricing(pricing, actions, data) {
     const extras = [...selectedAddOnObjects(), ...scopeAdjustments()];
 
     if (isVideo && currentCanonical) {
+      const chargedPrice = currentCanonical.usd;
+      const checkoutCurrency = "USD";
+
       actions.openCheckout({
         id: plan.id,
         name: `${plan.name} · ${state.quantity} videos`,
-        price: currentCanonical.usd,
+        price: chargedPrice,
         canonicalUsdAmount: currentCanonical.usd,
-        currency: "USD",
-        basePrice: currentCanonical.usd,
+        currency: checkoutCurrency,
+        regionalCurrency: "USD",
+        regionalPrice: `$${currentCanonical.usd}`,
+        basePrice: chargedPrice,
         quantity: state.quantity,
         billing: state.billing,
         contentType: state.service,
@@ -759,14 +900,11 @@ function setupUnifiedPricing(pricing, actions, data) {
     Premium: 4,
   };
 
-  function updateLobbyCard(planKey) {
+  function updateLobbyCard(planKey, triggerAnimation = false) {
     const card = pricing.querySelector(`[data-lobby-card="${planKey}"]`);
     if (!card) return;
     const count = cardPacks[planKey];
     const info = CANONICAL_SHORTFORM_PRICES[planKey][count];
-    const isINR = activeCurrency === "INR";
-    const inrTotal = Math.round(info.usd * USD_INR_RATE);
-    const inrRate = Math.round(inrTotal / count);
     const titleEl = card.querySelector(`[data-lobby-title="${planKey}"]`);
     if (titleEl) titleEl.textContent = `${planKey} ${count}-pack`;
 
@@ -779,11 +917,17 @@ function setupUnifiedPricing(pricing, actions, data) {
         badgeEl.textContent = "Save $40 with 12-pack";
         badgeEl.className = "cx-lobby-badge cx-lobby-badge--hot";
       } else if (planKey === "Premium" && count === 8) {
-        badgeEl.textContent = "Save $100 with 8-pack";
+        badgeEl.textContent = "Save $60 with 8-pack";
         badgeEl.className = "cx-lobby-badge cx-lobby-badge--premium";
       } else if (planKey === "Premium" && count === 12) {
-        badgeEl.textContent = "Save $200 with 12-pack";
+        badgeEl.textContent = "Save $130 with 12-pack";
         badgeEl.className = "cx-lobby-badge cx-lobby-badge--premium";
+      } else if (planKey === "Basic" && count === 8) {
+        badgeEl.textContent = "Save $10 with 8-pack";
+        badgeEl.className = "cx-lobby-badge";
+      } else if (planKey === "Basic" && count === 12) {
+        badgeEl.textContent = "Save $20 with 12-pack";
+        badgeEl.className = "cx-lobby-badge";
       } else if (info.save) {
         badgeEl.textContent = info.save;
         badgeEl.className = planKey === "Premium" ? "cx-lobby-badge cx-lobby-badge--premium" : "cx-lobby-badge";
@@ -794,32 +938,46 @@ function setupUnifiedPricing(pricing, actions, data) {
     }
 
     const rateEl = card.querySelector(`[data-lobby-rate="${planKey}"]`);
-    if (rateEl) rateEl.textContent = isINR ? `₹${inrTotal.toLocaleString("en-IN")}` : `$${info.usd}`;
+    if (rateEl) rateEl.textContent = `$${info.usd}`;
 
     const subtitleEl = card.querySelector(`[data-lobby-subtitle="${planKey}"]`);
     if (subtitleEl) {
-      subtitleEl.textContent = isINR
-        ? `${count} videos package · ₹${inrRate.toLocaleString("en-IN")}/video`
-        : `${count} videos package · $${info.rate}/video`;
+      subtitleEl.textContent = `${count} videos package · $${info.rate}/video`;
     }
 
     const pillEl = card.querySelector(`[data-lobby-total-pill="${planKey}"]`);
     if (pillEl) {
       const saveStr = info.save ? ` · ${info.save}` : "";
-      pillEl.innerHTML = `<span>Full package · ${count} Videos${saveStr}</span><small class="cx-pill-inr">approx. ₹${Math.round(info.usd * USD_INR_RATE).toLocaleString("en-IN")} · USD Canonical</small>`;
+      pillEl.innerHTML = `<span>Full package · ${count} Videos${saveStr}</span>`;
     }
 
     card.querySelectorAll("[data-qty-choice]").forEach(btn => {
-      btn.classList.toggle("active", Number(btn.dataset.qtyChoice) === count);
+      const isActive = Number(btn.dataset.qtyChoice) === count;
+      btn.classList.toggle("active", isActive);
+      if (isActive && triggerAnimation) {
+        btn.classList.remove("cx-btn-pulse");
+        void btn.offsetWidth;
+        btn.classList.add("cx-btn-pulse");
+      }
     });
+
+    if (triggerAnimation) {
+      const animatedEls = [rateEl, subtitleEl, pillEl, badgeEl, titleEl].filter(Boolean);
+      animatedEls.forEach(el => {
+        el.classList.remove("cx-rate-bump");
+        void el.offsetWidth;
+        el.classList.add("cx-rate-bump");
+      });
+    }
   }
 
   pricing.querySelectorAll("[data-lobby-pack-btn]").forEach(btn => {
     btn.addEventListener("click", () => {
       const planKey = btn.dataset.lobbyPackBtn;
       const count = Number(btn.dataset.qtyChoice);
+      if (cardPacks[planKey] === count) return;
       cardPacks[planKey] = count;
-      updateLobbyCard(planKey);
+      updateLobbyCard(planKey, true);
     });
   });
 
@@ -829,16 +987,17 @@ function setupUnifiedPricing(pricing, actions, data) {
       const count = cardPacks[planKey];
       const info = CANONICAL_SHORTFORM_PRICES[planKey][count];
       const plan = packages.video.find(p => getShortformPlanKey(p.name) === planKey) || packages.video[0];
-      const isINR = activeCurrency === "INR";
-      const chargedPrice = isINR ? Math.round(info.usd * USD_INR_RATE) : info.usd;
-      const currency = isINR ? "INR" : "USD";
+      const chargedPrice = info.usd;
+      const checkoutCurrency = "USD";
 
       actions.openCheckout({
         id: `${planKey.toLowerCase()}_${count}`,
         name: `${planKey} · ${count} videos`,
         price: chargedPrice,
         canonicalUsdAmount: info.usd,
-        currency: currency,
+        currency: checkoutCurrency,
+        regionalCurrency: "USD",
+        regionalPrice: `$${info.usd}`,
         basePrice: chargedPrice,
         quantity: count,
         billing: "monthly",
@@ -846,7 +1005,7 @@ function setupUnifiedPricing(pricing, actions, data) {
         deliveryFormat: "Vertical 9:16",
         addOns: [],
         unit: "package",
-        badge: `${count} videos · ${isINR ? `₹${Math.round(chargedPrice / count)}/vid` : `$${info.rate}/vid`}`,
+        badge: `${count} videos · $${info.rate}/vid`,
         features: [
           `${count} short-form videos (Vertical 9:16)`,
           `Fast 48h turnaround per video`,
@@ -857,14 +1016,6 @@ function setupUnifiedPricing(pricing, actions, data) {
         ]
       });
     });
-  });
-
-  window.addEventListener("cx:currency-change", e => {
-    if (e?.detail?.currency) {
-      activeCurrency = e.detail.currency;
-      Object.keys(cardPacks).forEach(updateLobbyCard);
-      updateSummary();
-    }
   });
 
   // Intent Toggle (Get Service vs Join as Editor)
@@ -912,7 +1063,10 @@ export function renderAccess(root, actions) {
 
 export function renderCheckout(root, actions) {
   const plan = store.get("cx_checkout", monthlyPlans[1]);
-  const formatCheckoutPrice = price => plan.currency === "USD" ? `$${Number(price).toLocaleString("en-US")}` : money(price);
+  const formatCheckoutPrice = price => {
+    const usd = plan.canonicalUsdAmount || (plan.currency === "USD" ? price : (price ? roundedUsdFromInr(price) : price));
+    return `$${Number(usd).toLocaleString("en-US")}`;
+  };
   const checkoutCopy = plan.revisionPurchase
     ? { back: "Back to workspace", eyebrow: "Additional revision round", secure: "Revision attached to this video", note: "After verified payment, one additional revision round is added only to the selected video and its existing version history.", success: "Your additional revision round is active for this video." }
     : plan.marketplace
@@ -921,7 +1075,7 @@ export function renderCheckout(root, actions) {
       ? { back: "Back to review", eyebrow: "Hands-off review add-on", secure: "Content X managed review", note: "Your paid request goes directly to the review desk for brief checks, consolidated feedback, revision follow-up and final quality approval.", success: "Your managed review is paid and queued with the Content X review desk." }
       : { back: "Back to pricing", eyebrow: "Activate your workspace", secure: "Payment-gated access", note: "Your client workspace opens only after a successful payment record is created.", success: "Your Content X workspace is active." };
   root.className = "checkout-app";
-  root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span>Secure test checkout</span></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="test-banner"><strong>TEST MODE</strong><span>No real payment will be charged. Completing this form unlocks the dashboard on this device.</span></div><form><h3>Contact information</h3><div class="field-pair"><label>Full name<input name="name" required value="Meera Kapoor"></label><label>WhatsApp<input name="phone" required value="+91 98765 43210"></label></div><label>Email<input name="email" type="email" required value="demo@apexfitness.in"></label><h3>Payment method</h3><div class="payment-tabs"><label><input type="radio" name="method" value="UPI" checked><span>UPI</span></label><label><input type="radio" name="method" value="Card"><span>Card</span></label><label><input type="radio" name="method" value="Bank transfer"><span>Bank transfer</span></label></div><div class="payment-fields"><label>UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123"></label></div><label class="terms"><input type="checkbox" required><span>I agree to the scope, two included revisions per video, and ₹300 for each additional revision round.</span></label><button class="pill pill-hot pay-button" type="submit">Complete test payment · ${formatCheckoutPrice(plan.price)}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge)}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-total"><span>Package total<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><strong>${formatCheckoutPrice(plan.price)}</strong></div><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">Enter workspace →</button></div></div>`;
+  root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span>Secure test checkout</span></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="test-banner"><strong>TEST MODE</strong><span>No real payment will be charged. Completing this form unlocks the dashboard on this device.</span></div><form><h3>Contact information</h3><div class="field-pair"><label>Full name<input name="name" required value="Meera Kapoor"></label><label>WhatsApp<input name="phone" required value="+91 98765 43210"></label></div><label>Email<input name="email" type="email" required value="demo@apexfitness.in"></label><h3>Payment method</h3><div class="payment-tabs"><label><input type="radio" name="method" value="UPI" checked><span>UPI</span></label><label><input type="radio" name="method" value="Card"><span>Card</span></label><label><input type="radio" name="method" value="Bank transfer"><span>Bank transfer</span></label></div><div class="payment-fields"><label>UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123"></label></div><label class="terms"><input type="checkbox" required><span>I agree to the scope, two included revisions per video, and $30 for each additional revision round.</span></label><button class="pill pill-hot pay-button" type="submit">Complete test payment · ${formatCheckoutPrice(plan.price)}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge)}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-total"><span>Package total<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><strong>${formatCheckoutPrice(plan.price)}</strong></div><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">Enter workspace →</button></div></div>`;
   root.querySelector('input[name="name"]').value = "";
   root.querySelector('input[name="phone"]').value = "";
   root.querySelector('input[name="email"]').value = "";
@@ -1039,7 +1193,7 @@ export function renderCheckout(root, actions) {
 
 export function enhanceDashboard(root, actions) {
   const user = root.querySelector(".dash-user");
-  if (user) user.insertAdjacentHTML("beforebegin", `<button class="owner-switch" data-owner>⚙ Owner view</button>`);
+  if (user) user.insertAdjacentHTML("beforebegin", `<button class="owner-switch" data-owner><span class="owner-switch-icon" style="display:inline-flex;align-items:center;margin-right:5px;vertical-align:middle"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><path d="M13.5 8a5.5 5.5 0 0 0-.1-.9l1.4-1.1-1.3-2.2-1.7.5a5.7 5.7 0 0 0-1.5-.9L10 1.7H7.4l-.4 1.7a5.7 5.7 0 0 0-1.5.9l-1.7-.5-1.3 2.2 1.4 1.1a5.5 5.5 0 0 0 0 1.8l-1.4 1.1 1.3 2.2 1.7-.5c.5.4 1 .7 1.5.9l.4 1.7h2.6l.4-1.7c.5-.2 1-.5 1.5-.9l1.7.5 1.3-2.2-1.4-1.1c.1-.3.1-.6.1-.9z"/></svg></span>Owner view</button>`);
   root.querySelector("[data-owner]")?.addEventListener("click", actions.openAdmin);
   const nav = root.querySelector(".dash-sidebar nav");
   const client = activeClientContext();
@@ -1290,7 +1444,7 @@ export async function renderAdmin(root, actions) {
     if (adminSnapshot.admin?.role === "owner") adminSnapshot.admin.role = "primary administrator";
   } catch { return renderOwnerGate(root, actions); }
   root.className = "admin-app"; const leads = store.get("cx_leads", []), apps = store.get("cx_applications", []), payments = store.get("cx_payments", []), moderation = store.get("cx_moderation", []), settings = store.get("cx_review_settings", { watermark:true, download:false }), managedRequests = store.get("cx_managed_review_requests", []), managedSettings = { enabled:true, price:2500, turnaround:"Within 1 business day", ...store.get("cx_managed_review_settings", {}) };
-  root.innerHTML = `<div class="admin-shell"><aside class="owner-sidebar"><div class="owner-workspace"><span class="brand-mark">CX</span><p><strong>Content X</strong><small>Admin control center</small></p><button type="button" aria-label="Content X admin menu">•••</button></div><nav aria-label="Content X admin navigation"><small>WORKSPACE</small><button class="active" data-admin="overview"><span>⌂</span>Overview</button><button data-admin="clients"><span>◉</span>Client workspaces</button><button data-admin="users"><span>◎</span>Website users</button><button data-admin="payments"><span>₹</span>Payments</button><button data-admin="coupons"><span>％</span>Coupons & commission</button><small>OPERATIONS</small><button data-admin="moderation"><span>◷</span>Approval queue</button><button data-admin="managed-review"><span>✦</span>Managed review</button><button data-admin="team"><span>◇</span>Team access</button><button data-admin="applications"><span>↗</span>Talent applications</button><button data-admin="leads"><span>✉</span>Enquiries</button><small data-owner-group="settings">SECURITY & SETTINGS</small><button data-admin="audit"><span>⌾</span>Security activity</button><button data-admin="settings"><span>⚙</span>Review controls</button></nav><div class="owner-sidebar-actions"><button data-client-view>← Client workspace</button></div></aside><main><header><div><p>Content X admin · ${escapeHTML(adminSnapshot.admin?.role || "authorized staff")}</p><h1>Operations overview</h1></div><button class="pill pill-hot" data-add-client>+ Add offline-paid client</button></header><section class="admin-content"></section></main></div>`;
+  root.innerHTML = `<div class="admin-shell"><aside class="owner-sidebar"><div class="owner-workspace"><span class="brand-mark">CX</span><p><strong>Content X</strong><small>Admin control center</small></p><button type="button" aria-label="Content X admin menu">•••</button></div><nav aria-label="Content X admin navigation"><small>WORKSPACE</small><button class="active" data-admin="overview"><span>⌂</span>Overview</button><button data-admin="clients"><span>◉</span>Client workspaces</button><button data-admin="users"><span>◎</span>Website users</button><button data-admin="payments"><span>₹</span>Payments</button><button data-admin="coupons"><span>％</span>Coupons & commission</button><small>OPERATIONS</small><button data-admin="moderation"><span>◷</span>Approval queue</button><button data-admin="managed-review"><span>✦</span>Managed review</button><button data-admin="team"><span>◇</span>Team access</button><button data-admin="applications"><span>↗</span>Talent applications</button><button data-admin="leads"><span>✉</span>Enquiries</button><small data-owner-group="settings">SECURITY & SETTINGS</small><button data-admin="audit"><span>⌾</span>Security activity</button><button data-admin="settings"><span><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="8" cy="8" r="2.5"/><path d="M13.5 8a5.5 5.5 0 0 0-.1-.9l1.4-1.1-1.3-2.2-1.7.5a5.7 5.7 0 0 0-1.5-.9L10 1.7H7.4l-.4 1.7a5.7 5.7 0 0 0-1.5.9l-1.7-.5-1.3 2.2 1.4 1.1a5.5 5.5 0 0 0 0 1.8l-1.4 1.1 1.3 2.2 1.7-.5c.5.4 1 .7 1.5.9l.4 1.7h2.6l.4-1.7c.5-.2 1-.5 1.5-.9l1.7.5 1.3-2.2-1.4-1.1c.1-.3.1-.6.1-.9z"/></svg></span>Review controls</button></nav><div class="owner-sidebar-actions"><button data-client-view>← Client workspace</button></div></aside><main><header><div><p>Content X admin · ${escapeHTML(adminSnapshot.admin?.role || "authorized staff")}</p><h1>Operations overview</h1></div><button class="pill pill-hot" data-add-client>+ Add offline-paid client</button></header><section class="admin-content"></section></main></div>`;
   root.querySelector(".owner-sidebar-actions")?.insertAdjacentHTML("beforeend", '<button data-owner-lock>⌾ Sign out of admin</button>');
   const content = root.querySelector(".admin-content");
   let adminDirectory = { projects:adminSnapshot.projects || [], projectAccess:adminSnapshot.projectAccess || [], recentUploads:adminSnapshot.recentUploads || [], recentActivity:adminSnapshot.recentActivity || [], recentAudit:adminSnapshot.recentAudit || [] };

@@ -1,12 +1,12 @@
 import { studio } from "./data.js?v=revision-bands-1";
 import { renderDashboard, renderMarketing, renderProject, renderReview } from "./ui.js?v=frame-native-20";
-import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=frame-native-20-production-ready-6";
+import { enhanceDashboard, enhanceMarketing, enhanceProject, enhanceReview, initTheme, renderAdmin, renderCheckout, selectCheckoutPlan } from "./features.js?v=payment-resend-theme-1";
 import { enhanceMarketplaceAdmin, enhanceMarketplaceDashboard, enhanceMarketplaceMarketing, renderMarketplace, renderProviderOnboarding, renderProviderWorkspace, renderTalentProfile } from "./marketplace.js?v=client-path-2";
 import { enhanceAdminSuite, enhanceDashboardSuite, enhanceProjectSuite, enhanceReviewSuite, prepareClientRoute } from "./advanced.js?v=live-client-directory-1";
 import { initProductPolish, polishRoute } from "./polish.js?v=admin-title-1";
 import { enhanceCreatorTools } from "./creator-tools.js?v=frame-native-3";
 import { enhanceUploadAdmin, renderClientUpload } from "./uploads.js?v=owner-session-files-1";
-import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=frame-native-20-auth-provider-2";
+import { accountUser, refreshAccountSession, rememberProtectedRoute, renderAccountAccess, renderProjectBrief } from "./account.js?v=payment-resend-theme-1";
 import { renderClientWorkspace, renderSharedWorkspace } from "./workspace.js?v=client-flow-6";
 import { enhanceStudioDashboard } from "./studio-workspace.js?v=organize-access-2";
 
@@ -40,6 +40,7 @@ const actions = {
   openReview: () => go("review"),
   openAccess: route => { rememberProtectedRoute(route || "workspace"); go("access"); },
   openAccount: () => go("workspace?panel=account"),
+  openScripts: () => go("workspace?panel=scripts"),
   openBrief: orderId => go(`brief${orderId ? `?order=${encodeURIComponent(orderId)}` : ""}`),
   openAdmin: () => go("owner"),
   openMarketplace: () => go("marketplace"),
@@ -88,8 +89,13 @@ async function renderRoute() {
     else if (route.startsWith("workspace")) {
       await refreshAccountSession();
       if (stale()) return;
-      if (accountUser()) await renderClientWorkspace(root, actions, route);
-      else { renderDashboard(root, actions, { demo:true }); enhanceDashboard(root, actions, { demo:true }); enhanceDashboardSuite(root, actions); }
+      if (accountUser() || route.includes("panel=scripts") || route.includes("panel=showcase")) {
+        await renderClientWorkspace(root, actions, route);
+      } else {
+        renderDashboard(root, actions, { demo:true });
+        enhanceDashboard(root, actions, { demo:true });
+        enhanceDashboardSuite(root, actions);
+      }
     }
     else if (route === "project") { renderProject(root, actions); enhanceProject(root, actions); enhanceProjectSuite(root, actions); }
     else if (route === "review") { renderReview(root, actions); enhanceReview(root, actions); enhanceReviewSuite(root, actions); }
@@ -141,7 +147,7 @@ document.addEventListener("click", event => {
   const anchor = event.target.closest('a[href^="#"]');
   if (!anchor) return;
   const targetId = anchor.getAttribute("href").slice(1);
-  if (["pricing", "workflow", "faq", "creator-tools", "work", "top"].includes(targetId)) {
+  if (["pricing", "workflow", "scripts", "faq", "creator-tools", "work", "top"].includes(targetId)) {
     const el = document.getElementById(targetId);
     if (el) {
       event.preventDefault();

@@ -83,14 +83,14 @@ test("keeps the live shell and site module versions in sync", async () => {
     load("public/site/src/main.js"),
   ]);
   assert.match(page, /\/site\/index\.html\?v=frame-native-20/);
-  assert.match(html, /contentx-release" content="frame-native-20-production-ready-7/);
-  assert.match(html, /main\.js\?v=frame-native-20-production-ready-7/);
+  assert.match(html, /contentx-release" content="payment-resend-theme-1/);
+  assert.match(html, /main\.js\?v=payment-resend-theme-1/);
   assert.match(html, /commerce\.css\?v=frame-native-20-owner-drilldown-1/);
-  assert.match(html, /theme\.css\?v=complete-light-5/);
-  assert.match(main, /features\.js\?v=frame-native-20-production-ready-6/);
+  assert.match(html, /theme\.css\?v=payment-resend-theme-1/);
+  assert.match(main, /features\.js\?v=payment-resend-theme-1/);
   assert.match(main, /marketplace\.js\?v=client-path-2/);
   assert.match(main, /uploads\.js\?v=owner-session-files-1/);
-  assert.match(main, /account\.js\?v=frame-native-20-auth-provider-2/);
+  assert.match(main, /account\.js\?v=payment-resend-theme-1/);
   assert.match(main, /ui\.js\?v=frame-native-20/);
 });
 
@@ -585,9 +585,9 @@ test("supports canonical USD short-form pricing system with 4, 8 and 12 video ti
 
   // Server-side canonical prices matrix in lib/razorpay.ts
   assert.match(razorpay, /CANONICAL_SHORTFORM_PRICES/);
-  assert.match(razorpay, /Basic:\s*\{\s*4:\s*100,\s*8:\s*189,\s*12:\s*269\s*\}/);
-  assert.match(razorpay, /Standard:\s*\{\s*4:\s*120,\s*8:\s*227,\s*12:\s*323\s*\}/);
-  assert.match(razorpay, /Premium:\s*\{\s*4:\s*399,\s*8:\s*699,\s*12:\s*999\s*\}/);
+  assert.match(razorpay, /Basic:\s*\{\s*4:\s*100,\s*8:\s*190,\s*12:\s*280\s*\}/);
+  assert.match(razorpay, /Standard:\s*\{\s*4:\s*140,\s*8:\s*265,\s*12:\s*380\s*\}/);
+  assert.match(razorpay, /Premium:\s*\{\s*4:\s*260,\s*8:\s*460,\s*12:\s*650\s*\}/);
   assert.match(razorpay, /function getCanonicalShortformPrice/);
 
   // Client-side canonical prices in public/site/src/features.js

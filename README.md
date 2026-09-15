@@ -42,9 +42,9 @@ This release updates the Content X short-form pricing system, introduces an in-w
    - Exactly three plans: **Basic**, **Standard** (Most popular), and **Premium** (High-impact editing).
    - USD remains the canonical pricing currency across client UI and backend calculations (`lib/razorpay.ts`). Approximate INR conversions are displayed for reference.
    - Segmented quantity selector for **4, 8, and 12 videos** with live per-video rates and volume savings tags:
-     - **Basic**: 4 videos: $100 ($25/vid), 8 videos: $189 ($23.63/vid, 5% savings), 12 videos: $269 ($22.42/vid, 10% savings).
-     - **Standard**: 4 videos: $120 ($30/vid), 8 videos: $227 ($28.38/vid, 5% savings), 12 videos: $323 ($26.92/vid, 10% savings).
-     - **Premium**: 4 videos: $399 ($99.75/vid), 8 videos: $699 ($87.38/vid, 12% savings), 12 videos: $999 ($83.25/vid, 17% savings).
+     - **Basic**: 4 videos: $100 ($25/vid), 8 videos: $190 ($23.75/vid, 5% savings), 12 videos: $280 ($23.33/vid, 10% savings).
+     - **Standard**: 4 videos: $140 ($35/vid), 8 videos: $265 ($33.13/vid, 5% savings), 12 videos: $380 ($31.67/vid, 10% savings).
+     - **Premium**: 4 videos: $260 ($65/vid), 8 videos: $460 ($57.50/vid, 12% savings), 12 videos: $650 ($54.17/vid, 17% savings).
    - Turnaround policy strip: 48h turnaround per video, dedicated creative lead, included revisions per video, and 100% quality guarantee.
    - Custom bulk quote callout for orders requiring more than 12 videos.
    - Distinct **"Join as Editor"** flow and banner completely separate from client pricing.

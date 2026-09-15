@@ -1,5 +1,7 @@
 import { demoComments, demoProjects } from "./data.js";
+import { VIRAL_HOOK_LIBRARY } from "./scripts-studio.js";
 
+const esc = str => String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const NOTIFICATION_API = "/api/notifications";
 
 function startMutedPreviewVideos(root) {
@@ -86,7 +88,8 @@ const checkoutPlans = {
 };
 
 function serviceCard(id, title, price, copy, featured = false) {
-  return `<article class="service-card ${featured ? "featured" : ""}"><div><h3>${title}</h3><p>${copy}</p></div><strong>₹${price.toLocaleString("en-IN")}</strong><small>per project</small><button class="pill ${featured ? "pill-hot" : "pill-dark"}" data-service-plan="${id}">Pay securely →</button></article>`;
+  const usdPrice = Math.max(15, Math.round(price / 96));
+  return `<article class="service-card ${featured ? "featured" : ""}"><div><h3>${title}</h3><p>${copy}</p></div><strong>$${usdPrice.toLocaleString("en-US")}</strong><small>per project</small><button class="pill ${featured ? "pill-hot" : "pill-dark"}" data-service-plan="${id}">Pay securely →</button></article>`;
 }
 
 export function renderMarketing(root, data, actions) {
@@ -94,8 +97,8 @@ export function renderMarketing(root, data, actions) {
   root.innerHTML = `
     <header class="site-nav">
       <a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a>
-      <nav aria-label="Main navigation"><a href="#workflow">How it works</a><a href="#pricing">Pricing</a><a href="#work">Selected work</a><a href="#faq">FAQ</a></nav>
-      <div class="nav-actions"><div class="cx-currency-ctrl" role="group" aria-label="Currency"><button type="button" class="active" data-currency-toggle="USD" title="USD canonical pricing">$ USD</button><button type="button" data-currency-toggle="INR" title="INR regional pricing">₹ INR</button></div><button class="text-button" data-action="workspace">Workspace</button><button class="text-button" data-action="login">Login</button><a class="pill pill-hot" href="#pricing">See plans <span>↓</span></a></div>
+      <nav aria-label="Main navigation"><a href="#workflow">How it works</a><a href="#scripts">Scripts &amp; Hooks</a><a href="#pricing">Pricing</a><a href="#work">Selected work</a><a href="#faq">FAQ</a></nav>
+      <div class="nav-actions"><button class="text-button" data-action="workspace">Workspace</button><button class="text-button" data-action="login">Login</button><a class="pill pill-hot" href="#pricing">See plans <span>↓</span></a></div>
     </header>
     <main id="top">
       <section class="hero section-shell">
@@ -126,35 +129,114 @@ export function renderMarketing(root, data, actions) {
         <div class="work-grid">${data.cases.map((item, i) => `<article class="work-card"><div class="work-media"><video src="${item.src}" muted loop playsinline preload="metadata" data-preview-autoplay></video><span>0${i + 1}</span></div><div><p>${item.label}</p><h3>${item.title}</h3><small>${item.copy}</small></div></article>`).join("")}</div>
       </section>
       <section id="workflow" class="workflow-section block-section"><div class="section-shell"><div class="section-heading split"><div><p class="eyebrow"><span></span>Your workflow</p><h2>From raw footage to <em>approved.</em></h2></div><p>Everything your project needs lives in one place—so feedback stays clear and delivery keeps moving.</p></div><div class="workflow-grid">${data.workflow.map(w => `<article class="workflow-step workflow-step-${w.step}"><span class="workflow-step-number">${w.step}</span><div class="step-icon">${["↑","✦","◌","✓"][Number(w.step)-1]}</div><h3>${w.title}</h3><p>${w.copy}</p></article>`).join("")}</div><div class="feature-banner"><div><span class="live-dot"></span><small>THE CONTENT X WORKSPACE</small><h3>Review video without the back-and-forth.</h3><p>Click any moment to add a timestamped note. Compare versions, resolve feedback and approve the final cut—all in your browser.</p><button class="pill pill-hot" data-action="workspace">Open interactive demo →</button></div><div class="review-mini"><div class="review-video"><video src="videos/video3.mp4" muted loop playsinline preload="metadata" data-preview-autoplay></video><span>00:12</span></div><div class="review-note"><b>MK</b><p><strong>00:12</strong> Can we make this transition faster?</p><button>Reply</button></div></div></div></div></section>
+      <section id="scripts" class="section-shell block-section scripts-showcase-section">
+        <div class="section-heading split">
+          <div>
+            <p class="eyebrow"><span></span>Viral hooks &amp; Script studio</p>
+            <h2>Hook viewers in <em>3 seconds.</em><br>The rest follows.</h2>
+          </div>
+          <p>Great video editing cannot rescue a weak opening. Explore 48+ battle-tested hook formulas, retention cues, and our built-in teleprompter—or have Content X write your entire reel.</p>
+        </div>
+        <div class="site-scripts-workbench">
+          <div class="site-hooks-column">
+            <div class="site-hooks-header">
+              <div class="site-hooks-title-row">
+                <span class="site-hooks-badge">48+ VIRAL HOOK FORMULAS</span>
+                <span class="site-hooks-hint">Click card to copy formula</span>
+              </div>
+              <div class="site-hooks-search-row">
+                <input type="search" class="site-hooks-search" data-site-hooks-search placeholder="Search 48+ viral hooks (e.g. mistake, setting, algorithm, proof)..." aria-label="Search viral hooks">
+              </div>
+              <div class="site-hook-filter-pills" role="tablist" aria-label="Hook categories">
+                <button type="button" class="site-filter-pill active" data-site-hook-filter="all">All (48)</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Contrarian &amp; Pattern Disrupt">Contrarian</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Curiosity &amp; Value Gap">Curiosity</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="High Stakes &amp; Warning">High Stakes</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Data &amp; Proof-Led">Data &amp; Proof</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Speed &amp; Actionable How-To">Speed / How-To</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Story &amp; Vulnerability">Story</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Audience Callout &amp; Niche">Audience Callout</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Transformation &amp; Teardown">Transformation</button>
+              </div>
+            </div>
+            <div class="site-hooks-cards-viewport" data-site-hooks-viewport>
+              ${VIRAL_HOOK_LIBRARY.map((hook, idx) => `
+                <article class="site-hook-card" data-site-hook-category="${esc(hook.category)}" data-site-hook-index="${idx}">
+                  <div class="site-hook-card-head">
+                    <span class="site-hook-cat-tag">${esc(hook.category)}</span>
+                    <button type="button" class="site-hook-copy-btn" data-site-copy-hook="${idx}" title="Copy formula">
+                      <span>📋</span> Copy
+                    </button>
+                  </div>
+                  <strong class="site-hook-card-title">${esc(hook.title)}</strong>
+                  <div class="site-hook-structure">
+                    <small>FORMULA</small>
+                    <p>${esc(hook.formula)}</p>
+                  </div>
+                  <div class="site-hook-example">
+                    <small>PROVEN EXAMPLE</small>
+                    <p>“${esc(hook.example)}”</p>
+                  </div>
+                </article>
+              `).join("")}
+            </div>
+          </div>
+          <aside class="site-studio-preview-card">
+            <div class="studio-preview-window">
+              <div class="studio-preview-bar">
+                <span class="brand-mark mini">CX</span>
+                <span>Script Studio · Full Surface</span>
+                <div class="studio-preview-dots"><i></i><i></i><i></i></div>
+              </div>
+              <div class="studio-preview-body">
+                <div class="studio-script-meta-bar">
+                  <span class="studio-script-tag">Reel 01 · 60s Optimal</span>
+                  <span class="studio-wpm-badge">135 WPM · 00:44</span>
+                  <span class="studio-cue-count">6 Cues</span>
+                </div>
+                <div class="studio-script-lines">
+                  <div class="studio-scene-head">Scene 1 · Scroll-Stopping Hook</div>
+                  <p><span class="cx-cue cue-hook">[HOOK]</span> <mark class="cx-hl-orange">Stop doing 15-second intros if you want to grow on Reels.</mark></p>
+                  <p><span class="cx-cue cue-sfx">[SFX]</span> Sub-bass impact + record stop</p>
+                  <div class="studio-scene-head">Scene 2 · The Retention Agitation</div>
+                  <p><span class="cx-cue cue-broll">[B-ROLL]</span> Fast mobile scroll feed showing 70% immediate drop-off</p>
+                  <p><span class="cx-cue cue-talent">[TALENT]</span> If you don't disrupt the pattern in frame one, viewers swipe away.</p>
+                  <div class="studio-scene-head">Scene 3 · The High-Value Solution</div>
+                  <p><span class="cx-cue cue-vo">[VO]</span> Flip the timeline: reveal the outcome in second 2, then teach the method.</p>
+                  <p><span class="cx-cue cue-cta">[CTA]</span> Save this formula and let Content X edit your next cut.</p>
+                </div>
+                <div class="studio-feature-perks">
+                  <div><span>✓</span> 48+ Viral Hook Matrix</div>
+                  <div><span>✓</span> Full-Screen Teleprompter (Mirror &amp; WPM)</div>
+                  <div><span>✓</span> Production Cues ([HOOK], [B-ROLL], [SFX], [CTA])</div>
+                  <div><span>✓</span> Attached Video Cuts &amp; Side-by-Side Review</div>
+                </div>
+              </div>
+            </div>
+            <div class="studio-preview-actions">
+              <a class="pill pill-hot" href="#workspace?panel=scripts">Open Script Studio Free →</a>
+              <a class="pill pill-dark" href="#pricing">See Script Packages ↓</a>
+            </div>
+          </aside>
+        </div>
+      </section>
       <section id="pricing" class="section-shell block-section service-pricing"><div class="section-heading centered"><p class="eyebrow"><span></span>Clear pricing</p><h2>Choose one service. Add only what you <em>need.</em></h2><p>Revision rounds follow the selected package. One-off reel pricing includes a 20% flexibility rate. Need ongoing support? Ask us for a monthly proposal.</p></div><div class="service-groups"><section class="service-group"><div class="service-group-head"><span>01</span><div><p>Short-form editing</p><h3>Reels that feel sharp, clear and native to the feed.</h3></div></div><div class="service-card-grid">${serviceCard("basic_reel", "Basic Reel", 1500, "Clean edits, captions and a polished social-ready finish.")}${serviceCard("growth_reel", "Growth Reel", 2500, "More B-roll, stronger pacing and richer sound design.", true)}${serviceCard("premium_motion", "Premium Motion Reel", 3500, "Motion-led editing for premium brand content.")}${serviceCard("advanced_reel", "Advanced Reel", 5000, "A high-concept reel with custom graphics and advanced motion.")}</div></section><section class="service-group"><div class="service-group-head"><span>02</span><div><p>Scriptwriting</p><h3>Start with a clearer idea, hook and story flow.</h3></div></div><div class="service-card-grid three-up">${serviceCard("script_hook", "Hook & Idea", 1000, "A focused content angle and opening hook.")}${serviceCard("script_full", "Full Reel Script", 1500, "A complete script from hook to CTA.", true)}${serviceCard("script_research", "Research-led Script", 2000, "Research, structure and brand voice refinement.")}</div></section><section class="service-group"><div class="service-group-head"><span>03</span><div><p>Podcast editing</p><h3>Long-form conversations, professionally cleaned and structured.</h3></div></div><div class="service-card-grid three-up">${serviceCard("podcast_30", "30 minutes", 5000, "Clean edit, audio cleanup and branded delivery.")}${serviceCard("podcast_45", "45 minutes", 7500, "A polished episode with chapter-ready structure.", true)}${serviceCard("podcast_60", "60 minutes", 10000, "Full episode edit and final branded master.")}</div></section></div><aside class="service-addons"><div><p class="eyebrow"><span></span>Optional support</p><h3>Social media management</h3><p>Content planning, posting, scheduling, comment management and monthly reporting—built around your publishing rhythm.</p></div><button class="pill pill-hot" type="button" data-support-open>Ask for a monthly plan →</button></aside><p class="pricing-note">Need a cover, extra revision, rush delivery, posting or another add-on? Choose a package first, then add it inside the website checkout flow.</p></section>
       <section id="faq" class="section-shell faq-section block-section"><div><p class="eyebrow"><span></span>Questions</p><h2>Before we<br><em>get started.</em></h2><p>Still unsure? Ask on the website first and we’ll recommend the right package before moving to WhatsApp.</p><button class="pill pill-dark" type="button" data-support-open>Ask a question →</button></div><div class="faq-list">${data.faqs.map((f,i) => `<details ${i===0?"open":""}><summary>${f[0]}<span>+</span></summary><p>${f[1]}</p></details>`).join("")}</div></section>
       <section class="cta-section"><div class="section-shell"><p class="eyebrow light"><span></span>Ready when you are</p><h2>Let’s make your next reel <em>impossible to skip.</em></h2><p>Choose a package on the website, pay securely, then share the brief and files inside your workspace.</p><div><a class="pill pill-light pill-large" href="#pricing">Start on website ↓</a><button class="pill pill-outline pill-large" type="button" data-support-open>Talk to support</button></div></div></section>
     </main>
     <button class="support-fab" type="button" data-support-open>?</button>
     <aside class="support-panel" data-support-panel hidden><button type="button" data-support-close>×</button><p class="eyebrow"><span></span>Content X support</p><h3>Ask first, then start properly.</h3><p>Use the website for packages, payment, brief and uploads. WhatsApp stays available only when you need quick human help.</p><div><button class="pill pill-hot" type="button" data-support-pricing>Choose package</button><a class="pill pill-dark" href="${data.whatsapp}" target="_blank" rel="noreferrer">WhatsApp help ↗</a><a class="pill pill-outline" href="mailto:${data.email}">Email team</a></div></aside>
-    <footer class="site-footer"><div class="section-shell"><div><a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a><p>Premium video editing and a better way to review it.</p></div><div><strong>Explore</strong><a href="#workflow">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></div><div><strong>Connect</strong><button data-support-open>Support</button><a href="mailto:${data.email}">Email</a><button data-action="login">Login</button></div></div><p class="copyright">© 2026 Content X. Built for better content.</p></footer>
+    <footer class="site-footer"><div class="section-shell"><div><a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a><p>Premium video editing and a better way to review it.</p></div><div><strong>Explore</strong><a href="#workflow">How it works</a><a href="#scripts">Scripts &amp; Hooks</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></div><div><strong>Connect</strong><button data-support-open>Support</button><a href="mailto:${data.email}">Email</a><button data-action="login">Login</button></div></div><p class="copyright">© 2026 Content X. Built for better content.</p></footer>
   `;
 
   const pricingFallback = root.querySelector("#pricing");
-  if (pricingFallback) pricingFallback.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple pricing</p><h2>Choose Video or Podcast. Add scripts only when you <em>need them.</em></h2><p>Five clear video packages start at ₹1,500. The interactive package builder is loading now.</p></div>`;
+  if (pricingFallback) pricingFallback.innerHTML = `<div class="section-heading centered"><p class="eyebrow"><span></span>Simple pricing</p><h2>High-retention video editing. <em>Zero overhead.</em></h2><p>Packages start from $100 for 4 videos. The interactive package builder is loading now.</p></div>`;
 
   root.querySelectorAll('[data-action="workspace"]').forEach(btn => btn.addEventListener("click", actions.openDashboard));
   root.querySelectorAll('[data-action="login"]').forEach(btn => btn.addEventListener("click", actions.openAccess));
   root.querySelectorAll("[data-support-open]").forEach(btn => btn.addEventListener("click", () => root.querySelector("[data-support-panel]").hidden = false));
   root.querySelector("[data-support-close]")?.addEventListener("click", () => root.querySelector("[data-support-panel]").hidden = true);
   root.querySelector("[data-support-pricing]")?.addEventListener("click", () => { root.querySelector("[data-support-panel]").hidden = true; root.querySelector("#pricing")?.scrollIntoView({ behavior:"smooth" }); });
-  const initialCurrency = (() => {
-    try { return localStorage.getItem("cx_currency_v2") || "USD"; } catch { return "USD"; }
-  })();
-  root.querySelectorAll("[data-currency-toggle]").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.currencyToggle === initialCurrency);
-    btn.addEventListener("click", () => {
-      const cur = btn.dataset.currencyToggle;
-      root.querySelectorAll("[data-currency-toggle]").forEach(b => b.classList.toggle("active", b === btn));
-      try { localStorage.setItem("cx_currency_v2", cur); } catch {}
-      window.dispatchEvent(new CustomEvent("cx:currency-change", { detail: { currency: cur } }));
-    });
-  });
   root.querySelectorAll("[data-service-plan]").forEach(button => button.addEventListener("click", () => {
     const plan = checkoutPlans[button.dataset.servicePlan];
     if (plan) actions.openCheckout({ id: button.dataset.servicePlan, ...plan, unit: "project", badge: "Secure one-time payment" });
@@ -183,13 +265,14 @@ const cxIcon = (name, label = "") => {
     mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/>',
     annotate:'<path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10zM14 7l3 3"/>',
     check:'<path d="m5 12 4 4L19 6"/>',
+    script:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>',
     help:'<circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.5 2.1c-.9.5-1.3 1-1.3 2M12 17h.01"/>'
   };
   return `<svg class="cx-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name] || paths.help}</svg>${label ? `<span>${label}</span>` : ""}`;
 };
 
 function dashboardShell(content, active = "projects") {
-  return `<div class="dashboard-shell"><aside class="cx-app-rail" aria-label="Global navigation"><a class="cx-rail-brand dash-brand" href="#" aria-label="Content X home">CX</a><nav><button class="${active === "home" ? "active" : ""}" aria-label="Home">${cxIcon("home")}</button><button class="${active === "projects" ? "active" : ""}" aria-label="Projects">${cxIcon("projects")}</button><button aria-label="Review">${cxIcon("review")}</button><button aria-label="Search">${cxIcon("search")}</button></nav><div class="cx-rail-bottom"><button aria-label="Settings" title="Settings">${cxIcon("settings")}</button><button class="cx-rail-avatar" aria-label="Account">MK</button></div></aside><aside class="dash-sidebar"><div class="dash-workspace"><strong>Content X</strong><small>Apex Fitness</small><button aria-label="Workspace menu">•••</button></div><nav><small>WORKSPACE</small><button class="${active === "home" ? "active" : ""}" data-dash="home">${cxIcon("home","Home")}</button><button class="${active === "projects" ? "active" : ""}" data-dash="projects">${cxIcon("projects","Projects")}<b>3</b></button><button data-dash="reviews">${cxIcon("review","Needs review")}<b>2</b></button><small>LIBRARY</small><button data-dash="approved">${cxIcon("grid","All assets")}</button><button data-dash="assets">${cxIcon("share","Share links")}</button></nav><div class="storage"><div><span>Storage</span><small>6.4 / 20 GB</small></div><i><em></em></i><button>Manage plan</button></div></aside><main class="dash-main"><div class="cx-product-topbar"><label>${cxIcon("search")}<input type="search" placeholder="Search Content X" aria-label="Search Content X"></label><button aria-label="Notifications">${cxIcon("bell")}</button><button aria-label="Help">${cxIcon("help")}</button></div>${content}</main></div>`;
+  return `<div class="dashboard-shell"><aside class="cx-app-rail" aria-label="Global navigation"><a class="cx-rail-brand dash-brand" href="#" aria-label="Content X home">CX</a><nav><button class="${active === "home" ? "active" : ""}" aria-label="Home">${cxIcon("home")}</button><button class="${active === "projects" ? "active" : ""}" aria-label="Projects">${cxIcon("projects")}</button><button class="${active === "scripts" ? "active" : ""}" aria-label="Scripts" data-dash="scripts" title="Script Writing Studio">${cxIcon("script")}</button><button aria-label="Review">${cxIcon("review")}</button><button aria-label="Search">${cxIcon("search")}</button></nav><div class="cx-rail-bottom"><button aria-label="Settings" title="Settings">${cxIcon("settings")}</button><button class="cx-rail-avatar" aria-label="Account">MK</button></div></aside><aside class="dash-sidebar"><div class="dash-workspace"><strong>Content X</strong><small>Apex Fitness</small><button aria-label="Workspace menu">•••</button></div><nav><small>WORKSPACE</small><button class="${active === "home" ? "active" : ""}" data-dash="home">${cxIcon("home","Home")}</button><button class="${active === "projects" ? "active" : ""}" data-dash="projects">${cxIcon("projects","Projects")}<b>3</b></button><button class="${active === "scripts" ? "active" : ""}" data-dash="scripts" title="Script Writing Studio">${cxIcon("script","Scripts")}</button><button data-dash="reviews">${cxIcon("review","Needs review")}<b>2</b></button><small>LIBRARY</small><button data-dash="approved">${cxIcon("grid","All assets")}</button><button data-dash="assets">${cxIcon("share","Share links")}</button></nav><div class="storage"><div><span>Storage</span><small>6.4 / 20 GB</small></div><i><em></em></i><button>Manage plan</button></div></aside><main class="dash-main"><div class="cx-product-topbar"><label>${cxIcon("search")}<input type="search" placeholder="Search Content X" aria-label="Search Content X"></label><button aria-label="Notifications">${cxIcon("bell")}</button><button aria-label="Help">${cxIcon("help")}</button></div>${content}</main></div>`;
 }
 
 export function renderDashboard(root, actions, options = {}) {
@@ -213,6 +296,7 @@ function bindDashboard(root, actions) {
   }));
   root.querySelector('[data-dash="home"]')?.addEventListener("click", actions.openDashboard);
   root.querySelector('[data-dash="projects"]')?.addEventListener("click", actions.openDashboard);
+  root.querySelectorAll('[data-dash="scripts"]').forEach(b => b.addEventListener("click", () => { location.hash = "workspace?panel=scripts"; }));
 }
 
 function bindProductNavigation(root, actions) {

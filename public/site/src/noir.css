@@ -254,3 +254,28 @@ html[data-theme="dark"] .tutorial-video-grid .cx-tutorial-copy p { min-height: 6
   .cx-cinematic[data-cx-motion="on"] .cx-tutorial-card:is(:hover, :focus-within) :is(.cx-mini-frame, .cx-note-float, .cx-version-sheet, .cx-link-core) { transition: none; }
   html[data-theme="dark"] :is(.cx-mini-frame, .cx-note-float, .cx-version-sheet, .cx-link-core, .work-card, .cx-tutorial-card, .creator-card) { transition: none; }
 }
+
+/* New Content X dark mode brand mark */
+html[data-theme="dark"] .brand-mark,
+html[data-theme="dark"] .workspace-brand > span,
+html[data-theme="dark"] .preloader__mark,
+html[data-theme="dark"] .cx-rail-brand,
+html[data-theme="dark"] .account-orbit-mark,
+html[data-theme="dark"] .account-card-logo > span {
+  background-image: url("/site/assets/logo-mark-128.png") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-color: #121317 !important;
+  color: transparent !important;
+  text-indent: -9999px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45) !important;
+  filter: brightness(0.92) contrast(1.04) !important;
+}
+
+html[data-theme="dark"] .brand-mark.mini {
+  border-radius: 7px !important;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4) !important;
+}

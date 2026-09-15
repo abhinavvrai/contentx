@@ -20,6 +20,7 @@ const ICONS = {
   focusExit: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M10 14l-7 7"/></svg>`,
   locate: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/></svg>`,
   close: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  search: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
   moreVertical: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="5" r="1.3" fill="currentColor"/><circle cx="12" cy="19" r="1.3" fill="currentColor"/></svg>`,
   check: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
 };
@@ -1045,8 +1046,14 @@ export async function renderScriptStudioSurface(container, {
 
               <div class="format-sep"></div>
 
-              <div class="format-group">
+              <div class="format-group scripts-cue-chips-row" role="group" aria-label="Production Cues">
                 <button type="button" class="cue-btn cue-hook" data-insert-cue="HOOK" title="Insert Scroll-Stopping Hook Cue">＋ Hook</button>
+                <button type="button" class="cue-chip-btn cue-vo" data-insert-cue="VO" title="Insert Voiceover Cue">[VO]</button>
+                <button type="button" class="cue-chip-btn cue-broll" data-insert-cue="B-ROLL" title="Insert B-Roll Cut">[B-ROLL]</button>
+                <button type="button" class="cue-chip-btn cue-talent" data-insert-cue="TALENT" title="Insert On-Camera Talent">[TALENT]</button>
+                <button type="button" class="cue-chip-btn cue-sfx" data-insert-cue="SFX" title="Insert Sound FX Cue">[SFX]</button>
+                <button type="button" class="cue-chip-btn cue-graphic" data-insert-cue="GRAPHIC" title="Insert Motion Graphic Cue">[GRAPHIC]</button>
+                <button type="button" class="cue-chip-btn cue-cta" data-insert-cue="CTA" title="Insert Call-To-Action">[CTA]</button>
               </div>
 
               <div class="format-sep"></div>
@@ -1151,6 +1158,21 @@ export async function renderScriptStudioSurface(container, {
                   <span class="pacing-wpm" data-current-wpm-label>135 WPM</span>
                 </div>
                 <div class="pacing-rating-pill" data-pacing-rating-pill>Optimal Short-Form (&lt;45s)</div>
+
+                <!-- Visual Retention Timeline Funnel -->
+                <div class="pacing-timeline-funnel" data-pacing-funnel title="Viewer retention pacing zones (0-3s hook, 3-15s setup, 15-45s value, 45s+ cta)">
+                  <div class="funnel-segment seg-hook" style="width: 20%;" title="0-3s Hook Zone: Immediate retention hook"><span>0-3s Hook</span></div>
+                  <div class="funnel-segment seg-setup" style="width: 35%;" title="3-15s Setup: Core premise"><span>3-15s Setup</span></div>
+                  <div class="funnel-segment seg-payoff" style="width: 30%;" title="15-45s Payoff: Demonstration"><span>15-45s Value</span></div>
+                  <div class="funnel-segment seg-cta" style="width: 15%;" title="45s+ CTA: Call to action"><span>CTA</span></div>
+                  <div class="funnel-needle" data-funnel-needle style="left: 0%;"></div>
+                </div>
+
+                <!-- Live Hook Strength Score Badge -->
+                <div class="hook-score-badge score-empty" data-hook-score-badge title="First sentence hook score (0-100) based on brevity, power keywords, and curiosity punchiness">
+                  <span class="hook-score-label">Hook Score:</span>
+                  <strong class="hook-score-val" data-hook-score-val>--</strong>
+                </div>
               </div>
 
               <div class="pacing-metrics-right">
@@ -1199,9 +1221,34 @@ export async function renderScriptStudioSurface(container, {
           <!-- PANEL 2: VIRAL HOOK MATRIX -->
           <section class="scripts-panel-view scripts-hooks-view" data-panel-view="hooks" hidden>
             <div class="hooks-view-head">
-              <div>
+              <div class="hooks-head-intro">
                 <h3>Viral Hook & Formula Library</h3>
                 <p>48 battle-tested short-form hook formulas engineered for maximum 3-second retention. Click <b>Insert into Script</b> to drop any hook directly into your document, or <b>Copy</b> to use anywhere.</p>
+              </div>
+
+              <!-- Live Search & Match Counter -->
+              <div class="hooks-search-row">
+                <div class="hooks-search-input-wrap">
+                  <span class="hooks-search-icon">${ICONS.search}</span>
+                  <input type="search" class="hooks-search-input" data-hook-search-input placeholder="Search formulas, examples, or keywords (e.g., 'secret', 'stop', 'mistake', 'money')…">
+                </div>
+                <span class="hooks-match-count" data-hooks-match-count>${VIRAL_HOOK_LIBRARY.length} formulas available</span>
+              </div>
+
+              <!-- AI Smart Hook Generator Card -->
+              <div class="smart-hook-generator-card" data-hook-generator>
+                <div class="generator-card-left">
+                  <span class="gen-sparkle-icon">✨</span>
+                  <div>
+                    <strong>Instant Viral Hook Generator</strong>
+                    <small>Enter your video topic or niche to generate 3 tailored viral hook angles instantly.</small>
+                  </div>
+                </div>
+                <div class="generator-card-inputs">
+                  <input type="text" class="gen-topic-input" data-gen-topic-input placeholder="e.g., Real Estate investing, B2B SaaS, Fitness fat loss…">
+                  <button type="button" class="scripts-action-button primary gen-submit-btn" data-gen-submit-btn>Generate Hooks ⚡</button>
+                </div>
+                <div class="generator-results" data-gen-results-area hidden></div>
               </div>
               <div class="hooks-filter-row">
                 <button type="button" class="hook-cat-btn active" data-hook-filter="all">All Formulas (${VIRAL_HOOK_LIBRARY.length})</button>
@@ -1296,10 +1343,33 @@ export async function renderScriptStudioSurface(container, {
                 <p>Automated breakdown of all Voiceover, B-Roll, Talent, SFX, and Graphic cues extracted from the active script. Use this checklist during shoot day and timeline assembly.</p>
               </div>
               <div class="cues-head-actions">
+                <button type="button" class="scripts-action-button subtle" data-reset-cues-check title="Reset all checklist checkmarks">Reset Checks</button>
                 <button type="button" class="scripts-action-button subtle" data-copy-shot-list>Copy Shot List</button>
                 <button type="button" class="scripts-action-button subtle" data-print-shot-list>Print Checklist</button>
               </div>
             </div>
+
+            <!-- Shooting Progress & Category Filter -->
+            <div class="cues-progress-card">
+              <div class="cues-progress-info">
+                <span class="cues-progress-label">Shooting Progress:</span>
+                <strong class="cues-progress-counter" data-cues-progress-counter>0 of 0 cues filmed (0%)</strong>
+              </div>
+              <div class="cues-progress-bar-track">
+                <div class="cues-progress-bar-fill" data-cues-progress-bar style="width: 0%;"></div>
+              </div>
+              <div class="cues-filter-pills" role="group" aria-label="Filter cues by type">
+                <button type="button" class="cue-filter-pill active" data-cues-filter="all">All Items</button>
+                <button type="button" class="cue-filter-pill" data-cues-filter="HOOK">Hook</button>
+                <button type="button" class="cue-filter-pill" data-cues-filter="VO">VO</button>
+                <button type="button" class="cue-filter-pill" data-cues-filter="B-ROLL">B-Roll</button>
+                <button type="button" class="cue-filter-pill" data-cues-filter="TALENT">Talent</button>
+                <button type="button" class="cue-filter-pill" data-cues-filter="SFX">SFX</button>
+                <button type="button" class="cue-filter-pill" data-cues-filter="GRAPHIC">Graphic</button>
+                <button type="button" class="cue-filter-pill" data-cues-filter="CTA">CTA</button>
+              </div>
+            </div>
+
             <div class="cues-breakdown-grid" data-cues-breakdown-grid></div>
           </section>
         </main>
@@ -1429,6 +1499,42 @@ export async function renderScriptStudioSurface(container, {
     }, 400);
   }
 
+  function calculateHookScore(text = "") {
+    if (!text.trim()) return { score: 0, rating: "Empty", class: "score-empty", firstSentence: "" };
+    const firstSentence = text.split(/[.!?\n]/)[0]?.trim() || "";
+    const words = firstSentence.split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
+    if (wordCount === 0) return { score: 0, rating: "Empty", class: "score-empty", firstSentence: "" };
+
+    let score = 50;
+    if (wordCount >= 4 && wordCount <= 14) score += 25;
+    else if (wordCount > 14 && wordCount <= 22) score += 10;
+    else if (wordCount > 22) score -= 15;
+    else if (wordCount < 4) score -= 10;
+
+    const hookPowerKeywords = [
+      "stop", "secret", "never", "nobody", "why", "how", "warning", "mistake", "truth",
+      "hack", "trick", "worst", "best", "revealed", "proof", "insane", "million", "dollar",
+      "money", "don't", "before", "instead", "real reason", "this is why", "if you", "you need"
+    ];
+    const lowerFirst = firstSentence.toLowerCase();
+    let matchedPower = 0;
+    for (const kw of hookPowerKeywords) {
+      if (lowerFirst.includes(kw)) matchedPower++;
+    }
+    score += Math.min(25, matchedPower * 10);
+    if (firstSentence.includes("?") || firstSentence.includes("!")) score += 5;
+
+    score = Math.max(15, Math.min(99, score));
+    let rating = "Fair";
+    let cls = "score-fair";
+    if (score >= 80) { rating = "Viral Tier 🔥"; cls = "score-high"; }
+    else if (score >= 60) { rating = "Strong ⚡"; cls = "score-good"; }
+    else { rating = "Weak Hook"; cls = "score-weak"; }
+
+    return { score, rating, class: cls, firstSentence };
+  }
+
   function updateMetrics(content = "") {
     const text = (editorSurface.innerText || "").trim();
     const active = getActiveScript();
@@ -1443,6 +1549,22 @@ export async function renderScriptStudioSurface(container, {
     }
     if (wordCountEl) wordCountEl.textContent = `${metrics.words} word${metrics.words === 1 ? "" : "s"}`;
     if (charCountEl) charCountEl.textContent = `${metrics.chars} character${metrics.chars === 1 ? "" : "s"}`;
+
+    const hookScoreEl = container.querySelector("[data-hook-score-val]");
+    const hookBadge = container.querySelector("[data-hook-score-badge]");
+    const funnelNeedle = container.querySelector("[data-funnel-needle]");
+    if (hookScoreEl) {
+      const hookData = calculateHookScore(text);
+      hookScoreEl.textContent = hookData.score ? `${hookData.score}/100` : "--";
+      if (hookBadge) {
+        hookBadge.className = `hook-score-badge ${hookData.class}`;
+        hookBadge.title = hookData.firstSentence ? `Hook: "${hookData.firstSentence}" — Rating: ${hookData.rating}` : "No hook detected";
+      }
+    }
+    if (funnelNeedle) {
+      const pct = Math.min(100, Math.max(0, (metrics.seconds / 60) * 100));
+      funnelNeedle.style.left = `${pct}%`;
+    }
 
     updateCuesSummary(editorSurface.innerHTML);
     updateExplorerTotalRuntime();
@@ -1789,6 +1911,14 @@ export async function renderScriptStudioSurface(container, {
   // -------------------------------------------------------------
   // PANEL 4: SHOT LIST & PRODUCTION CUES RENDERING
   // -------------------------------------------------------------
+  function updateCuesProgress(checked, total) {
+    const counter = container.querySelector("[data-cues-progress-counter]");
+    const bar = container.querySelector("[data-cues-progress-bar]");
+    const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
+    if (counter) counter.textContent = `${checked} of ${total} cues filmed (${pct}%)`;
+    if (bar) bar.style.width = `${pct}%`;
+  }
+
   function renderShotListPanel(script) {
     const grid = container.querySelector("[data-cues-breakdown-grid]");
     if (!grid || !script) return;
@@ -1811,10 +1941,13 @@ export async function renderScriptStudioSurface(container, {
       } else {
         const text = child.textContent.trim();
         if (text) {
+          const cueEl = child.querySelector(".cx-cue");
+          const cueType = cueEl ? cueEl.textContent.replace(/[\[\]]/g, "").trim().toUpperCase() : "";
           currentScene.items.push({
             html: child.innerHTML,
             text,
-            isCue: child.querySelector(".cx-cue") !== null
+            isCue: cueEl !== null,
+            cueType
           });
         }
       }
@@ -1823,28 +1956,97 @@ export async function renderScriptStudioSurface(container, {
 
     if (!sections.length) {
       grid.innerHTML = `<p class="cues-empty-note">No scene headings or cue items found. Use H1 / H2 headings and [VO], [B-ROLL], [TALENT] cue tags in the editor to populate this checklist.</p>`;
+      updateCuesProgress(0, 0);
       return;
     }
 
-    grid.innerHTML = sections.map((sec, sIdx) => `
-      <div class="cue-scene-group">
-        <header class="cue-scene-head">
-          <strong>${escapeHTML(sec.title)}</strong>
-          <small>${sec.items.length} item${sec.items.length === 1 ? "" : "s"}</small>
-        </header>
-        <ul class="cue-scene-checklist">
-          ${sec.items.map((it, iIdx) => `
-            <li class="cue-check-item">
-              <label class="cue-item-label">
-                <input type="checkbox" data-cue-check="${sIdx}_${iIdx}">
-                <div class="cue-item-snippet">${it.html}</div>
-              </label>
-            </li>
-          `).join("")}
-        </ul>
-      </div>
-    `).join("");
+    let checkedMap = {};
+    try {
+      checkedMap = JSON.parse(localStorage.getItem(`cx_shotlist_${script.id}`) || "{}");
+    } catch {}
+
+    const activeFilterBtn = container.querySelector("[data-cues-filter].active");
+    const activeFilter = activeFilterBtn?.dataset.cuesFilter || "all";
+
+    let totalItems = 0;
+    let checkedItems = 0;
+
+    grid.innerHTML = sections.map((sec, sIdx) => {
+      const filteredItems = sec.items.filter(it => {
+        if (activeFilter === "all") return true;
+        return it.cueType === activeFilter;
+      });
+
+      if (!filteredItems.length && activeFilter !== "all") return "";
+
+      return `
+        <div class="cue-scene-group">
+          <header class="cue-scene-head">
+            <strong>${escapeHTML(sec.title)}</strong>
+            <small>${filteredItems.length} item${filteredItems.length === 1 ? "" : "s"}</small>
+          </header>
+          <ul class="cue-scene-checklist">
+            ${filteredItems.map((it, iIdx) => {
+              const key = `${sIdx}_${iIdx}`;
+              const isChecked = Boolean(checkedMap[key]);
+              totalItems++;
+              if (isChecked) checkedItems++;
+              return `
+                <li class="cue-check-item ${isChecked ? "is-checked" : ""}">
+                  <label class="cue-item-label">
+                    <input type="checkbox" data-cue-check="${key}" ${isChecked ? "checked" : ""}>
+                    <div class="cue-item-snippet">${it.html}</div>
+                  </label>
+                </li>
+              `;
+            }).join("")}
+          </ul>
+        </div>
+      `;
+    }).join("");
+
+    updateCuesProgress(checkedItems, totalItems);
+
+    grid.querySelectorAll("[data-cue-check]").forEach(chk => {
+      chk.addEventListener("change", () => {
+        const key = chk.dataset.cueCheck;
+        const itemLi = chk.closest(".cue-check-item");
+        if (chk.checked) {
+          checkedMap[key] = true;
+          itemLi?.classList.add("is-checked");
+        } else {
+          delete checkedMap[key];
+          itemLi?.classList.remove("is-checked");
+        }
+        try {
+          localStorage.setItem(`cx_shotlist_${script.id}`, JSON.stringify(checkedMap));
+        } catch {}
+
+        const allCheckboxes = grid.querySelectorAll("[data-cue-check]");
+        const curChecked = grid.querySelectorAll("[data-cue-check]:checked").length;
+        updateCuesProgress(curChecked, allCheckboxes.length);
+      });
+    });
   }
+
+  // Reset checks
+  container.querySelector("[data-reset-cues-check]")?.addEventListener("click", () => {
+    const active = getActiveScript();
+    if (!active) return;
+    try {
+      localStorage.removeItem(`cx_shotlist_${active.id}`);
+    } catch {}
+    renderShotListPanel(active);
+  });
+
+  // Filter pills
+  container.querySelectorAll("[data-cues-filter]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      container.querySelectorAll("[data-cues-filter]").forEach(b => b.classList.toggle("active", b === btn));
+      const active = getActiveScript();
+      if (active) renderShotListPanel(active);
+    });
+  });
 
   // Copy Shot List
   container.querySelector("[data-copy-shot-list]")?.addEventListener("click", async e => {
@@ -1852,7 +2054,7 @@ export async function renderScriptStudioSurface(container, {
     if (!active) return;
     const text = htmlToMarkdown(active.content);
     try {
-      await navigator.clipboard.writeText(`SHOT LIST CHECKLIST — ${active.title}\\n\\n${text}`);
+      await navigator.clipboard.writeText(`SHOT LIST CHECKLIST — ${active.title}\n\n${text}`);
       const btn = e.currentTarget;
       const orig = btn.textContent;
       btn.textContent = "Copied ✓";
@@ -1886,17 +2088,136 @@ export async function renderScriptStudioSurface(container, {
   });
 
   // -------------------------------------------------------------
-  // VIRAL HOOKS INSERTION & FILTERING
+  // VIRAL HOOKS SEARCH, GENERATOR & FILTERING
   // -------------------------------------------------------------
+  function filterHooks() {
+    const activeCatBtn = container.querySelector("[data-hook-filter].active");
+    const cat = activeCatBtn ? activeCatBtn.dataset.hookFilter : "all";
+    const searchInput = container.querySelector("[data-hook-search-input]");
+    const query = (searchInput?.value || "").toLowerCase().trim();
+    const countEl = container.querySelector("[data-hooks-match-count]");
+
+    let visibleCount = 0;
+    container.querySelectorAll("[data-hook-category]").forEach(card => {
+      const cardCat = card.dataset.hookCategory;
+      const catMatch = cat === "all" || cardCat === cat;
+      const textMatch = !query || card.textContent.toLowerCase().includes(query);
+      const isVisible = catMatch && textMatch;
+      card.hidden = !isVisible;
+      if (isVisible) visibleCount++;
+    });
+
+    if (countEl) {
+      countEl.textContent = `${visibleCount} formula${visibleCount === 1 ? "" : "s"} found`;
+    }
+  }
+
   container.querySelectorAll("[data-hook-filter]").forEach(btn => {
     btn.addEventListener("click", () => {
       container.querySelectorAll("[data-hook-filter]").forEach(b => b.classList.toggle("active", b === btn));
-      const cat = btn.dataset.hookFilter;
-      container.querySelectorAll("[data-hook-category]").forEach(card => {
-        card.hidden = cat !== "all" && card.dataset.hookCategory !== cat;
-      });
+      filterHooks();
     });
   });
+
+  const hookSearchInput = container.querySelector("[data-hook-search-input]");
+  if (hookSearchInput) {
+    hookSearchInput.addEventListener("input", filterHooks);
+  }
+
+  // AI Hook Generator
+  const genSubmitBtn = container.querySelector("[data-gen-submit-btn]");
+  const genTopicInput = container.querySelector("[data-gen-topic-input]");
+  const genResultsArea = container.querySelector("[data-gen-results-area]");
+
+  if (genSubmitBtn && genTopicInput && genResultsArea) {
+    genSubmitBtn.addEventListener("click", () => {
+      const topic = genTopicInput.value.trim() || "Content Creation";
+      const generated = [
+        {
+          badge: "Contrarian Disrupt",
+          formula: `Stop [common approach] for ${topic}. Here's the counter-intuitive method top 1% use:`,
+          example: `Stop doing ${topic} the traditional way. 90% of creators fail because they ignore this 1 simple shift.`
+        },
+        {
+          badge: "Curiosity & High Stakes",
+          formula: `The brutal truth about ${topic} nobody is talking about:`,
+          example: `If you are doing ${topic} in 2026 without this framework, you are burning 80% of your growth.`
+        },
+        {
+          badge: "Actionable Speed / Proof",
+          formula: `How to master ${topic} in 30 seconds (Steal my 3-step cheat sheet):`,
+          example: `Here's how I scaled ${topic} in record time using this 3-step blueprint. Steal it before your competition does.`
+        }
+      ];
+
+      genResultsArea.hidden = false;
+      genResultsArea.innerHTML = `
+        <div class="gen-results-title">
+          <strong>3 Generated Angles for "${escapeHTML(topic)}"</strong>
+          <button type="button" class="gen-clear-btn" data-gen-clear>✕ Clear</button>
+        </div>
+        <div class="gen-cards-grid">
+          ${generated.map((g, i) => `
+            <div class="gen-card">
+              <div class="gen-card-top">
+                <span class="gen-badge">${escapeHTML(g.badge)}</span>
+              </div>
+              <p class="gen-text">“${escapeHTML(g.example)}”</p>
+              <div class="gen-card-actions">
+                <button type="button" class="gen-copy-btn" data-gen-copy="${i}">📋 Copy</button>
+                <button type="button" class="gen-insert-btn" data-gen-insert="${i}">＋ Insert into Script</button>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+
+      genResultsArea.querySelector("[data-gen-clear]")?.addEventListener("click", () => {
+        genResultsArea.hidden = true;
+        genResultsArea.innerHTML = "";
+      });
+
+      genResultsArea.querySelectorAll("[data-gen-insert]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const idx = Number(btn.dataset.genInsert);
+          const item = generated[idx];
+          if (!item) return;
+
+          const hookHtml = `<h1>Scene 1 · Scroll-Stopping Hook</h1>\n<p><span class="cx-cue cue-hook">[HOOK]</span> <mark class="cx-hl-orange">${escapeHTML(item.example)}</mark></p>\n`;
+          const editorTabBtn = container.querySelector('[data-studio-tab="editor"]');
+          if (editorTabBtn) editorTabBtn.click();
+          editorSurface.focus();
+          try {
+            document.execCommand("insertHTML", false, hookHtml);
+          } catch {
+            editorSurface.innerHTML = hookHtml + editorSurface.innerHTML;
+          }
+          updateMetrics();
+          triggerAutoSave();
+        });
+      });
+
+      genResultsArea.querySelectorAll("[data-gen-copy]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const idx = Number(btn.dataset.genCopy);
+          const item = generated[idx];
+          if (!item) return;
+          try {
+            await navigator.clipboard.writeText(item.example);
+            btn.textContent = "Copied ✓";
+            setTimeout(() => { if (btn.isConnected) btn.textContent = "📋 Copy"; }, 1600);
+          } catch {}
+        });
+      });
+    });
+
+    genTopicInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        genSubmitBtn.click();
+      }
+    });
+  }
 
   container.querySelectorAll("[data-insert-hook]").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -3137,7 +3458,15 @@ export function openFullscreenTeleprompter(script, onWpmChange = () => {}) {
       <div class="prompter-bar-center">
         <!-- WPM Speed Controller -->
         <div class="prompter-wpm-control">
-          <label for="prompter-wpm-slider">Speed: <b data-prompter-wpm-val>${wpm}</b> WPM</label>
+          <div class="prompter-wpm-label-row">
+            <label for="prompter-wpm-slider">Speed: <b data-prompter-wpm-val>${wpm}</b> WPM</label>
+            <div class="prompter-speed-presets" role="group" aria-label="Speed Presets">
+              <button type="button" class="prompter-preset-btn ${wpm === 115 ? "active" : ""}" data-set-prompter-wpm="115">115</button>
+              <button type="button" class="prompter-preset-btn ${wpm === 135 ? "active" : ""}" data-set-prompter-wpm="135">135</button>
+              <button type="button" class="prompter-preset-btn ${wpm === 160 ? "active" : ""}" data-set-prompter-wpm="160">160</button>
+              <button type="button" class="prompter-preset-btn ${wpm === 185 ? "active" : ""}" data-set-prompter-wpm="185">185</button>
+            </div>
+          </div>
           <input type="range" id="prompter-wpm-slider" min="90" max="240" step="5" value="${wpm}" data-wpm-slider>
         </div>
 
@@ -3179,6 +3508,17 @@ export function openFullscreenTeleprompter(script, onWpmChange = () => {}) {
       </div>
     </div>
 
+    <!-- Shortcuts Hint Bar -->
+    <footer class="prompter-shortcuts-hint-bar" aria-label="Teleprompter Shortcuts">
+      <span><kbd>Space</kbd> Play / Pause</span>
+      <span class="hint-sep">·</span>
+      <span><kbd>R</kbd> Restart</span>
+      <span class="hint-sep">·</span>
+      <span><kbd>↑</kbd> <kbd>↓</kbd> Adjust Speed</span>
+      <span class="hint-sep">·</span>
+      <span><kbd>Esc</kbd> Exit</span>
+    </footer>
+
     <!-- 3-2-1 Countdown Overlay -->
     <div class="prompter-countdown-overlay" data-countdown-overlay hidden>
       <span class="countdown-number" data-countdown-num>3</span>
@@ -3216,10 +3556,24 @@ export function openFullscreenTeleprompter(script, onWpmChange = () => {}) {
 
   prompter.querySelector("[data-close-prompter]").addEventListener("click", closePrompter);
 
+  // WPM Speed Presets
+  prompter.querySelectorAll("[data-set-prompter-wpm]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      wpm = Number(btn.dataset.setPrompterWpm);
+      wpmSlider.value = wpm;
+      wpmVal.textContent = wpm;
+      prompter.querySelectorAll("[data-set-prompter-wpm]").forEach(b => b.classList.toggle("active", b === btn));
+      onWpmChange(wpm);
+    });
+  });
+
   // WPM Slider
   wpmSlider.addEventListener("input", () => {
     wpm = Number(wpmSlider.value);
     wpmVal.textContent = wpm;
+    prompter.querySelectorAll("[data-set-prompter-wpm]").forEach(b => {
+      b.classList.toggle("active", Number(b.dataset.setPrompterWpm) === wpm);
+    });
     onWpmChange(wpm);
   });
 
