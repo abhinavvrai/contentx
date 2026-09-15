@@ -40,7 +40,7 @@ This release updates the Content X short-form pricing system, introduces an in-w
 
 1. **Canonical USD Short-Form Pricing System**:
    - Exactly three plans: **Basic**, **Standard** (Most popular), and **Premium** (High-impact editing).
-   - USD remains the canonical pricing currency across client UI and backend calculations (`lib/razorpay.ts`). Approximate INR conversions are displayed for reference.
+   - USD remains the canonical pricing currency across client UI and backend calculations (`lib/razorpay.ts`). At checkout, India is charged in INR and the United States is charged in USD; the INR amount is calculated from the canonical USD price on the server.
    - Segmented quantity selector for **4, 8, and 12 videos** with live per-video rates and volume savings tags:
      - **Basic**: 4 videos: $100 ($25/vid), 8 videos: $190 ($23.75/vid, 5% savings), 12 videos: $280 ($23.33/vid, 10% savings).
      - **Standard**: 4 videos: $140 ($35/vid), 8 videos: $265 ($33.13/vid, 5% savings), 12 videos: $380 ($31.67/vid, 10% savings).
@@ -431,9 +431,15 @@ Monthly minimums:
 Currency behavior:
 
 - India visitors should see INR pricing by default.
-- Visitors outside India should see USD pricing by default.
+- United States visitors should see USD pricing by default; other regions fall back to USD.
+- Cloudflare's `CF-IPCountry` is used server-side when creating the order, so a browser cannot change the charged currency. The checkout preview uses the same India/US rule and the Razorpay order response is authoritative.
 - USD prices should use clean rounded numbers, not direct messy exchange-rate decimals.
 - Keep server-side Razorpay/payment totals synchronized with visible pricing before accepting real payments.
+
+Razorpay prerequisites:
+
+- INR orders use the normal Razorpay domestic checkout.
+- USD orders require International Payments and USD to be enabled for the Razorpay merchant account. Razorpay Orders accept the amount in the selected currency's smallest unit; settlement and conversion are handled according to the merchant account and Razorpay's current terms.
 
 ## Public Video Preview Behavior
 
