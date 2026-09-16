@@ -39,6 +39,7 @@ html[data-theme="light"] {
   --theme-line:#dde0e7;
   --theme-text:#17181d;
   --theme-muted:#69707d;
+  --navy:#ffffff;
 }
 
 html[data-theme="light"] body,
@@ -47,6 +48,111 @@ html[data-theme="light"] #app:is(.marketing-app,.dashboard-app,.workspace-app,.a
   background:var(--theme-bg);
   color:var(--theme-text);
 }
+
+/* All-white home screen in light mode: eliminate black/white combo */
+html[data-theme="light"] #app :is(.hero,.work-section,.workflow-section,.scripts-showcase-section,.pricing-section,.faq-section,.site-footer) {
+  background:#ffffff!important;
+  color:#17181d!important;
+}
+html[data-theme="light"] #app .workflow-section {
+  background:#ffffff!important;
+  color:#17181d!important;
+  border-top:1px solid #e2e5eb!important;
+  border-bottom:1px solid #e2e5eb!important;
+}
+html[data-theme="light"] #app .workflow-section .section-heading h2,
+html[data-theme="light"] #app .workflow-grid h3 {
+  color:#17181d!important;
+}
+html[data-theme="light"] #app .workflow-section .section-heading p,
+html[data-theme="light"] #app .workflow-grid p {
+  color:#555a64!important;
+}
+html[data-theme="light"] #app .workflow-grid {
+  border-top:1px solid #e2e5eb!important;
+}
+html[data-theme="light"] #app .workflow-grid article {
+  border-color:#e2e5eb!important;
+  background:#ffffff!important;
+}
+html[data-theme="light"] #app .workflow-grid article>span {
+  background:#ffffff!important;
+  color:#676c77!important;
+}
+html[data-theme="light"] #app .step-icon {
+  border-color:#e2e5eb!important;
+  background:#fff8f4!important;
+  color:#ff5c20!important;
+}
+html[data-theme="light"] #app .review-mini {
+  background:#ffffff!important;
+  border:1px solid #e2e5eb!important;
+  box-shadow:0 16px 36px rgba(0,0,0,0.06)!important;
+}
+html[data-theme="light"] #app .review-note {
+  background:#ffffff!important;
+}
+html[data-theme="light"] #app .review-note p {
+  color:#17181d!important;
+}
+html[data-theme="light"] #app .review-note button {
+  color:#676c77!important;
+}
+html[data-theme="light"] #app .site-footer {
+  background:#ffffff!important;
+  color:#17181d!important;
+  border-top:1px solid #e2e5eb!important;
+}
+html[data-theme="light"] #app .site-footer p,
+html[data-theme="light"] #app .site-footer a,
+html[data-theme="light"] #app .site-footer button {
+  color:#555a64!important;
+}
+html[data-theme="light"] #app .site-footer strong {
+  color:#8b909c!important;
+}
+html[data-theme="light"] #app .site-footer a:hover,
+html[data-theme="light"] #app .site-footer button:hover {
+  color:#ff5c20!important;
+}
+html[data-theme="light"] #app .copyright {
+  border-top:1px solid #e2e5eb!important;
+  color:#8b909c!important;
+}
+html[data-theme="light"] #app .faces b {
+  border-color:#ffffff!important;
+  background:#eef0f4!important;
+  color:#17181d!important;
+}
+html[data-theme="light"] #app .faces b:first-child {
+  background:#ff5c20!important;
+  color:#ffffff!important;
+}
+html[data-theme="light"] #app .work-card {
+  background:#ffffff!important;
+  border:1px solid #e2e5eb!important;
+}
+html[data-theme="light"] #app .work-card h3 {
+  color:#17181d!important;
+}
+html[data-theme="light"] #app .work-card small {
+  color:#676c77!important;
+}
+html[data-theme="light"] #app .stat-strip {
+  background:#ffffff!important;
+  border:1px solid #e2e5eb!important;
+}
+html[data-theme="light"] #app .stat-strip article {
+  border-color:#e2e5eb!important;
+}
+html[data-theme="light"] #app .stat-strip strong {
+  color:#17181d!important;
+}
+html[data-theme="light"] #app .stat-strip p,
+html[data-theme="light"] #app .stat-strip span {
+  color:#676c77!important;
+}
+
 
 /* Maintain the vivid Content X orange gradient and actions in light mode */
 html[data-theme="light"] body :is(.pill-hot,.pay-button,.brand-mark,.workspace-brand>span),
@@ -102,56 +208,12 @@ html[data-theme="light"] #app :is(.eyebrow span,.progress-row em,.workspace-stor
   background:var(--em-gradient)!important;
 }
 
-/* One compact, accessible control on every route. */
-.global-theme-toggle {
-  display: grid !important;
-  position:fixed;
-  z-index:240;
-  right:22px;
-  bottom:22px;
-  width:44px;
-  height:44px;
-  place-items:center;
-  padding:0;
-  border:1px solid #3b3c46;
-  border-radius:50%;
-  background:#1c1d23;
-  color:#fff;
-  box-shadow:0 14px 38px #0005;
-  cursor:pointer;
-  font-size:0;
-  transition:transform .18s ease,background .18s ease,border-color .18s ease,color .18s ease;
-}
-.global-theme-toggle::before { content:"☀"; font-size:18px; line-height:1; }
-html[data-theme="light"] .global-theme-toggle { border-color:#d6d9df; background:#fff; color:#252831; box-shadow:0 12px 34px #25283024; }
-html[data-theme="light"] .global-theme-toggle::before { content:"☾"; }
-.global-theme-toggle:hover { transform:translateY(-2px); border-color:#ff8a58; }
-.global-theme-toggle:focus-visible { outline:3px solid #ff8a5866; outline-offset:3px; }
-
-/* In review and workspace views, reposition toggle away from the comment panel and action buttons */
-#app.review-app ~ .global-theme-toggle,
-.global-theme-toggle.review-theme-toggle {
-  right: auto !important;
-  left: 78px !important;
-  bottom: 18px !important;
-}
-
-#app.workspace-app ~ .global-theme-toggle,
-.global-theme-toggle.workspace-theme-toggle {
-  right: auto !important;
-  left: 18px !important;
-  bottom: 64px !important;
-}
-
-/* The homepage keeps appearance beside its primary navigation action. */
-.site-nav .nav-theme-toggle {
-  position:static;
-  z-index:auto;
-  width:42px;
-  height:42px;
-  flex:0 0 42px;
-  border-radius:12px;
-  box-shadow:none;
+/* Theme toggles are now shifted exclusively into Settings (#workspace?panel=account) */
+.global-theme-toggle,
+.site-nav .nav-theme-toggle,
+.global-theme-toggle::before,
+[data-theme-control] {
+  display: none !important;
 }
 
 /* White cards inside the hero video container on the home screen must show black text */
@@ -2221,6 +2283,117 @@ html[data-theme="light"] #app .folder-picker-count {
   font-size: 10px;
   line-height: 1.45;
 }
+.secure-payment-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 92, 32, 0.3);
+  background: rgba(255, 92, 32, 0.07);
+  margin: 16px 0 24px;
+}
+.secure-banner-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.secure-banner-text strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: inherit;
+}
+.secure-banner-text span {
+  display: block;
+  font-size: 12px;
+  color: var(--theme-muted, #a5a2ac);
+  margin-top: 2px;
+}
+.coupon-field-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.coupon-field-row input {
+  flex: 1;
+  min-height: 40px;
+}
+.coupon-apply-btn {
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid #ff5c20;
+  background: rgba(255, 92, 32, 0.15);
+  color: #ff7843;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--fx-fast);
+}
+.coupon-apply-btn:hover {
+  background: #ff5c20;
+  color: #fff;
+}
+.order-breakdown {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0;
+  padding: 16px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #aaa7b4;
+}
+.breakdown-row strong {
+  font-size: 13px;
+  color: #f1f3f9;
+}
+.breakdown-row.coupon-discount strong {
+  color: #34d399;
+}
+.total-price-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.currency-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(255, 92, 32, 0.18);
+  border: 1px solid rgba(255, 92, 32, 0.35);
+  color: #ff8548;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.checkout-status-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 12px 0 4px;
+}
+.checkout-status-alert.loading {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+}
+.checkout-status-alert.cancelled {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+}
+.checkout-status-alert.error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
 .checkout-coupon {
   border-color: rgba(255, 122, 69, .32) !important;
   background: color-mix(in srgb, var(--theme-raised, #1d1e25) 88%, #ff7a45 12%) !important;
@@ -2271,3 +2444,173 @@ html[data-theme="dark"] .payment-success > div { background: #202126; color: #f5
   .checkout-form { border-radius: 18px; }
   .checkout-head > span { font-size: 8px; }
 }
+
+/* Systematic & Minimal Guest Review Comments */
+#app .workspace-comments {
+  max-width: 680px !important;
+  width: min(680px, calc(100% - 32px)) !important;
+  margin: 36px auto 60px !important;
+  padding: 22px 24px !important;
+  border-radius: 16px !important;
+  background: #181921 !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25) !important;
+}
+#app .workspace-comments > header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  padding-bottom: 14px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+#app .workspace-comments h2 {
+  font-size: 16px !important;
+  font-weight: 750 !important;
+  letter-spacing: -0.02em !important;
+  color: #fff !important;
+  margin: 0 !important;
+}
+#app .workspace-comments > header p {
+  font-size: 12px !important;
+  color: #8c8e9b !important;
+  margin: 3px 0 0 !important;
+}
+#app .workspace-comment-summary {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+#app .workspace-comment-summary span {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #a4a7b5 !important;
+}
+#app .workspace-comment-summary div {
+  display: inline-flex !important;
+  padding: 2px !important;
+  border-radius: 7px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+#app .workspace-comment-summary button {
+  padding: 3px 8px !important;
+  border: 0 !important;
+  border-radius: 5px !important;
+  background: transparent !important;
+  color: #878a98 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+}
+#app .workspace-comment-summary button.active {
+  background: #252632 !important;
+  color: #fff !important;
+}
+#app .workspace-comment-empty {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 22px 18px !important;
+  border: 1px dashed rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.015) !important;
+  color: #808290 !important;
+  text-align: center !important;
+  gap: 4px !important;
+  margin-top: 16px !important;
+}
+#app .workspace-comment-empty span {
+  font-size: 18px !important;
+  color: #5c5e6d !important;
+}
+#app .workspace-comment-empty b {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #dedee6 !important;
+}
+#app .workspace-comment-empty small {
+  font-size: 12px !important;
+  color: #7d808f !important;
+}
+#app .workspace-comment-form {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  margin-top: 18px !important;
+  padding-top: 16px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+#app .workspace-comment-form > div:first-child {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 12px !important;
+}
+#app .workspace-comment-form input,
+#app .workspace-comment-form textarea {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 9px 12px !important;
+  border: 1px solid #333644 !important;
+  border-radius: 8px !important;
+  background: #111217 !important;
+  color: #f3f3f6 !important;
+  font-family: inherit !important;
+  font-size: 12.5px !important;
+  outline: none !important;
+}
+#app .workspace-comment-form input:focus,
+#app .workspace-comment-form textarea:focus {
+  border-color: #ff6d33 !important;
+  box-shadow: 0 0 0 3px rgba(255, 92, 32, 0.16) !important;
+}
+#app .workspace-comment-form textarea {
+  min-height: 72px !important;
+  resize: vertical !important;
+  line-height: 1.5 !important;
+}
+#app .workspace-comment-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+}
+#app .workspace-comment-actions button[type="submit"],
+#app .workspace-comment-form > button[type="submit"] {
+  align-self: flex-end !important;
+  width: auto !important;
+  min-width: 130px !important;
+  min-height: 38px !important;
+  padding: 0 18px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  cursor: pointer !important;
+}
+html[data-theme="light"] #app .workspace-comments {
+  background: #ffffff !important;
+  border-color: #dfe2e8 !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06) !important;
+}
+html[data-theme="light"] #app .workspace-comments h2 {
+  color: #17181d !important;
+}
+html[data-theme="light"] #app .workspace-comments > header p {
+  color: #6a6f7d !important;
+}
+html[data-theme="light"] #app .workspace-comment-empty {
+  background: #f8f9fb !important;
+  border-color: #dde0e8 !important;
+  color: #6a6f7d !important;
+}
+html[data-theme="light"] #app .workspace-comment-empty b {
+  color: #17181d !important;
+}
+html[data-theme="light"] #app .workspace-comment-form input,
+html[data-theme="light"] #app .workspace-comment-form textarea {
+  background: #ffffff !important;
+  border-color: #d8dce4 !important;
+  color: #17181d !important;
+}
+

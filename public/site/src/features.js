@@ -285,61 +285,67 @@ function pushServerNotification(type, title, message, meta = {}) {
   }).catch(() => {});
 }
 
-export function initTheme() {
-  let transitionTimer;
-  const applyTheme = value => {
-    const theme = value === "light" ? "light" : "dark";
-    document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "light" ? "#f4f5f7" : "#101014");
-    document.querySelectorAll("[data-theme-control]").forEach(button => {
-      const next = theme === "dark" ? "light" : "dark";
-      button.setAttribute("aria-label", `Use ${next} mode`);
-      button.setAttribute("title", `Use ${next} mode`);
-      button.setAttribute("aria-pressed", String(theme === "light"));
-      button.style.display = "";
+let themeTransitionTimer;
+
+export function getAppTheme() {
+  try {
+    return localStorage.getItem("cx_theme") || "dark";
+  } catch {
+    return "dark";
+  }
+}
+
+export function setAppTheme(theme) {
+  const next = theme === "light" ? "light" : "dark";
+  try { localStorage.setItem("cx_theme", next); } catch {}
+  
+  const commitTheme = () => {
+    document.documentElement.dataset.theme = next;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", next === "light" ? "#f4f5f7" : "#101014");
+    
+    // Update any UI active states for [data-set-theme]
+    document.querySelectorAll("[data-set-theme]").forEach(el => {
+      const active = el.dataset.setTheme === next;
+      el.classList.toggle("active", active);
+      el.setAttribute("aria-checked", String(active));
+      const statusPill = el.querySelector(".theme-status-pill");
+      if (statusPill) {
+        statusPill.textContent = active ? "✓ Active" : "Select";
+        statusPill.classList.toggle("active", active);
+      }
     });
+
+    window.dispatchEvent(new CustomEvent("cx-theme-changed", { detail: { theme: next } }));
   };
-  let savedTheme = "dark";
-  try { savedTheme = localStorage.getItem("cx_theme") || "dark"; } catch {}
-  applyTheme(savedTheme);
-  const placeControl = () => {
-    let control = document.querySelector("[data-theme-control]");
-    if (!control) {
-      control = document.createElement("button");
-      control.type = "button";
-      control.className = "global-theme-toggle";
-      control.dataset.themeControl = "";
-      document.body.append(control);
-    }
-    const navActions = document.querySelector("#app.marketing-app .nav-actions");
-    if (navActions) {
-      control.classList.add("nav-theme-toggle");
-      const startButton = navActions.querySelector(".pill-hot");
-      if (control.parentElement !== navActions || control.nextElementSibling !== startButton) navActions.insertBefore(control, startButton);
-    } else if (control.parentElement !== document.body) {
-      control.classList.remove("nav-theme-toggle");
-      document.body.append(control);
-    }
-    const isReview = Boolean(document.querySelector("#app.review-app") || location.hash === "#review");
-    const isWorkspace = Boolean(document.querySelector("#app.workspace-app") || location.hash.startsWith("#workspace"));
-    control.classList.toggle("review-theme-toggle", isReview);
-    control.classList.toggle("workspace-theme-toggle", isWorkspace && !isReview);
-    control.style.display = "";
-    applyTheme(document.documentElement.dataset.theme);
-  };
-  placeControl();
-  const app = document.getElementById("app");
-  if (app && typeof MutationObserver !== "undefined") new MutationObserver(placeControl).observe(app, { childList:true });
+
+  document.documentElement.classList.add("theme-is-switching");
+  clearTimeout(themeTransitionTimer);
+  if (document.startViewTransition) {
+    document.startViewTransition(commitTheme);
+  } else {
+    commitTheme();
+  }
+  themeTransitionTimer = setTimeout(() => document.documentElement.classList.remove("theme-is-switching"), 420);
+}
+
+export function initTheme() {
+  document.documentElement.dataset.theme = "dark";
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#101014");
+  try {
+    if (localStorage.getItem("cx_theme") === "light") localStorage.setItem("cx_theme", "dark");
+  } catch {}
+
+  // Remove any legacy floating or navbar theme controls
+  document.querySelectorAll("[data-theme-control], .global-theme-toggle").forEach(el => el.remove());
+
+  // Global click listener for settings theme buttons
   document.addEventListener("click", event => {
-    if (!event.target.closest?.("[data-theme-control]")) return;
-    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-    try { localStorage.setItem("cx_theme", next); } catch {}
-    const commitTheme = () => applyTheme(next);
-    document.documentElement.classList.add("theme-is-switching");
-    clearTimeout(transitionTimer);
-    if (document.startViewTransition) document.startViewTransition(commitTheme);
-    else commitTheme();
-    transitionTimer = setTimeout(() => document.documentElement.classList.remove("theme-is-switching"), 420);
+    const trigger = event.target.closest("[data-set-theme]");
+    if (!trigger) return;
+    const chosen = trigger.dataset.setTheme;
+    if (chosen === "dark" || chosen === "light") {
+      setAppTheme(chosen);
+    }
   });
 }
 
@@ -1086,95 +1092,118 @@ export function renderCheckout(root, actions) {
       ? { back: "Back to review", eyebrow: "Hands-off review add-on", secure: "Content X managed review", note: "Your paid request goes directly to the review desk for brief checks, consolidated feedback, revision follow-up and final quality approval.", success: "Your managed review is paid and queued with the Content X review desk." }
       : { back: "Back to pricing", eyebrow: "Activate your workspace", secure: "Payment-gated access", note: "Your client workspace opens only after a successful payment record is created.", success: "Your Content X workspace is active." };
   root.className = "checkout-app";
-  root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span>Secure test checkout</span></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="test-banner"><strong>TEST MODE</strong><span>No real payment will be charged. Completing this form unlocks the dashboard on this device.</span></div><form><h3>Contact information</h3><div class="field-pair"><label>Full name<input name="name" required value="Meera Kapoor"></label><label>WhatsApp<input name="phone" required value="+91 98765 43210"></label></div><label>Email<input name="email" type="email" required value="demo@apexfitness.in"></label><h3>Payment method</h3><div class="payment-tabs"><label><input type="radio" name="method" value="UPI" checked><span>UPI</span></label><label><input type="radio" name="method" value="Card"><span>Card</span></label><label><input type="radio" name="method" value="Bank transfer"><span>Bank transfer</span></label></div><div class="payment-fields"><label>UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123"></label></div><label class="terms"><input type="checkbox" required><span>I agree to the scope, two included revisions per video, and $30 for each additional revision round.</span></label><button class="pill pill-hot pay-button" type="submit">Complete test payment · ${formatCheckoutPrice(plan.price)}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge)}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-total"><span>Package total<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><strong>${formatCheckoutPrice(plan.price)}</strong></div><small class="currency-note">Charged in ${checkoutCurrency}. Final currency is confirmed by Razorpay for your region.</small><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">Enter workspace →</button></div></div>`;
-  root.querySelector('input[name="name"]').value = "";
-  root.querySelector('input[name="phone"]').value = "";
-  root.querySelector('input[name="email"]').value = "";
-  root.querySelector('input[name="name"]').setAttribute("autocomplete", "name");
-  root.querySelector('input[name="phone"]').setAttribute("autocomplete", "tel");
-  root.querySelector('input[name="email"]').setAttribute("autocomplete", "email");
-  root.querySelector(".terms span").textContent = "I agree to the selected package scope, add-ons and revision allowance shown in this order.";
-  root.querySelector(".brand").addEventListener("click", e => { e.preventDefault(); actions.openMarketing(); }); root.querySelector(".back-link").addEventListener("click", plan.revisionPurchase ? () => { location.hash = plan.returnTo || "workspace"; } : plan.marketplace ? actions.openTalentProfile : plan.managedReview ? actions.openReview : actions.openMarketing);
-  root.querySelectorAll('.payment-tabs input').forEach(input => input.addEventListener("change", () => { const field = root.querySelector('.payment-fields label'); field.innerHTML = input.value === "Card" ? 'Test card number<input name="paymentRef" required value="4242 4242 4242 4242">' : input.value === "UPI" ? 'UPI ID / test reference<input name="paymentRef" required placeholder="name@upi or TEST123">' : 'Bank reference<input name="paymentRef" required placeholder="TEST-TRANSFER">'; }));
-  root.querySelector("form").addEventListener("submit", e => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.currentTarget));
-    const createdAt = Date.now(), code = `CX-${String(createdAt).slice(-6)}`, created = new Date().toLocaleString();
-    const payment = { id: createdAt, ...data, code, plan: plan.name, amount: plan.price, status: "Paid (test)", type: plan.marketplace ? "Marketplace" : plan.managedReview ? "Managed review" : "Agency package", created };
-    const payments = store.get("cx_payments", []); payments.unshift(payment); store.set("cx_payments", payments);
-    if (plan.marketplace) {
-      const commissionRate = Number(plan.commissionRate || store.get("cx_commission_rate", 20));
-      const commissionAmount = Math.round(Number(plan.price) * commissionRate / 100);
-      const orders = store.get("cx_market_orders", []);
-      orders.unshift({ id: createdAt, paymentId: createdAt, code, clientName: data.name, clientEmail: data.email, providerId: plan.providerId, providerName: plan.providerName, providerRole: plan.providerRole, packageName: plan.packageName, amount: Number(plan.price), commissionRate, commissionAmount, providerPayout: Number(plan.price) - commissionAmount, status: "Paid · Brief needed", created });
-      store.set("cx_market_orders", orders);
-    }
-    if (plan.managedReview) {
-      const requests = store.get("cx_managed_review_requests", []);
-      requests.unshift({ id: createdAt, paymentId: createdAt, code, clientId: plan.clientId || "apex", clientName: data.name, clientEmail: data.email, project: plan.project || "Apex Fitness Launch", version: plan.version || "V3", price: Number(plan.price), reviewer: "Content X review desk", turnaround: plan.turnaround || "Within 1 business day", status: "Paid · Review queued", created });
-      store.set("cx_managed_review_requests", requests);
-      recordNotification("managedReview", "Managed review is queued", `${plan.project || "Your project"} ${plan.version || "V3"} has been assigned to the Content X review desk.`, { email: data.email, project: plan.project });
-    }
-    recordNotification("payment", "Payment confirmed", `${plan.name} was paid successfully in local test mode.`, { email: data.email, amount: plan.price });
-    store.set("cx_access", { email: data.email, plan: plan.name, paid: true, code, clientId: plan.clientId || "apex" });
-    root.querySelector(".access-code").textContent = `Access code: ${code}`;
-    root.querySelector(".payment-success").classList.add("show");
-  });
-  root.querySelector(".payment-success .pill").textContent = plan.revisionPurchase ? "Return to this video →" : "Add project brief →";
-  root.querySelector(".payment-success .pill").addEventListener("click", event => {
-    if (plan.revisionPurchase) location.hash = plan.returnTo || "workspace";
-    else actions.openBrief(event.currentTarget.dataset.orderId || "");
-  });
+  root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span>Secure Razorpay checkout</span></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="secure-payment-banner"><div class="secure-banner-icon">🛡️</div><div class="secure-banner-text"><strong>Direct Razorpay Checkout</strong><span>UPI, cards, netbanking and wallets open securely in Razorpay.</span></div></div><form class="checkout-form-inner"><h3>Contact details</h3><div class="field-pair"><label>Full name<input name="name" required autocomplete="name" placeholder="Your name"></label><label>WhatsApp / Phone<input name="phone" required autocomplete="tel" placeholder="+91 98765 43210"></label></div><label>Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label><div class="checkout-coupon"><label><span class="coupon-label">Coupon code <span class="workspace-optional">optional</span></span><div class="coupon-field-row"><input name="couponCode" maxlength="32" autocomplete="off" placeholder="Enter coupon code"><button type="button" class="coupon-apply-btn" data-apply-coupon>Apply</button></div></label><small data-coupon-feedback>Discounts are checked securely before Razorpay opens.</small></div><label class="terms"><input type="checkbox" required><span>I agree to the selected package scope, add-ons and revision allowance shown in this order.</span></label><p role="status" class="checkout-status-alert" data-checkout-status hidden></p><button class="pill pill-hot pay-button" type="submit">Pay securely with Razorpay · ${formatCheckoutPrice(plan.price)}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge || "Verified")}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-breakdown"><div class="breakdown-row"><span>Package price</span><strong data-breakdown-pkg>${formatCheckoutPrice(plan.price)}</strong></div>${(plan.addOns || []).map(a => `<div class="breakdown-row"><span>${escapeHTML(a.name)}</span><strong>${formatCheckoutPrice(a.price)}</strong></div>`).join("")}<div class="breakdown-row coupon-discount" data-breakdown-coupon hidden><span>Coupon discount</span><strong class="discount-amount" data-breakdown-discount>-</strong></div></div><div class="order-total"><span>Total amount<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><div class="total-price-wrap"><strong data-order-total>${formatCheckoutPrice(plan.price)}</strong><span class="currency-tag" data-currency-tag>${checkoutCurrency}</span></div></div><small class="currency-note">Charged in ${checkoutCurrency}. Final currency is confirmed by Razorpay for your region.</small><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">${plan.revisionPurchase ? "Return to this video →" : "Add project brief →"}</button></div></div>`;
 
-  root.querySelector(".checkout-head>span").textContent = "Secure Razorpay checkout";
-  const testBanner = root.querySelector(".test-banner");
-  testBanner.innerHTML = "<strong>SECURE PAYMENT</strong><span>Pay safely with UPI, card, netbanking or wallets through Razorpay.</span>";
-  const originalForm = root.querySelector("form");
-  const paymentForm = originalForm.cloneNode(true);
-  originalForm.replaceWith(paymentForm);
-  paymentForm.querySelector(".payment-tabs").innerHTML = "<span class=\"payment-method-note\">Choose UPI, card, netbanking or wallet securely in the Razorpay payment window.</span>";
-  paymentForm.querySelector(".payment-fields").remove();
-  paymentForm.querySelector(".terms").insertAdjacentHTML("beforebegin", `<div class="checkout-coupon"><label>Coupon code <span>optional</span><input name="couponCode" maxlength="32" autocomplete="off" placeholder="Enter your code"></label><small data-coupon-feedback>Discounts are checked securely before Razorpay opens.</small></div>`);
+  const paymentForm = root.querySelector("form");
   const payButton = paymentForm.querySelector(".pay-button");
+  const statusAlert = root.querySelector("[data-checkout-status]");
+  const couponFeedback = paymentForm.querySelector("[data-coupon-feedback]");
+  const couponInput = paymentForm.querySelector('input[name="couponCode"]');
+  const applyCouponBtn = paymentForm.querySelector("[data-apply-coupon]");
   const currencyNote = root.querySelector(".currency-note");
+  const currencyTag = root.querySelector("[data-currency-tag]");
+  const orderTotalEl = root.querySelector("[data-order-total]");
+
+  const showStatus = (text, type = "info") => {
+    if (!statusAlert) return;
+    statusAlert.textContent = text;
+    statusAlert.className = `checkout-status-alert ${type}`;
+    statusAlert.hidden = !text;
+  };
+
+  root.querySelector(".brand").addEventListener("click", e => { e.preventDefault(); actions.openMarketing(); });
+  root.querySelector(".back-link").addEventListener("click", plan.revisionPurchase ? () => { location.hash = plan.returnTo || "workspace"; } : plan.marketplace ? actions.openTalentProfile : plan.managedReview ? actions.openReview : actions.openMarketing);
+
   const applyCheckoutCurrency = currency => {
     checkoutCurrency = currency === "INR" ? "INR" : "USD";
     payButton.textContent = `Pay securely with Razorpay · ${formatCheckoutPrice(plan.price)}`;
-    const total = root.querySelector(".order-total strong");
-    if (total) total.textContent = formatCheckoutPrice(plan.price);
+    if (orderTotalEl) orderTotalEl.textContent = formatCheckoutPrice(plan.price);
+    if (currencyTag) currencyTag.textContent = checkoutCurrency;
     if (currencyNote) currencyNote.textContent = `Charged in ${checkoutCurrency}. Final currency is confirmed by Razorpay for your region.`;
   };
-  payButton.textContent = `Pay securely with Razorpay · ${formatCheckoutPrice(plan.price)}`;
+
   fetch("/api/auth", { cache:"no-store", credentials:"same-origin" }).then(response => response.json()).then(({ user }) => {
     if (!user) return;
-    paymentForm.elements.name.value = user.name || "";
-    paymentForm.elements.email.value = user.email || "";
+    if (paymentForm.elements.name && !paymentForm.elements.name.value) paymentForm.elements.name.value = user.name || "";
+    if (paymentForm.elements.email && !paymentForm.elements.email.value) paymentForm.elements.email.value = user.email || "";
   }).catch(() => undefined);
+
+  applyCouponBtn?.addEventListener("click", () => {
+    const code = couponInput?.value.trim() || "";
+    if (!code) {
+      couponFeedback.textContent = "Please enter a valid coupon code.";
+      couponFeedback.className = "error";
+      return;
+    }
+    couponFeedback.textContent = `Code “${code.toUpperCase()}” will be verified when opening Razorpay.`;
+    couponFeedback.className = "is-applied";
+  });
+
+  let isPreparing = false;
   paymentForm.addEventListener("submit", async event => {
     event.preventDefault();
+    if (isPreparing) return;
+    isPreparing = true;
+    showStatus("");
+
     const contact = Object.fromEntries(new FormData(paymentForm));
-    const restore = () => { payButton.disabled = false; payButton.textContent = `Pay securely with Razorpay · ${formatCheckoutPrice(plan.price)}`; };
+    const restore = () => {
+      isPreparing = false;
+      payButton.disabled = false;
+      payButton.textContent = `Pay securely with Razorpay · ${formatCheckoutPrice(plan.price)}`;
+    };
+
     payButton.disabled = true;
-    payButton.textContent = "Preparing secure payment…";
+    payButton.textContent = "Opening secure Razorpay checkout…";
+    showStatus("Preparing your secure payment session…", "loading");
+
     try {
       const configResponse = await fetch("/api/payments/razorpay/config", { cache:"no-store" });
       const config = await configResponse.json();
       if (!configResponse.ok) throw new Error(config.error || "Payment setup is unavailable. Please try again.");
       applyCheckoutCurrency(config.currency || activeCurrency);
+
       const orderResponse = await fetch("/api/payments/razorpay/order", {
         method:"POST",
         headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ planId:razorpayPlanId(plan), quantity:razorpayQuantity(plan), billing:plan.billing || (plan.unit === "month" ? "monthly" : "one_off"), addOns:(plan.addOns || []).map(item => item.id).filter(id => !["longform_extra_minutes", "longform_raw_review"].includes(id)), durationMinutes:plan.durationMinutes, rawFootageMinutes:plan.rawFootageMinutes, currency:checkoutCurrency, contentType:plan.contentType || "video", deliveryFormat:plan.deliveryFormat || "", projectId:plan.projectId, assetId:plan.assetId, name:contact.name, email:contact.email, phone:contact.phone, couponCode:contact.couponCode })
+        body:JSON.stringify({
+          planId:razorpayPlanId(plan),
+          quantity:razorpayQuantity(plan),
+          billing:plan.billing || (plan.unit === "month" ? "monthly" : "one_off"),
+          addOns:(plan.addOns || []).map(item => item.id).filter(id => !["longform_extra_minutes", "longform_raw_review"].includes(id)),
+          durationMinutes:plan.durationMinutes,
+          rawFootageMinutes:plan.rawFootageMinutes,
+          currency:checkoutCurrency,
+          contentType:plan.contentType || "video",
+          deliveryFormat:plan.deliveryFormat || "",
+          projectId:plan.projectId, assetId:plan.assetId,
+          name:contact.name,
+          email:contact.email,
+          phone:contact.phone,
+          couponCode:contact.couponCode
+        })
       });
       const order = await orderResponse.json();
       if (!configResponse.ok || !orderResponse.ok) throw new Error(config.error || order.error || "Payment setup is unavailable. Please try again.");
+
       applyCheckoutCurrency(order.currency || checkoutCurrency);
-      const couponFeedback = paymentForm.querySelector("[data-coupon-feedback]");
       if (order.coupon && couponFeedback) {
-        couponFeedback.textContent = `${order.coupon.code} applied · ${moneyMinor(order.coupon.discountPaise, order.currency)} saved`;
-        couponFeedback.classList.add("is-applied");
+        couponFeedback.textContent = `✓ ${order.coupon.code} applied · ${moneyMinor(order.coupon.discountPaise, order.currency)} saved`;
+        couponFeedback.className = "is-applied";
+        const couponBreakdown = root.querySelector("[data-breakdown-coupon]");
+        const discountVal = root.querySelector("[data-breakdown-discount]");
+        if (couponBreakdown && discountVal) {
+          discountVal.textContent = `-${moneyMinor(order.coupon.discountPaise, order.currency)}`;
+          couponBreakdown.hidden = false;
+        }
+        if (orderTotalEl && order.amount) {
+          orderTotalEl.textContent = moneyMinor(order.amount, order.currency);
+        }
       }
+
       await loadRazorpayCheckout();
+      showStatus("");
+
       const checkout = new window.Razorpay({
         key:config.keyId,
         amount:order.amount,
@@ -1183,32 +1212,63 @@ export function renderCheckout(root, actions) {
         description:order.coupon ? `${plan.name} · ${order.coupon.code} applied` : plan.name,
         order_id:order.orderId,
         prefill:{ name:contact.name, email:contact.email, contact:contact.phone },
-        theme:{ color:"#f15b2a" },
-        modal:{ ondismiss:restore },
+        theme:{ color:"#ff5c20" },
+        modal:{
+          ondismiss:() => {
+            restore();
+            showStatus("Payment was cancelled. No amount was charged.", "cancelled");
+          }
+        },
         handler:async response => {
+          showStatus("Verifying payment…", "loading");
           try {
-            const verifyResponse = await fetch("/api/payments/razorpay/verify", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(response) });
+            const verifyResponse = await fetch("/api/payments/razorpay/verify", {
+              method:"POST",
+              headers:{ "Content-Type":"application/json" },
+              body:JSON.stringify(response)
+            });
             const verification = await verifyResponse.json();
             if (!verifyResponse.ok || !verification.verified) throw new Error(verification.error || "Payment verification failed.");
             const createdAt = Date.now(), code = `CX-${String(createdAt).slice(-6)}`;
             const payment = { id:verification.paymentId, name:contact.name, phone:contact.phone, email:contact.email, code, plan:plan.name, amount:plan.price, status:"Verified", type:"Razorpay", created:new Date().toLocaleString() };
             store.set("cx_payments", [payment, ...store.get("cx_payments", [])]);
+            if (plan.marketplace) {
+              const commissionRate = Number(plan.commissionRate || store.get("cx_commission_rate", 20));
+              const commissionAmount = Math.round(Number(plan.price) * commissionRate / 100);
+              const orders = store.get("cx_market_orders", []);
+              orders.unshift({ id:createdAt, paymentId:createdAt, code, clientName:contact.name, clientEmail:contact.email, providerId:plan.providerId, providerName:plan.providerName, providerRole:plan.providerRole, packageName:plan.packageName, amount:Number(plan.price), commissionRate, commissionAmount, providerPayout:Number(plan.price) - commissionAmount, status:"Paid · Brief needed", created:new Date().toLocaleString() });
+              store.set("cx_market_orders", orders);
+            }
+            if (plan.managedReview) {
+              const requests = store.get("cx_managed_review_requests", []);
+              requests.unshift({ id:createdAt, paymentId:createdAt, code, clientId:plan.clientId || "apex", clientName:contact.name, clientEmail:contact.email, project:plan.project || "Apex Fitness Launch", version:plan.version || "V3", price:Number(plan.price), reviewer: "Content X review desk", turnaround:plan.turnaround || "Within 1 business day", status:"Paid · Review queued", created:new Date().toLocaleString() });
+              store.set("cx_managed_review_requests", requests);
+              recordNotification("managedReview", "Managed review is queued", `${plan.project || "Your project"} ${plan.version || "V3"} has been assigned to the Content X review desk.`, { email:contact.email, project:plan.project });
+            }
             store.set("cx_access", { email:contact.email, plan:plan.name, paid:true, code, clientId:plan.clientId || "apex" });
             root.querySelector(".access-code").textContent = plan.revisionPurchase ? "Payment verified · One more revision round is ready." : "Payment verified · Next, add the project brief and files.";
             root.querySelector(".payment-success .pill").dataset.orderId = verification.orderId;
             root.querySelector(".payment-success").classList.add("show");
           } catch (error) {
             restore();
-            alert(error.message || "We could not verify the payment. Please contact Content X support.");
+            showStatus(error.message || "We could not verify the payment. Please contact Content X support.", "error");
           }
         }
       });
-      checkout.on("payment.failed", () => { restore(); alert("Payment failed or was cancelled. No amount was charged by Content X."); });
+      checkout.on("payment.failed", () => {
+        restore();
+        showStatus("Payment failed or was declined. No amount was charged.", "error");
+      });
       checkout.open();
     } catch (error) {
       restore();
-      alert(error.message || "Payment setup is unavailable. Please try again.");
+      showStatus(error.message || "Payment setup is unavailable. Please try again.", "error");
     }
+  });
+
+  root.querySelector(".payment-success .pill").addEventListener("click", event => {
+    if (plan.revisionPurchase) location.hash = plan.returnTo || "workspace";
+    else actions.openBrief(event.currentTarget.dataset.orderId || "");
   });
 }
 

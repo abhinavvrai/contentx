@@ -7,7 +7,7 @@
   <meta name="description" content="Content X connects strategy, creators, scripts, editing and social management with a private workspace for uploads, feedback, versions and approvals.">
   <meta name="theme-color" content="#101014">
   <title>Content X | Create. Review. Publish.</title>
-  <script>try{document.documentElement.dataset.theme=localStorage.getItem("cx_theme")==="light"?"light":"dark"}catch{}</script>
+  <script>try{if(localStorage.getItem("cx_theme")==="light")localStorage.setItem("cx_theme","dark");document.documentElement.dataset.theme=localStorage.getItem("cx_theme")==="light"?"dark":"dark";}catch{}</script>
   <link rel="icon" href="/contentx-favicon.svg?v=contentx-tab-icon-1" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,6 +34,7 @@
     <div class="preloader__mark">CX</div>
     <div class="preloader__line"><span></span></div>
   </div>
+  <script>(function(){var l=document.querySelector('[data-loader]');if(!l)return;var d=function(){l.classList.add('is-done');};if(document.readyState==='complete')d();else{window.addEventListener('DOMContentLoaded',d,{once:true});window.addEventListener('load',d,{once:true});setTimeout(d,250);}})();</script>
 
   <div class="progress" data-progress aria-hidden="true"></div>
   <canvas id="studio-canvas" aria-hidden="true"></canvas>

@@ -60,6 +60,7 @@ type StoredUser = {
 };
 
 let authSchemaPromise: Promise<void> | null = null;
+let authSchemaReady = false;
 let googleKeysPromise: Promise<Array<JsonWebKey & { kid?: string }>> | null = null;
 let otpHealthCache: { available: boolean; checkedAt: number } | null = null;
 const OTP_HEALTH_CACHE_MS = 5 * 60 * 1000;
@@ -99,11 +100,18 @@ export async function getVerifiedAccountCapabilities(): Promise<AccountCapabilit
   };
 }
 
+let dbHealthCache: { ok: boolean; checkedAt: number } | null = null;
+
 export async function accountDatabaseAvailable(): Promise<boolean> {
+  const now = Date.now();
+  if (dbHealthCache && now - dbHealthCache.checkedAt < 60_000) return dbHealthCache.ok;
   try {
     const result = await getAccountDatabase().prepare("SELECT 1 AS ok").first<{ ok: number }>();
-    return result?.ok === 1;
+    const ok = result?.ok === 1;
+    dbHealthCache = { ok, checkedAt: now };
+    return ok;
   } catch {
+    dbHealthCache = { ok: false, checkedAt: now };
     return false;
   }
 }
@@ -211,6 +219,7 @@ export function expiredGoogleNonceCookie(request: Request): string {
 }
 
 export async function ensureAccountSchema(): Promise<void> {
+  if (authSchemaReady) return;
   const db = getAccountDatabase();
   if (!authSchemaPromise) {
     authSchemaPromise = (async () => {
@@ -225,6 +234,7 @@ export async function ensureAccountSchema(): Promise<void> {
           db.prepare("SELECT reference_url, status, updated_at FROM project_briefs LIMIT 0"),
           db.prepare("SELECT project_id, user_id FROM user_upload_projects LIMIT 0"),
         ]);
+        authSchemaReady = true;
         return;
       } catch {
         // A fresh or older database still receives the complete idempotent bootstrap below.
@@ -319,12 +329,15 @@ export async function ensureAccountSchema(): Promise<void> {
       db.prepare("PRAGMA optimize"),
       ]);
       await ensureAuthSchemaColumns(db);
+      authSchemaReady = true;
     })().catch(error => {
       authSchemaPromise = null;
+      authSchemaReady = false;
       throw error;
     });
   }
   await authSchemaPromise;
+  authSchemaReady = true;
 }
 
 async function ensureAuthSchemaColumns(db: D1Database): Promise<void> {
@@ -433,17 +446,24 @@ export async function loginAccount(request: Request, input: Record<string, unkno
   if (!email || !password) throw new AccountError("Enter your email and password.");
   const db = getAccountDatabase();
   const attemptKey = await loginAttemptKey(request, email);
-  await enforceLoginRateLimit(db, attemptKey);
-  const stored = await db.prepare("SELECT * FROM account_users WHERE email = ? LIMIT 1").bind(email).first<StoredUser>();
+  
+  // Single roundtrip batch for rate limit and user query
+  const [rateLimitBatch, userBatch] = await db.batch([
+    db.prepare("SELECT attempts, window_started_at, blocked_until FROM auth_login_attempts WHERE attempt_key = ? LIMIT 1").bind(attemptKey),
+    db.prepare("SELECT * FROM account_users WHERE email = ? LIMIT 1").bind(email),
+  ]);
+  const rateLimitRow = rateLimitBatch.results?.[0] as { attempts: number; window_started_at: number; blocked_until: number } | undefined;
+  if (rateLimitRow?.blocked_until && rateLimitRow.blocked_until > Date.now()) throw new AccountError("Too many attempts. Try again in 15 minutes.", 429);
+  const stored = userBatch.results?.[0] as StoredUser | undefined;
+
   const accepted = stored && await verifyPassword(password, stored);
   if (!stored || !accepted) {
     await recordFailedLogin(db, attemptKey);
     throw new AccountError("Email or password is incorrect.", 401);
   }
   if ((stored.account_status || "active") !== "active") throw new AccountError("This account is suspended. Contact Content X support.", 403);
-  await db.prepare("DELETE FROM auth_login_attempts WHERE attempt_key = ?").bind(attemptKey).run();
   const user = accountUserFromRow(stored);
-  return { user, token: await createSession(request, user.id) };
+  return { user, token: await createSession(request, user.id, attemptKey) };
 }
 
 export async function requestPasswordReset(request: Request, input: Record<string, unknown>): Promise<void> {
@@ -537,9 +557,9 @@ export async function revokeAccountSessions(request:Request,input:Record<string,
 }
 
 export async function getSessionUser(request: Request): Promise<AccountUser | null> {
-  await ensureAccountSchema();
   const token = cookieValue(request, SESSION_COOKIE);
   if (!token) return null;
+  await ensureAccountSchema();
   const db = getAccountDatabase();
   const now = Date.now();
   const row = await db.prepare(`SELECT u.*, s.last_seen_at
@@ -846,17 +866,21 @@ function validatePassword(password: string): void {
   if (password.length > 128) throw new AccountError("Your password is too long.");
 }
 
-async function createSession(request: Request, userId: string): Promise<string> {
+async function createSession(request: Request, userId: string, attemptKeyToClean?: string): Promise<string> {
   const token = randomToken(32);
   const now = Date.now();
   const db = getAccountDatabase();
-  await db.batch([
+  const statements = [
     db.prepare("DELETE FROM account_sessions WHERE expires_at <= ?").bind(now),
     db.prepare(`INSERT INTO account_sessions
       (token_hash, user_id, expires_at, created_at, last_seen_at, user_agent)
       VALUES (?, ?, ?, ?, ?, ?)`)
       .bind(await sha256(token), userId, now + SESSION_TTL_MS, now, now, cleanText(request.headers.get("user-agent"), 240) || null),
-  ]);
+  ];
+  if (attemptKeyToClean) {
+    statements.push(db.prepare("DELETE FROM auth_login_attempts WHERE attempt_key = ?").bind(attemptKeyToClean));
+  }
+  await db.batch(statements);
   return token;
 }
 

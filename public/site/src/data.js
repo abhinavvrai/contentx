@@ -16,10 +16,10 @@ export const studio = {
     { value: "48–72h", label: "typical first cut" }
   ],
   cases: [
-    { title: "Premium Reels", label: "Kinetic edit", src: "videos/premium1.mp4", copy: "Motion, sound design, captions and retention-led pacing." },
-    { title: "Brand Shorts", label: "Launch content", src: "videos/premium2.mp4", copy: "High-energy vertical edits built to stop the scroll." },
-    { title: "Story Cuts", label: "Creator narrative", src: "videos/standard3.mp4", copy: "Clear storytelling, clean captions and purposeful rhythm." },
-    { title: "Fast Turnarounds", label: "Social ready", src: "videos/quick1.mp4", copy: "A polished edit that is ready to publish, without the wait." }
+    { title: "Premium Reels", label: "Kinetic edit", src: "videos/premium1.mp4", posterTime: 2.8, copy: "Motion, sound design, captions and retention-led pacing." },
+    { title: "Brand Shorts", label: "Launch content", src: "videos/premium2.mp4", posterTime: 2.4, copy: "High-energy vertical edits built to stop the scroll." },
+    { title: "Story Cuts", label: "Creator narrative", src: "videos/standard3.mp4", posterTime: 2.6, copy: "Clear storytelling, clean captions and purposeful rhythm." },
+    { title: "Fast Turnarounds", label: "Social ready", src: "videos/quick1.mp4", posterTime: 2.0, copy: "A polished edit that is ready to publish, without the wait." }
   ],
   workflow: [
     { step: "01", title: "Upload", copy: "Drop raw footage, brand assets, references and your brief into a private project folder." },

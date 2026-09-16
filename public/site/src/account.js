@@ -93,7 +93,71 @@ function profilePanel(user, activeRefunds = 0, workspaceLabel = "View projects")
         <article><span>◇</span><div><strong>Private by default</strong><p>Your photo and contact details are available only inside your signed-in account.</p></div></article>
       </aside>
     </div>
+    <div class="account-profile-theme-strip">
+      <div class="account-section-title"><div><h2>Interface Theme</h2><p>Switch between Dark Mode and Light Mode.</p></div></div>
+      <div class="profile-theme-btn-row" role="group" aria-label="Theme switcher">
+        <button type="button" class="profile-theme-pill ${document.documentElement.dataset.theme === "dark" ? "active" : ""}" data-set-theme="dark">
+          <span class="theme-pill-icon">☾</span> <strong>Dark Mode</strong>
+        </button>
+        <button type="button" class="profile-theme-pill ${document.documentElement.dataset.theme === "light" ? "active" : ""}" data-set-theme="light">
+          <span class="theme-pill-icon">☀</span> <strong>Light Mode</strong>
+        </button>
+      </div>
+    </div>
     <div class="account-profile-metrics"><article><span>Storage plan</span><strong>50 GB free</strong><small>Private creator workspace</small></article><article><span>Profile</span><strong>${completion}%</strong><small>${completion === 100 ? "All details complete" : "Add details collaborators recognise"}</small></article><article><span>Refunds</span><strong>${activeRefunds}</strong><small>Active requests</small></article></div>`;
+}
+
+function appearanceSettingsPanel() {
+  const currentTheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+
+  return `<div class="account-panel-heading">
+    <p>PREFERENCES</p>
+    <h1>Appearance &amp; Theme</h1>
+    <span>Choose how Content X looks on your screen. Your preference applies across your entire workspace, review rooms, and scripts studio.</span>
+  </div>
+  <div class="appearance-settings-body">
+    <div class="appearance-theme-grid" role="radiogroup" aria-label="Theme selection">
+      <article class="appearance-theme-card ${currentTheme === "dark" ? "active" : ""}" data-set-theme="dark" role="radio" aria-checked="${currentTheme === "dark"}" tabindex="0">
+        <div class="appearance-preview-box dark-preview" aria-hidden="true">
+          <div class="preview-mock-ui">
+            <div class="mock-topbar"><span class="mock-dot"></span><span class="mock-line short"></span></div>
+            <div class="mock-body"><div class="mock-sidebar"><i></i><i></i><i></i></div><div class="mock-content"><div class="mock-card"></div><div class="mock-accent-btn"></div></div></div>
+          </div>
+        </div>
+        <div class="appearance-card-info">
+          <div class="appearance-card-title-row">
+            <span class="theme-icon">☾</span>
+            <strong>Dark Mode</strong>
+            <span class="theme-status-pill ${currentTheme === "dark" ? "active" : ""}">${currentTheme === "dark" ? "✓ Active" : "Select"}</span>
+          </div>
+          <p>Charcoal and obsidian contrast engineered for low-light editing sessions, color grading, and maximum visual focus.</p>
+        </div>
+      </article>
+      <article class="appearance-theme-card ${currentTheme === "light" ? "active" : ""}" data-set-theme="light" role="radio" aria-checked="${currentTheme === "light"}" tabindex="0">
+        <div class="appearance-preview-box light-preview" aria-hidden="true">
+          <div class="preview-mock-ui">
+            <div class="mock-topbar"><span class="mock-dot"></span><span class="mock-line short"></span></div>
+            <div class="mock-body"><div class="mock-sidebar"><i></i><i></i><i></i></div><div class="mock-content"><div class="mock-card"></div><div class="mock-accent-btn"></div></div></div>
+          </div>
+        </div>
+        <div class="appearance-card-info">
+          <div class="appearance-card-title-row">
+            <span class="theme-icon">☀</span>
+            <strong>Light Mode</strong>
+            <span class="theme-status-pill ${currentTheme === "light" ? "active" : ""}">${currentTheme === "light" ? "✓ Active" : "Select"}</span>
+          </div>
+          <p>Clean paper aesthetic with crisp typography and subtle borders, ideal for daytime client presentations and bright ambient light.</p>
+        </div>
+      </article>
+    </div>
+    <div class="appearance-system-note">
+      <span>⚙</span>
+      <div>
+        <strong>Persistent Local Preference</strong>
+        <small>Your theme choice is stored in your browser and automatically applied whenever you open Content X.</small>
+      </div>
+    </div>
+  </div>`;
 }
 
 function applyProfileUser(root, user) {
@@ -411,7 +475,7 @@ export async function renderAccountDashboard(root, actions) {
     const refundUpdates = orders.filter(order => order.refund_status && order.refund_status !== "none").length;
     root.innerHTML = `<div class="account-settings-shell">
       <aside class="account-global-rail" aria-label="Content X navigation">
-        <a class="account-rail-brand" href="#home" aria-label="Content X home">CX</a>
+        <a class="account-rail-brand" href="#workspace" aria-label="Workspace overview">CX</a>
         <nav><a href="#workspace" aria-label="Workspace" title="Workspace">⌂</a><a class="active" href="#account" aria-label="Account settings" title="Account settings">◎</a></nav>
         ${avatarMarkup(data.user, "account-rail-avatar")}
       </aside>
@@ -481,6 +545,9 @@ export async function renderWorkspaceAccountPanel(container, actions, initialVie
         <section class="account-settings-panel" data-account-panel="profile">
           ${profilePanel(data.user, activeRefunds, "View projects")}
         </section>
+        <section class="account-settings-panel" data-account-panel="appearance" hidden>
+          ${appearanceSettingsPanel()}
+        </section>
         <section class="account-settings-panel" data-account-panel="notifications" hidden>${notificationSettingsPanel(notificationData)}</section>
         <section class="account-settings-panel" data-account-panel="billing" hidden>
           <div class="account-panel-heading"><p>ACCOUNT</p><h1>Orders & billing</h1><span>Packages, receipts and refund updates stay private to your account.</span></div>
@@ -489,9 +556,11 @@ export async function renderWorkspaceAccountPanel(container, actions, initialVie
         </section>
       </div>`;
     const openView = view => {
-      const selected = ["profile", "notifications", "billing", "security"].includes(view) ? view : "profile";
-      const securityPanel=container.querySelector('[data-account-panel="security"]');
-      if(selected==="security"&&!securityPanel.dataset.loaded){securityPanel.dataset.loaded="true";renderAccountSecurity(securityPanel,api);}
+      const selected = ["profile", "appearance", "notifications", "billing", "security"].includes(view) ? view : "profile";
+      const securityPanel = container.querySelector('[data-account-panel="security"]');
+      if (selected === "security" && !securityPanel.dataset.loaded) { securityPanel.dataset.loaded = "true"; renderAccountSecurity(securityPanel, api); }
+      const appearancePanel = container.querySelector('[data-account-panel="appearance"]');
+      if (selected === "appearance" && appearancePanel) { appearancePanel.innerHTML = appearanceSettingsPanel(); }
       container.querySelectorAll("[data-account-view]").forEach(button => button.classList.toggle("active", button.dataset.accountView === selected));
       container.querySelectorAll("[data-account-panel]").forEach(panel => { const active = panel.dataset.accountPanel === selected; panel.hidden = !active; panel.classList.toggle("active", active); });
       history.replaceState(null, "", `${location.pathname}${location.search}#workspace?panel=account&view=${selected}`);
@@ -501,6 +570,19 @@ export async function renderWorkspaceAccountPanel(container, actions, initialVie
     container.querySelector("[data-account-logout]").addEventListener("click", async () => {
       await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"logout" }) });
       currentUser = null; sessionChecked = true; localStorage.removeItem("cx_access"); actions.openMarketing();
+    });
+    window.addEventListener("cx-theme-changed", e => {
+      const theme = e.detail?.theme || document.documentElement.dataset.theme;
+      container.querySelectorAll("[data-set-theme]").forEach(el => {
+        const active = el.dataset.setTheme === theme;
+        el.classList.toggle("active", active);
+        el.setAttribute("aria-checked", String(active));
+        const pill = el.querySelector(".theme-status-pill");
+        if (pill) {
+          pill.textContent = active ? "✓ Active" : "Select";
+          pill.classList.toggle("active", active);
+        }
+      });
     });
     bindNotificationSettings(container);
     bindProfileSettings(container, data.user, activeRefunds, "View projects");

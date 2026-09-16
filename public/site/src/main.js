@@ -56,17 +56,34 @@ async function renderRoute() {
   const motionRender = ++cinematicRender;
   let route = location.hash.slice(1);
   if (!route) {
-    await refreshAccountSession();
-    if (accountUser()) {
-      route = "workspace";
-      history.replaceState(null, "", `${location.pathname}${location.search}#workspace`);
+    const hasSavedSession = (() => {
+      try {
+        const raw = localStorage.getItem("cx_access");
+        return Boolean(raw && JSON.parse(raw)?.account);
+      } catch { return false; }
+    })();
+    if (hasSavedSession) {
+      await Promise.race([refreshAccountSession(), new Promise(r => setTimeout(r, 1000))]);
+      if (accountUser()) {
+        route = "workspace";
+        history.replaceState(null, "", `${location.pathname}${location.search}#workspace`);
+      } else {
+        route = "home";
+      }
     } else {
       route = "home";
+      refreshAccountSession().then(user => {
+        if (user && !location.hash.slice(1)) {
+          history.replaceState(null, "", `${location.pathname}${location.search}#workspace`);
+          renderRoute();
+        }
+      }).catch(() => {});
     }
   }
   const stale = () => renderVersion !== routeRenderVersion;
   document.documentElement.classList.add("route-busy");
   try {
+    loader?.classList.add("is-done");
     // These guards belong to the old DOM, not to the reusable route root.
     ["advancedDashboard", "advancedProject", "advancedReview", "advancedAdmin", "dashboardEnhanced"].forEach(key => delete root.dataset[key]);
     prepareClientRoute(route);
@@ -77,7 +94,7 @@ async function renderRoute() {
     const uploadRoute = route.startsWith("upload?");
     const uploadHasToken = uploadRoute && Boolean(new URLSearchParams(route.split("?")[1] || "").get("token"));
     const protectedRoute = ["account", "checkout"].includes(route) || route.startsWith("brief") || (uploadRoute && !uploadHasToken);
-    if (protectedRoute || route.startsWith("access")) await refreshAccountSession();
+    if (protectedRoute || route.startsWith("access")) await Promise.race([refreshAccountSession(), new Promise(r => setTimeout(r, 1500))]);
     if (stale()) return;
     if (protectedRoute && !accountUser()) {
       rememberProtectedRoute(route);
@@ -87,7 +104,7 @@ async function renderRoute() {
     else if (uploadRoute && uploadHasToken) await renderClientUpload(root, actions, route);
     else if (uploadRoute) await renderClientWorkspace(root, actions, route.replace(/^upload/, "workspace"));
     else if (route.startsWith("workspace")) {
-      await refreshAccountSession();
+      await Promise.race([refreshAccountSession(), new Promise(r => setTimeout(r, 1200))]);
       if (stale()) return;
       if (accountUser() || route.includes("panel=scripts") || route.includes("panel=showcase")) {
         await renderClientWorkspace(root, actions, route);

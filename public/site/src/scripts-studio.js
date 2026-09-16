@@ -1,6 +1,6 @@
 // Content X Script Writing Studio — Full-Screen Studio & Teleprompter
 // Features: Full-screen workspace surface, Scene/Shot headings, formatting, color highlights,
-// production cues ([HOOK], [VO], [B-ROLL], [TALENT], [SFX], [GRAPHIC], [TRANSITION], [CTA]),
+// production cues (HOOK, VO, B-ROLL, TALENT, SFX, GRAPHIC, TRANSITION, CTA),
 // viral hook matrix library (16 formulas), multi-script templates (PAS, Myth-Buster, 3-Step, etc.),
 // full-screen hardware-ready teleprompter with WPM speed/mirror mode/guideline,
 // attached video cuts & workspace asset linking with side-by-side review player,
@@ -9,20 +9,35 @@
 const SCRIPTS_KEY_PREFIX = "cx_scripts_";
 
 const ICONS = {
-  film: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="2.18" ry="2.18"/><line x1="7" x2="7" y1="2" y2="22"/><line x1="17" x2="17" y1="2" y2="22"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="2" x2="7" y1="7" y2="7"/><line x1="2" x2="7" y1="17" y2="17"/><line x1="17" x2="22" y1="17" y2="17"/><line x1="17" x2="22" y1="7" y2="7"/></svg>`,
-  paperclip: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>`,
-  link: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
-  folder: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 8 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>`,
-  sidebar: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg>`,
-  play: `<svg class="studio-svg-icon studio-svg-play" viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>`,
-  pause: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`,
-  focusExpand: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>`,
-  focusExit: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M10 14l-7 7"/></svg>`,
-  locate: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/></svg>`,
-  close: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  film: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="2.18" ry="2.18"/><line x1="7" x2="7" y1="2" y2="22"/><line x1="17" x2="17" y1="2" y2="22"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="2" x2="7" y1="7" y2="7"/><line x1="2" x2="7" y1="17" y2="17"/><line x1="17" x2="22" y1="17" y2="17"/><line x1="17" x2="22" y1="7" y2="7"/></svg>`,
+  paperclip: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>`,
+  link: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
+  folder: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 8 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>`,
+  sidebar: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg>`,
+  play: `<svg class="studio-svg-icon studio-svg-play" viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>`,
+  playOutline: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>`,
+  pause: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`,
+  focusExpand: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>`,
+  focusExit: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M10 14l-7 7"/></svg>`,
+  locate: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/></svg>`,
+  close: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
   search: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+  moreHorizontal: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/><circle cx="5" cy="12" r="1.5" fill="currentColor"/></svg>`,
   moreVertical: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="5" r="1.3" fill="currentColor"/><circle cx="12" cy="19" r="1.3" fill="currentColor"/></svg>`,
-  check: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
+  check: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  plus: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  share: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`,
+  chevronDown: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`,
+  chevronRight: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`,
+  chevronLeft: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`,
+  copy: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
+  trash: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`,
+  messageSquare: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+  chart: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  sparkles: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>`,
+  rotateCcw: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`,
+  dot: `<svg class="studio-svg-icon studio-svg-dot" viewBox="0 0 12 12" width="7" height="7" fill="currentColor"><circle cx="6" cy="6" r="4"/></svg>`,
+  globe: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`
 };
 
 export function getStorageScripts(projectId) {
@@ -35,6 +50,7 @@ export function getStorageScripts(projectId) {
           ...s,
           attachedAssets: Array.isArray(s.attachedAssets) ? s.attachedAssets : [],
           videoLinks: Array.isArray(s.videoLinks) ? s.videoLinks : [],
+          comments: Array.isArray(s.comments) ? s.comments : [],
           published: Boolean(s.published),
           publishedAt: s.publishedAt || null,
           targetPacing: s.targetPacing || "reel_60",
@@ -78,24 +94,33 @@ export function defaultStarterScripts(projectId) {
       ],
       published: true,
       publishedAt: now - 3600000,
+      comments: [
+        {
+          id: "cmt_demo_1",
+          author: "Director",
+          text: "Punch up this pattern interrupt with faster cuts and screen shake.",
+          createdAt: now - 3600000,
+          resolved: false
+        }
+      ],
       content: `<h1>Scene 1 · The Scroll-Stopping Hook</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> <mark class="cx-hl-orange">Stop editing short-form videos like it is 2020.</mark></p>
-<p><span class="cx-cue cue-vo">[VO]</span> Here is why that is killing your audience retention in the first 3 seconds.</p>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Rapid fast-cut timeline montage of swipe-aways on mobile feed with motion blur whip pan.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Sharp vinyl record stop + sub-bass drop impact.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> <mark class="cx-comment-anchor" data-comment-id="cmt_demo_1">Stop editing short-form videos like it is 2020.</mark></p>
+<p><span class="cx-cue cue-vo">VO</span> Here is why that is killing your audience retention in the first 3 seconds.</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Rapid fast-cut timeline montage of swipe-aways on mobile feed with motion blur whip pan.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Sharp vinyl record stop + sub-bass drop impact.</p>
 
 <h2>Shot 2 · The Pattern Disruption</h2>
-<p><span class="cx-cue cue-talent">[TALENT]</span> If you don't establish a pattern interrupt in frame 1, over 70% of viewers scroll before you even finish your first sentence.</p>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> Kinetic bold typography: <strong>"70% DROP-OFF IN 3 SECONDS"</strong> with flame highlight accent.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> If you don't establish a pattern interrupt in frame 1, over 70% of viewers scroll before you even finish your first sentence.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> Kinetic bold typography: <strong>"70% DROP-OFF IN 3 SECONDS"</strong> with flame highlight accent.</p>
 
 <h1>Scene 2 · The Solution Framework</h1>
-<p><span class="cx-cue cue-vo">[VO]</span> Watch how changing the opening cut transforms an average retention curve into a <mark class="cx-hl-green">65% complete watch-through</mark>.</p>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Side-by-side split screen showing retention graph analytics and timeline cuts.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Clean digital interface riser swell into chime.</p>
+<p><span class="cx-cue cue-vo">VO</span> Watch how changing the opening cut transforms an average retention curve into a <mark class="cx-hl-green">65% complete watch-through</mark>.</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Side-by-side split screen showing retention graph analytics and timeline cuts.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Clean digital interface riser swell into chime.</p>
 
 <h2>Shot 3 · The CTA & Closing Beat</h2>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Drop a comment with your niche below, and our team will build your custom 3-second hook framework.</p>
-<p><span class="cx-cue cue-cta">[CTA]</span> Save this cut and follow for daily retention breakdowns.</p>`,
+<p><span class="cx-cue cue-talent">TALENT</span> Drop a comment with your niche below, and our team will build your custom 3-second hook framework.</p>
+<p><span class="cx-cue cue-cta">CTA</span> Save this cut and follow for daily retention breakdowns.</p>`,
       createdAt: now - 86400000,
       updatedAt: now - 3600000,
     },
@@ -112,14 +137,14 @@ export function defaultStarterScripts(projectId) {
       published: false,
       publishedAt: null,
       content: `<h1>Scene 1 · Studio Atmosphere</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> What does it actually take to produce high-impact short-form videos every day without burning out?</p>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Macro close-up of high-speed camera gimbal setup, ambient studio lighting turning orange.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Ambient studio tone + low frequency drone.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> What does it actually take to produce high-impact short-form videos every day without burning out?</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Macro close-up of high-speed camera gimbal setup, ambient studio lighting turning orange.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Ambient studio tone + low frequency drone.</p>
 
 <h2>Shot 2 · Workflow Breakdown</h2>
-<p><span class="cx-cue cue-talent">[TALENT]</span> You don't need more hours. You need an editing pipeline that takes raw footage and turns it into publish-ready retention cuts in 48 hours.</p>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> 48-Hour Turnaround badge with animated checkmark.</p>
-<p><span class="cx-cue cue-cta">[CTA]</span> Claim your private workspace at contentx.co.in.</p>`,
+<p><span class="cx-cue cue-talent">TALENT</span> You don't need more hours. You need an editing pipeline that takes raw footage and turns it into publish-ready retention cuts in 48 hours.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> 48-Hour Turnaround badge with animated checkmark.</p>
+<p><span class="cx-cue cue-cta">CTA</span> Claim your private workspace at contentx.co.in.</p>`,
       createdAt: now - 172800000,
       updatedAt: now - 7200000,
     }
@@ -132,7 +157,7 @@ export const SCRIPT_TEMPLATES = [
     name: "Blank Canvas",
     category: "Standard",
     desc: "Start with an empty script document and write from scratch.",
-    template: `<h1>Scene 1 · Hook</h1>\n<p><span class="cx-cue cue-hook">[HOOK]</span> Enter your opening line here...</p>\n<p><span class="cx-cue cue-vo">[VO]</span> Voiceover explanation...</p>`
+    template: `<h1>Scene 1 · Hook</h1>\n<p><span class="cx-cue cue-hook">HOOK</span> Enter your opening line here...</p>\n<p><span class="cx-cue cue-vo">VO</span> Voiceover explanation...</p>`
   },
   {
     id: "pas",
@@ -140,21 +165,21 @@ export const SCRIPT_TEMPLATES = [
     category: "Viral Hook",
     desc: "The classic short-form formula for pattern interrupt, pain point agitation, and immediate solution.",
     template: `<h1>Scene 1 · Scroll-Stopping Hook</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> <mark class="cx-hl-orange">Stop doing [Common Mistake] if you want [Desired Outcome].</mark></p>
-<p><span class="cx-cue cue-vo">[VO]</span> Here is why that strategy is costing you thousands of views in the first 3 seconds.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Sub-bass drop + vinyl brake impact.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> <mark class="cx-hl-orange">Stop doing Common Mistake if you want Desired Outcome.</mark></p>
+<p><span class="cx-cue cue-vo">VO</span> Here is why that strategy is costing you thousands of views in the first 3 seconds.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Sub-bass drop + vinyl brake impact.</p>
 
 <h1>Scene 2 · The Agitation</h1>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Rapid swipe-away montage on mobile feed showing instant drop-off analytics.</p>
-<p><span class="cx-cue cue-talent">[TALENT]</span> When you open with small talk, over 70% of viewers scroll before you even introduce your topic.</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Rapid swipe-away montage on mobile feed showing instant drop-off analytics.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> When you open with small talk, over 70% of viewers scroll before you even introduce your topic.</p>
 
 <h2>Shot 2 · The Solution Framework</h2>
-<p><span class="cx-cue cue-vo">[VO]</span> Instead, lead with the transformation first. Watch what happens when we flip the timeline.</p>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> Side-by-side timeline retention curve showing 68% complete watch-through.</p>
+<p><span class="cx-cue cue-vo">VO</span> Instead, lead with the transformation first. Watch what happens when we flip the timeline.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> Side-by-side timeline retention curve showing 68% complete watch-through.</p>
 
 <h2>Shot 3 · The Call to Action</h2>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Drop a comment below and our team will build your tailored hook structure.</p>
-<p><span class="cx-cue cue-cta">[CTA]</span> Save this cut and follow for daily retention frameworks.</p>`
+<p><span class="cx-cue cue-talent">TALENT</span> Drop a comment below and our team will build your tailored hook structure.</p>
+<p><span class="cx-cue cue-cta">CTA</span> Save this cut and follow for daily retention frameworks.</p>`
   },
   {
     id: "myth",
@@ -162,20 +187,20 @@ export const SCRIPT_TEMPLATES = [
     category: "Authority",
     desc: "Call out outdated industry advice and position your unique method as the true secret.",
     template: `<h1>Scene 1 · The Myth Callout</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> Most advice about [Niche Topic] is completely backwards.</p>
-<p><span class="cx-cue cue-talent">[TALENT]</span> You’ve been told that you need [Common Myth]. But here is the truth no one is talking about.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Sharp record scratch into digital riser.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> Most advice about Niche Topic is completely backwards.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> You’ve been told that you need Common Myth. But here is the truth no one is talking about.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Sharp record scratch into digital riser.</p>
 
 <h1>Scene 2 · The Proof</h1>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Screen recording of real timeline data and analytics comparison.</p>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> "MYTH VS REALITY" split callout cards.</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Screen recording of real timeline data and analytics comparison.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> "MYTH VS REALITY" split callout cards.</p>
 
 <h2>Shot 2 · The New Rule</h2>
-<p><span class="cx-cue cue-vo">[VO]</span> The creators actually winning in 2026 focus on one thing: immediate pacing velocity.</p>
+<p><span class="cx-cue cue-vo">VO</span> The creators actually winning in 2026 focus on one thing: immediate pacing velocity.</p>
 
 <h2>Shot 3 · Actionable Takeaway</h2>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Save this video and test this formula on your very next upload.</p>
-<p><span class="cx-cue cue-cta">[CTA]</span> Bookmark for your next shoot.</p>`
+<p><span class="cx-cue cue-talent">TALENT</span> Save this video and test this formula on your very next upload.</p>
+<p><span class="cx-cue cue-cta">CTA</span> Bookmark for your next shoot.</p>`
   },
   {
     id: "three_step",
@@ -183,24 +208,24 @@ export const SCRIPT_TEMPLATES = [
     category: "Educational",
     desc: "Rapid-fire 3 tips with visual cues engineered for high save and share rates.",
     template: `<h1>Scene 1 · The High-Value Hook</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> 3 editing secrets that will instantly double your video retention.</p>
-<p><span class="cx-cue cue-vo">[VO]</span> Number 3 is something 95% of editors forget to do.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> 3 editing secrets that will instantly double your video retention.</p>
+<p><span class="cx-cue cue-vo">VO</span> Number 3 is something 95% of editors forget to do.</p>
 
 <h2>Shot 1 · Step One</h2>
-<p><span class="cx-cue cue-talent">[TALENT]</span> First: Cut every single breath and dead air pause under 0.2 seconds.</p>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Timeline waveform ripple edit demonstration.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> First: Cut every single breath and dead air pause under 0.2 seconds.</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Timeline waveform ripple edit demonstration.</p>
 
 <h2>Shot 2 · Step Two</h2>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Second: Change the visual frame every 2.5 seconds using dynamic zoom cuts or b-roll punch-ins.</p>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> Kinetic zoom in/out with sound effect marker.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> Second: Change the visual frame every 2.5 seconds using dynamic zoom cuts or b-roll punch-ins.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> Kinetic zoom in/out with sound effect marker.</p>
 
 <h2>Shot 3 · Step Three (The Secret)</h2>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Third: Layer subtle ambient sound design underneath your speech so there is never silent audio.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Subtle warm synth drone riser.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> Third: Layer subtle ambient sound design underneath your speech so there is never silent audio.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Subtle warm synth drone riser.</p>
 
 <h1>Scene 2 · Save Call To Action</h1>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Which of these 3 are you adding to your workflow today?</p>
-<p><span class="cx-cue cue-cta">[CTA]</span> Save this post and share with your editor.</p>`
+<p><span class="cx-cue cue-talent">TALENT</span> Which of these 3 are you adding to your workflow today?</p>
+<p><span class="cx-cue cue-cta">CTA</span> Save this post and share with your editor.</p>`
   },
   {
     id: "product_demo",
@@ -208,20 +233,20 @@ export const SCRIPT_TEMPLATES = [
     category: "Commercial",
     desc: "Highlight pain point, feature reveal, fast b-roll rhythm, and conversion CTA.",
     template: `<h1>Scene 1 · Visual Hook</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> What if video editing didn’t take 14 hours of back-and-forth revisions?</p>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Cinematic macro shots of raw footage turning into polished 4K cuts in seconds.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Crisp mechanical click + bass drop.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> What if video editing didn’t take 14 hours of back-and-forth revisions?</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Cinematic macro shots of raw footage turning into polished 4K cuts in seconds.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Crisp mechanical click + bass drop.</p>
 
 <h1>Scene 2 · Friction vs Flow</h1>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Meet Content X: Private review rooms, timestamped frame feedback, and 48-hour delivery.</p>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> Interactive UI mockup showing timestamped comments and version slider.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> Meet Content X: Private review rooms, timestamped frame feedback, and 48-hour delivery.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> Interactive UI mockup showing timestamped comments and version slider.</p>
 
 <h2>Shot 2 · The Results</h2>
-<p><span class="cx-cue cue-vo">[VO]</span> Upload your raw footage once, review directly on the timeline, and approve with a click.</p>
+<p><span class="cx-cue cue-vo">VO</span> Upload your raw footage once, review directly on the timeline, and approve with a click.</p>
 
 <h1>Scene 3 · Offer & Invitation</h1>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Claim your free workspace today at contentx.co.in.</p>
-<p><span class="cx-cue cue-cta">[CTA]</span> Link in bio to start your first project.</p>`
+<p><span class="cx-cue cue-talent">TALENT</span> Claim your free workspace today at contentx.co.in.</p>
+<p><span class="cx-cue cue-cta">CTA</span> Link in bio to start your first project.</p>`
   },
   {
     id: "story_arc",
@@ -229,22 +254,22 @@ export const SCRIPT_TEMPLATES = [
     category: "Storytelling",
     desc: "Vulnerable personal or client story tracing the breakdown to the breakthrough.",
     template: `<h1>Scene 1 · The Painful Beginning</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> 6 months ago, our videos were stuck at 400 views per reel.</p>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Slow moody footage showing flatline analytics graph and tired creator.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Low heartbeat bass pulse.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> 6 months ago, our videos were stuck at 400 views per reel.</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Slow moody footage showing flatline analytics graph and tired creator.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Low heartbeat bass pulse.</p>
 
 <h1>Scene 2 · The Turning Point</h1>
-<p><span class="cx-cue cue-talent">[TALENT]</span> We realized the problem wasn't the content—it was the first 3 seconds of timeline editing.</p>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> Hook comparison overlay: "Vague intro" vs "Pattern disrupt".</p>
+<p><span class="cx-cue cue-talent">TALENT</span> We realized the problem wasn't the content—it was the first 3 seconds of timeline editing.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> Hook comparison overlay: "Vague intro" vs "Pattern disrupt".</p>
 
 <h2>Shot 2 · The Transformation</h2>
-<p><span class="cx-cue cue-vo">[VO]</span> We stripped out 10 seconds of fluff and tested high-contrast pattern disruptions.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Upbeat transition whoosh into rhythmic beat.</p>
+<p><span class="cx-cue cue-vo">VO</span> We stripped out 10 seconds of fluff and tested high-contrast pattern disruptions.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Upbeat transition whoosh into rhythmic beat.</p>
 
 <h1>Scene 3 · The Breakthrough</h1>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Spiking analytics curve reaching 250K+ views with surging engagement.</p>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Pacing beats perfection every single time.</p>
-<p><span class="cx-cue cue-cta">[CTA]</span> Drop "HOOK" in comments to get the full timeline preset.</p>`
+<p><span class="cx-cue cue-broll">B-ROLL</span> Spiking analytics curve reaching 250K+ views with surging engagement.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> Pacing beats perfection every single time.</p>
+<p><span class="cx-cue cue-cta">CTA</span> Drop "HOOK" in comments to get the full timeline preset.</p>`
   },
   {
     id: "founder_authority",
@@ -252,20 +277,20 @@ export const SCRIPT_TEMPLATES = [
     category: "Authority",
     desc: "Build instant domain authority, share an unconventional founder lesson, and drive qualified profile views.",
     template: `<h1>Scene 1 · The Uncomfortable Truth</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> Most founders waste 20 hours a week on tasks that should be automated or delegated.</p>
-<p><span class="cx-cue cue-talent">[TALENT]</span> When we started scaling Content X, I thought doing everything myself was a badge of honour.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Sub-bass drop + clock ticking sound.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> Most founders waste 20 hours a week on tasks that should be automated or delegated.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> When we started scaling Content X, I thought doing everything myself was a badge of honour.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Sub-bass drop + clock ticking sound.</p>
 
 <h1>Scene 2 · The Pivot Point</h1>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Split screen showing messy desktop tabs vs clean automated project pipeline.</p>
-<p><span class="cx-cue cue-vo">[VO]</span> The second we built a dedicated review workflow, our turnaround dropped from 7 days to 48 hours.</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Split screen showing messy desktop tabs vs clean automated project pipeline.</p>
+<p><span class="cx-cue cue-vo">VO</span> The second we built a dedicated review workflow, our turnaround dropped from 7 days to 48 hours.</p>
 
 <h2>Shot 2 · The 1 Actionable Takeaway</h2>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> "3 Rules of Leverage: Systems > Raw Effort".</p>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Build systems before you hire people. Protect your creative focus at all costs.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> "3 Rules of Leverage: Systems > Raw Effort".</p>
+<p><span class="cx-cue cue-talent">TALENT</span> Build systems before you hire people. Protect your creative focus at all costs.</p>
 
 <h1>Scene 3 · Authority CTA</h1>
-<p><span class="cx-cue cue-cta">[CTA]</span> Follow for weekly insights on creative operations and founder workflows.</p>`
+<p><span class="cx-cue cue-cta">CTA</span> Follow for weekly insights on creative operations and founder workflows.</p>`
   },
   {
     id: "steal_system",
@@ -273,19 +298,19 @@ export const SCRIPT_TEMPLATES = [
     category: "Educational",
     desc: "Give away an entire high-value workflow step-by-step for massive bookmark and share velocity.",
     template: `<h1>Scene 1 · The Generous Hook</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> <mark class="cx-hl-orange">Steal our exact short-form video workflow that produces 30 reels a month.</mark></p>
-<p><span class="cx-cue cue-vo">[VO]</span> We spent 18 months optimizing this so you can set it up in 10 minutes.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Whoosh into paper slam.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> <mark class="cx-hl-orange">Steal our exact short-form video workflow that produces 30 reels a month.</mark></p>
+<p><span class="cx-cue cue-vo">VO</span> We spent 18 months optimizing this so you can set it up in 10 minutes.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Whoosh into paper slam.</p>
 
 <h1>Scene 2 · The 4-Part System</h1>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> 4-stage pipeline: Ideation → Scripting → Batch Shoot → Edit.</p>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Step 1: Never write one script at a time. Batch 8 hooks using our formula matrix on Sunday morning.</p>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Teleprompter mode scrolling smoothly on phone screen.</p>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Step 2: Use an in-browser teleprompter locked at 135 words per minute. Zero memorization required.</p>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Step 3: Upload raw files directly to a timestamped review room for 48-hour delivery.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> 4-stage pipeline: Ideation → Scripting → Batch Shoot → Edit.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> Step 1: Never write one script at a time. Batch 8 hooks using our formula matrix on Sunday morning.</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Teleprompter mode scrolling smoothly on phone screen.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> Step 2: Use an in-browser teleprompter locked at 135 words per minute. Zero memorization required.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> Step 3: Upload raw files directly to a timestamped review room for 48-hour delivery.</p>
 
 <h1>Scene 3 · Share CTA</h1>
-<p><span class="cx-cue cue-cta">[CTA]</span> Save this video so you have the blueprint ready for your next recording day.</p>`
+<p><span class="cx-cue cue-cta">CTA</span> Save this video so you have the blueprint ready for your next recording day.</p>`
   },
   {
     id: "case_study",
@@ -293,20 +318,20 @@ export const SCRIPT_TEMPLATES = [
     category: "Proof & Case Study",
     desc: "Break down real client metrics, timeline interventions, and tangible revenue outcomes.",
     template: `<h1>Scene 1 · Proof-Led Hook</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> How this SaaS brand generated 1.2M views with zero paid ads in 60 days.</p>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Analytics dashboard screen capture with verified engagement figures.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Camera shutter + bass pulse.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> How this SaaS brand generated 1.2M views with zero paid ads in 60 days.</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Analytics dashboard screen capture with verified engagement figures.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Camera shutter + bass pulse.</p>
 
 <h1>Scene 2 · The Baseline Problem</h1>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Before working with us, their videos had an average view duration of just 4 seconds.</p>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> Old retention graph dropping at 2.4s vs New retention graph holding at 78%.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> Before working with us, their videos had an average view duration of just 4 seconds.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> Old retention graph dropping at 2.4s vs New retention graph holding at 78%.</p>
 
 <h2>Shot 2 · The Strategic Fix</h2>
-<p><span class="cx-cue cue-vo">[VO]</span> We removed their 5-second branded intro, replaced talking-head pauses with motion B-roll, and cut pacing to 0.2s transitions.</p>
+<p><span class="cx-cue cue-vo">VO</span> We removed their 5-second branded intro, replaced talking-head pauses with motion B-roll, and cut pacing to 0.2s transitions.</p>
 
 <h1>Scene 3 · The Conversion CTA</h1>
-<p><span class="cx-cue cue-talent">[TALENT]</span> If you want your short-form content to look and convert like this, check the link in our bio.</p>
-<p><span class="cx-cue cue-cta">[CTA]</span> Visit contentx.co.in to view our packages.</p>`
+<p><span class="cx-cue cue-talent">TALENT</span> If you want your short-form content to look and convert like this, check the link in our bio.</p>
+<p><span class="cx-cue cue-cta">CTA</span> Visit contentx.co.in to view our packages.</p>`
   },
   {
     id: "expensive_mistake",
@@ -314,19 +339,19 @@ export const SCRIPT_TEMPLATES = [
     category: "Warning & Contrarian",
     desc: "Expose an invisible technical mistake that ruins content reach, with an immediate visual fix.",
     template: `<h1>Scene 1 · High-Stakes Warning</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> This single audio mistake is driving 60% of your audience away before sentence one.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Distorted clipping sound followed by crisp warm voice.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> This single audio mistake is driving 60% of your audience away before sentence one.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Distorted clipping sound followed by crisp warm voice.</p>
 
 <h1>Scene 2 · The Comparison</h1>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Audio waveform comparison showing blown out peaks vs balanced -14 LUFS mastering.</p>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Viewers will forgive average camera quality, but bad phone audio makes them swipe away instantly.</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Audio waveform comparison showing blown out peaks vs balanced -14 LUFS mastering.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> Viewers will forgive average camera quality, but bad phone audio makes them swipe away instantly.</p>
 
 <h2>Shot 2 · The 2-Click Fix</h2>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> Audio equalizer preset overlay: Voice Isolation + Dynamic Compression.</p>
-<p><span class="cx-cue cue-vo">[VO]</span> Always normalize your mobile audio to -14 LUFS and roll off frequencies below 80Hz.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> Audio equalizer preset overlay: Voice Isolation + Dynamic Compression.</p>
+<p><span class="cx-cue cue-vo">VO</span> Always normalize your mobile audio to -14 LUFS and roll off frequencies below 80Hz.</p>
 
 <h1>Scene 3 · Bookmark CTA</h1>
-<p><span class="cx-cue cue-cta">[CTA]</span> Bookmark this for your next video export so your audio sounds studio-grade.</p>`
+<p><span class="cx-cue cue-cta">CTA</span> Bookmark this for your next video export so your audio sounds studio-grade.</p>`
   },
   {
     id: "lead_magnet",
@@ -334,20 +359,20 @@ export const SCRIPT_TEMPLATES = [
     category: "Conversion",
     desc: "Present an irresistible free asset, demonstrate tangible utility, and drive dozens of comment triggers.",
     template: `<h1>Scene 1 · The Asset Tease</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> Stop paying $99 for viral hook packs. I am giving away our entire internal matrix for free.</p>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Quick scroll through our 48 categorized hook formulas with examples.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> Paper slide + chime sound.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> Stop paying $99 for viral hook packs. I am giving away our entire internal matrix for free.</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Quick scroll through our 48 categorized hook formulas with examples.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> Paper slide + chime sound.</p>
 
 <h1>Scene 2 · What's Inside</h1>
-<p><span class="cx-cue cue-talent">[TALENT]</span> 48 formulas, retention cues, and the exact teleprompter speeds top creators use to hit 100K+ views.</p>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> "48 HOOK FORMULAS · FREE CREATOR DOWNLOAD".</p>
+<p><span class="cx-cue cue-talent">TALENT</span> 48 formulas, retention cues, and the exact teleprompter speeds top creators use to hit 100K+ views.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> "48 HOOK FORMULAS · FREE CREATOR DOWNLOAD".</p>
 
 <h2>Shot 2 · Instant Delivery</h2>
-<p><span class="cx-cue cue-vo">[VO]</span> Everything is formatted and ready to copy-paste directly into your next video script.</p>
+<p><span class="cx-cue cue-vo">VO</span> Everything is formatted and ready to copy-paste directly into your next video script.</p>
 
 <h1>Scene 3 · The Keyword Trigger</h1>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Just comment "SCRIPT" below and my automation will send you the direct link right now.</p>
-<p><span class="cx-cue cue-cta">[CTA]</span> Comment "SCRIPT" for instant access.</p>`
+<p><span class="cx-cue cue-talent">TALENT</span> Just comment "SCRIPT" below and my automation will send you the direct link right now.</p>
+<p><span class="cx-cue cue-cta">CTA</span> Comment "SCRIPT" for instant access.</p>`
   },
   {
     id: "trend_reaction",
@@ -355,20 +380,20 @@ export const SCRIPT_TEMPLATES = [
     category: "Viral Hook",
     desc: "Ride an active platform update or industry conversation with a fast, defensible perspective.",
     template: `<h1>Scene 1 · The News Hook</h1>
-<p><span class="cx-cue cue-hook">[HOOK]</span> Everyone is freaking out over [Platform/Algorithm Change], but here is what nobody is noticing.</p>
-<p><span class="cx-cue cue-sfx">[SFX]</span> News flash ping + digital riser.</p>
+<p><span class="cx-cue cue-hook">HOOK</span> Everyone is freaking out over Platform/Algorithm Change, but here is what nobody is noticing.</p>
+<p><span class="cx-cue cue-sfx">SFX</span> News flash ping + digital riser.</p>
 
 <h1>Scene 2 · The Real Meaning</h1>
-<p><span class="cx-cue cue-talent">[TALENT]</span> While everyone complains about lower reach, the algorithm is secretly rewarding this 1 format.</p>
-<p><span class="cx-cue cue-broll">[B-ROLL]</span> Fast headline overlay montage from tech and creator publications.</p>
+<p><span class="cx-cue cue-talent">TALENT</span> While everyone complains about lower reach, the algorithm is secretly rewarding this 1 format.</p>
+<p><span class="cx-cue cue-broll">B-ROLL</span> Fast headline overlay montage from tech and creator publications.</p>
 
 <h2>Shot 2 · How To Capitalize</h2>
-<p><span class="cx-cue cue-graphic">[GRAPHIC]</span> 30-day trend pivot blueprint.</p>
-<p><span class="cx-cue cue-vo">[VO]</span> If you pivot your first 3 seconds right now, you can capture the traffic everyone else is losing.</p>
+<p><span class="cx-cue cue-graphic">GRAPHIC</span> 30-day trend pivot blueprint.</p>
+<p><span class="cx-cue cue-vo">VO</span> If you pivot your first 3 seconds right now, you can capture the traffic everyone else is losing.</p>
 
 <h1>Scene 3 · The Debate CTA</h1>
-<p><span class="cx-cue cue-talent">[TALENT]</span> Do you think this update helps or hurts creators? Let me know in the comments.</p>
-<p><span class="cx-cue cue-cta">[CTA]</span> Share your take below.</p>`
+<p><span class="cx-cue cue-talent">TALENT</span> Do you think this update helps or hurts creators? Let me know in the comments.</p>
+<p><span class="cx-cue cue-cta">CTA</span> Share your take below.</p>`
   }
 ];
 
@@ -377,37 +402,37 @@ export const VIRAL_HOOK_LIBRARY = [
   {
     category: "Contrarian & Pattern Disrupt",
     title: "The Stop-Doing Hook",
-    formula: "Stop doing [Common Habit] if you want [Desired Outcome].",
+    formula: "Stop doing Common Habit if you want Desired Outcome.",
     example: "Stop doing 15-second intros if you want to grow on Reels. Here is what actually holds attention in 2026."
   },
   {
     category: "Contrarian & Pattern Disrupt",
     title: "The Industry Lie",
-    formula: "Everyone is lying to you about [Topic]. Here is the real reason...",
+    formula: "Everyone is lying to you about Topic. Here is the real reason...",
     example: "Everyone is lying to you about camera gear. Here is the real reason your videos aren't converting."
   },
   {
     category: "Contrarian & Pattern Disrupt",
     title: "The Unpopular Truth",
-    formula: "This might make some people angry, but [Bold Statement].",
+    formula: "This might make some people angry, but Bold Statement.",
     example: "This might make some editors angry, but fancy transitions never saved a boring script."
   },
   {
     category: "Contrarian & Pattern Disrupt",
     title: "The Delete Button",
-    formula: "If you still have [Tool/Habit] in your workflow, delete it today.",
+    formula: "If you still have Tool/Habit in your workflow, delete it today.",
     example: "If you still use auto-captions without customizing fonts and safe zones, delete that preset today."
   },
   {
     category: "Contrarian & Pattern Disrupt",
     title: "The Overrated Shortcut",
-    formula: "Stop spending $[Amount] on [Hype Solution]. Here is the $0 fix.",
+    formula: "Stop spending $Amount on Hype Solution. Here is the $0 fix.",
     example: "Stop spending $500 on viral courses. Here is the exact 3-second pacing framework we use for free."
   },
   {
     category: "Contrarian & Pattern Disrupt",
     title: "The Reverse Rule",
-    formula: "Do NOT watch this video if you're happy with [Average Result].",
+    formula: "Do NOT watch this video if you're happy with Average Result.",
     example: "Do NOT watch this video if you're comfortable getting 300 views per reel for the next 6 months."
   },
 
@@ -415,19 +440,19 @@ export const VIRAL_HOOK_LIBRARY = [
   {
     category: "Curiosity & Value Gap",
     title: "The Hidden Setting",
-    formula: "This 1 hidden setting in [Tool/Platform] literally doubled our [Metric].",
+    formula: "This 1 hidden setting in Tool/Platform literally doubled our Metric.",
     example: "This 1 hidden pacing rule in Premiere literally doubled our average view duration."
   },
   {
     category: "Curiosity & Value Gap",
     title: "The 99% Rule",
-    formula: "99% of creators are doing [Action] completely wrong. Watch this.",
+    formula: "99% of creators are doing Action completely wrong. Watch this.",
     example: "99% of creators frame their talking head completely wrong. Here is the 2-inch eye-line rule."
   },
   {
     category: "Curiosity & Value Gap",
     title: "The Secret Weapon",
-    formula: "If I lost everything and had to rebuild [Goal] from zero, this is what I would do.",
+    formula: "If I lost everything and had to rebuild Goal from zero, this is what I would do.",
     example: "If I lost all my followers and had to reach 100K in 90 days, here is my exact 3-reel script framework."
   },
   {
@@ -439,13 +464,13 @@ export const VIRAL_HOOK_LIBRARY = [
   {
     category: "Curiosity & Value Gap",
     title: "The Unfair Advantage",
-    formula: "Top [Niche] creators will hate me for exposing this, but...",
+    formula: "Top Niche creators will hate me for exposing this, but...",
     example: "Top video agencies will hate me for exposing this, but here is how we cut edit turnaround down to 48 hours."
   },
   {
     category: "Curiosity & Value Gap",
     title: "The Bookmark Hook",
-    formula: "You are going to want to save this video before [Platform] hides it.",
+    formula: "You are going to want to save this video before Platform hides it.",
     example: "You are going to want to save this video before you shoot your next 5 talking-head reels."
   },
 
@@ -491,13 +516,13 @@ export const VIRAL_HOOK_LIBRARY = [
   {
     category: "Data & Proof-Led",
     title: "The 500-Video Analysis",
-    formula: "We analyzed [Number] high-performing videos. Here are the 3 patterns.",
+    formula: "We analyzed Number high-performing videos. Here are the 3 patterns.",
     example: "We analyzed 500 viral shorts last month. Here are the 3 timeline cuts they all have in common."
   },
   {
     category: "Data & Proof-Led",
     title: "The Zero-Ad Breakdown",
-    formula: "How [Subject] generated [Big Result] with zero ad spend.",
+    formula: "How Subject generated Big Result with zero ad spend.",
     example: "How this founder gained 45,000 email subscribers with just 12 short-form videos."
   },
   {
@@ -509,7 +534,7 @@ export const VIRAL_HOOK_LIBRARY = [
   {
     category: "Data & Proof-Led",
     title: "The $0 to $100K Case Study",
-    formula: "The exact [Number]-reel content sequence that generated $[Revenue].",
+    formula: "The exact Number-reel content sequence that generated $Revenue.",
     example: "The exact 8-reel sequence that generated $120,000 in agency pipeline with organic video."
   },
   {
@@ -529,13 +554,13 @@ export const VIRAL_HOOK_LIBRARY = [
   {
     category: "Speed & Actionable How-To",
     title: "The Painless Shortcut",
-    formula: "How to get [Desirable Result] in [Short Time] without [Painful Obstacle].",
+    formula: "How to get Desirable Result in Short Time without Painful Obstacle.",
     example: "How to script 10 high-retention videos in 45 minutes without staring at a blank screen."
   },
   {
     category: "Speed & Actionable How-To",
     title: "The Blueprint Steal",
-    formula: "Steal this exact [Framework/Timeline] for your next [Project].",
+    formula: "Steal this exact [Framework/Timeline] for your next Project.",
     example: "Steal this 4-step hook formula for your next TikTok or Instagram Reel."
   },
   {
@@ -553,7 +578,7 @@ export const VIRAL_HOOK_LIBRARY = [
   {
     category: "Speed & Actionable How-To",
     title: "The 3-Step Velocity Fix",
-    formula: "3 quick edits to fix [Common Flaw] in under 60 seconds.",
+    formula: "3 quick edits to fix Common Flaw in under 60 seconds.",
     example: "3 quick edits in CapCut or Premiere to make flat iPhone video look like cinema glass."
   },
   {
@@ -567,19 +592,19 @@ export const VIRAL_HOOK_LIBRARY = [
   {
     category: "Story & Vulnerability",
     title: "The Rock Bottom Confession",
-    formula: "6 months ago, I was completely burnt out and ready to quit [Domain].",
+    formula: "6 months ago, I was completely burnt out and ready to quit Domain.",
     example: "6 months ago, I spent 40 hours editing 1 reel that got 82 views. Here is what I had to unlearn."
   },
   {
     category: "Story & Vulnerability",
     title: "The $10,000 Mistake",
-    formula: "I wasted $[Large Amount] on [Asset] so you don't have to.",
+    formula: "I wasted $Large Amount on Asset so you don't have to.",
     example: "I spent $10,000 on studio cameras and lighting before realizing good audio and hooks drive 90% of views."
   },
   {
     category: "Story & Vulnerability",
     title: "The Uncomfortable Lesson",
-    formula: "The hardest lesson I learned after producing [Number] short-form videos.",
+    formula: "The hardest lesson I learned after producing Number short-form videos.",
     example: "The hardest lesson I learned after editing 1,200 reels: nobody cares about your brand until you solve their problem."
   },
   {
@@ -591,13 +616,13 @@ export const VIRAL_HOOK_LIBRARY = [
   {
     category: "Story & Vulnerability",
     title: "The Client Who Was Stuck",
-    formula: "This creator was stuck at [Low Metric] for 2 years. Then we changed 1 thing.",
+    formula: "This creator was stuck at Low Metric for 2 years. Then we changed 1 thing.",
     example: "This founder had 900 followers for 2 years straight. After changing their hook pacing, they hit 50K in 90 days."
   },
   {
     category: "Story & Vulnerability",
     title: "The 'Nobody Believed Me' Arc",
-    formula: "Everyone told me [Strategy] was dead. Then we did [Huge Result].",
+    formula: "Everyone told me Strategy was dead. Then we did Huge Result.",
     example: "Everyone told me talking-head videos were dead in 2026. Then we generated 3.4M views with this format."
   },
 
@@ -617,7 +642,7 @@ export const VIRAL_HOOK_LIBRARY = [
   {
     category: "Audience Callout & Niche",
     title: "The Agency / Freelancer Filter",
-    formula: "If you charge under $[Amount] for [Service], you need to hear this.",
+    formula: "If you charge under $Amount for Service, you need to hear this.",
     example: "If you're charging under $500 for video editing, you're competing in the wrong market. Here is the pivot."
   },
   {
@@ -635,7 +660,7 @@ export const VIRAL_HOOK_LIBRARY = [
   {
     category: "Audience Callout & Niche",
     title: "The Local Business Dominator",
-    formula: "If you own a local business, you only need [Number] reels to dominate your city.",
+    formula: "If you own a local business, you only need Number reels to dominate your city.",
     example: "If you run a local clinic or gym, you only need 3 specific videos to outrank every competitor in your town."
   },
 
@@ -661,25 +686,25 @@ export const VIRAL_HOOK_LIBRARY = [
   {
     category: "Transformation & Teardown",
     title: "The Timeline Teardown",
-    formula: "Let's deconstruct the highest-performing video in [Niche] second-by-second.",
+    formula: "Let's deconstruct the highest-performing video in Niche second-by-second.",
     example: "Let's deconstruct this 4-million view reel second-by-second: notice the pattern disruption at 00:03."
   },
   {
     category: "Transformation & Teardown",
     title: "The Old Way vs The 2026 Way",
-    formula: "The old way: [Outdated Method]. The 2026 way: [Modern Framework].",
+    formula: "The old way: Outdated Method. The 2026 way: Modern Framework.",
     example: "The old way: intro, logo sting, thesis. The 2026 way: micro-pattern disrupt, direct proof, tight rhythm."
   },
   {
     category: "Transformation & Teardown",
     title: "The Retention Curve Save",
-    formula: "How we took a video dying at 20% retention and revived it to [Metric]%.",
+    formula: "How we took a video dying at 20% retention and revived it to Metric%.",
     example: "How we took a client's cut stuck at 22% watch time and boosted it to 78% completion by cutting the first 4 seconds."
   }
 ];
 
 export function calculateSpeechMetrics(text, wpm = 135) {
-  const clean = text.replace(/\[[A-Z-]+\]/g, "").replace(/\s+/g, " ").trim();
+  const clean = text.replace(/\[[A-Z-]+\]/g, "").replace(/\b(HOOK|VO|B-ROLL|TALENT|SFX|GRAPHIC|TRANSITION|CTA)\b/g, "").replace(/\s+/g, " ").trim();
   const words = clean ? clean.split(/\s+/).length : 0;
   const chars = clean.length;
   const targetWpm = Math.max(80, Math.min(260, Number(wpm) || 135));
@@ -716,6 +741,12 @@ export function parseProductionCues(html = "") {
     CTA: 0
   };
   const str = String(html || "");
+  const spanMatches = str.match(/class="cx-cue[^"]*">([A-Z-]+)</g) || [];
+  for (const sm of spanMatches) {
+    const k = sm.replace(/class="cx-cue[^"]*">/, "").replace("<", "").replace("-", "");
+    if (k === "BROLL") cues.BROLL++;
+    else if (cues[k] !== undefined) cues[k]++;
+  }
   const cueMatches = str.match(/\[([A-Z-]+)\]/g) || [];
   for (const match of cueMatches) {
     const key = match.replace(/[\[\]]/g, "").replace("-", "");
@@ -852,7 +883,7 @@ export async function renderScriptStudioSurface(container, {
       videoLinks: [],
       published: false,
       publishedAt: null,
-      content: `<h1>Scene 1 · Scroll-Stopping Hook</h1>\n<p><span class="cx-cue cue-hook">[HOOK]</span> Enter opening hook line...</p>\n<p><span class="cx-cue cue-vo">[VO]</span> Voiceover explanation...</p>`,
+      content: `<h1>Scene 1 · Scroll-Stopping Hook</h1>\n<p><span class="cx-cue cue-hook">HOOK</span> Enter opening hook line...</p>\n<p><span class="cx-cue cue-vo">VO</span> Voiceover explanation...</p>`,
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -861,357 +892,365 @@ export async function renderScriptStudioSurface(container, {
     activeScriptId = newScript.id;
   }
 
-  // Shell Layout
+  // Shell Layout - Content X Scripts Studio
   container.innerHTML = `
     <div class="scripts-surface-wrapper">
-      <!-- Sub-navigation & Tools Ribbon -->
-      <header class="scripts-surface-subnav" role="toolbar" aria-label="Scripts Studio Controls">
-        <div class="scripts-subnav-left">
-          <span class="scripts-studio-tag">SCRIPTS STUDIO</span>
-          <div class="scripts-project-selector-group">
-            <label for="scripts-active-proj">Project:</label>
-            <select id="scripts-active-proj" class="scripts-proj-select" data-active-project-select>
-              ${projects && projects.length ? projects.map(p => {
-                const pid = p.project_id || p.id;
-                return `<option value="${escapeHTML(pid)}" ${pid === projectId ? "selected" : ""}>${escapeHTML(p.name)}</option>`;
-              }).join("") : `<option value="${escapeHTML(projectId)}">${escapeHTML(activeProject.name)}</option>`}
-            </select>
+      <!-- Breadcrumb & Top Action Bar matching Screenshot -->
+      <header class="scripts-breadcrumb-topbar" role="toolbar" aria-label="Scripts Studio Controls">
+        <div class="scripts-breadcrumb-left">
+          <div class="scripts-breadcrumb-trail">
+            <span class="scripts-breadcrumb-root">Scripts Studio</span>
+            <span class="scripts-breadcrumb-sep">›</span>
+            <input type="text" class="scripts-main-title-input" data-script-title-input placeholder="Untitled Script" value="" aria-label="Script title">
           </div>
-          <div class="scripts-pacing-goal-group">
-            <label for="scripts-pacing-goal">Goal:</label>
-            <select id="scripts-pacing-goal" class="scripts-pacing-select" data-pacing-goal-select title="Target duration benchmark">
-              <option value="reel_60">Reel / TikTok (&lt;60s)</option>
-              <option value="reel_45">High-Retention Viral (&lt;45s)</option>
-              <option value="short_60">YouTube Shorts (60s)</option>
-              <option value="explainer_90">Explainer / BTS (&gt;90s)</option>
-            </select>
+          <div class="scripts-save-badge" data-save-indicator>
+            ${ICONS.check} <span>Saved</span>
           </div>
         </div>
 
-        <nav class="scripts-subnav-tabs" aria-label="Studio Modes">
-          <button type="button" class="scripts-mode-tab active" data-studio-tab="editor">
-            Editor
-          </button>
-          <button type="button" class="scripts-mode-tab" data-studio-tab="hooks">
-            Viral Hooks <b class="tab-count-pill">${VIRAL_HOOK_LIBRARY.length}</b>
-          </button>
-          <button type="button" class="scripts-mode-tab" data-studio-tab="cuts">
-            Video Cuts <b class="tab-count-pill" data-cuts-count-pill>0</b>
-          </button>
-          <button type="button" class="scripts-mode-tab" data-studio-tab="cues">
-            Shot List
-          </button>
-        </nav>
+        <div class="scripts-breadcrumb-actions">
+          <!-- On-Screen Status Selector -->
+          <div class="scripts-topbar-select-wrap scripts-status-select-wrap" title="Change script status">
+            <span class="status-indicator-dot dot-draft" data-topbar-status-dot></span>
+            <select class="scripts-topbar-select scripts-status-select" data-script-status-select aria-label="Script status">
+              <option value="Draft">Draft</option>
+              <option value="Review">In Review</option>
+              <option value="Ready">Ready</option>
+              <option value="Filming">Filming</option>
+            </select>
+            <span class="scripts-select-chevron">${ICONS.chevronDown}</span>
+          </div>
 
-        <div class="scripts-subnav-actions">
-          <button type="button" class="scripts-action-button scripts-prompter-launch-btn" data-launch-teleprompter title="Launch Hardware-Ready Teleprompter">
-            <span class="studio-btn-icon">${ICONS.play}</span> Teleprompter
-          </button>
-          <button type="button" class="scripts-publish-btn" data-toggle-publish title="Publish script & attached cut to website showcase">
-            Publish
+          <!-- On-Screen Folder Assign Selector -->
+          <div class="scripts-topbar-select-wrap scripts-folder-select-wrap" title="Assign or move script to folder">
+            <span class="studio-btn-icon">${ICONS.folder}</span>
+            <select class="scripts-topbar-select scripts-folder-select" data-script-folder-select aria-label="Assign to folder">
+              <option value="">Project root</option>
+              ${folders.map(f => `<option value="${escapeHTML(f.id)}">${escapeHTML(f.name)}</option>`).join("")}
+            </select>
+            <span class="scripts-select-chevron">${ICONS.chevronDown}</span>
+          </div>
+
+          <!-- Share Button (Opens dedicated Share Script modal) -->
+          <button type="button" class="scripts-topbar-action-btn scripts-share-btn" data-share-script-modal title="Create and copy shareable link">
+            <span class="studio-btn-icon">${ICONS.share}</span> <span>Share</span>
           </button>
 
+          <!-- Topbar Overflow Menu for Studio Views, Teleprompter, & Export -->
           <div class="scripts-dropdown-wrap scripts-overflow-wrap">
-            <button type="button" class="scripts-action-button subtle scripts-overflow-btn" data-toggle-overflow-menu title="More actions" aria-label="More actions">
-              <span class="studio-btn-icon">${ICONS.moreVertical}</span>
+            <button type="button" class="scripts-topbar-action-btn subtle scripts-overflow-btn" data-toggle-overflow-menu title="More studio tools and options" aria-label="More studio tools">
+              <span class="studio-btn-icon">${ICONS.moreHorizontal}</span>
             </button>
             <div class="scripts-menu-popover scripts-overflow-popover" data-overflow-menu hidden>
+              <div class="scripts-overflow-section-label">RECORD &amp; PRESENT</div>
+              <button type="button" class="scripts-overflow-item" data-launch-teleprompter title="Launch Fullscreen Teleprompter">
+                <span class="studio-btn-icon">${ICONS.play}</span>
+                <span>Teleprompter Mode</span>
+              </button>
+
+              <div class="scripts-overflow-divider"></div>
+              <div class="scripts-overflow-section-label">EXPORT SCRIPT</div>
+              <button type="button" class="scripts-overflow-item" data-export-md>
+                <span class="export-badge">.MD</span>
+                <span>Markdown Document</span>
+              </button>
+              <button type="button" class="scripts-overflow-item" data-export-txt>
+                <span class="export-badge">.TXT</span>
+                <span>Plain Text File</span>
+              </button>
+              <button type="button" class="scripts-overflow-item" data-copy-formatted>
+                <span class="export-badge">COPY</span>
+                <span>Copy to Clipboard</span>
+              </button>
+              <button type="button" class="scripts-overflow-item" data-print-script>
+                <span class="export-badge">PDF</span>
+                <span>Print / PDF Export</span>
+              </button>
+
+              <div class="scripts-overflow-divider"></div>
+              <div class="scripts-overflow-section-label">STUDIO VIEWS</div>
+              <button type="button" class="scripts-overflow-item" data-switch-mode="editor">
+                <span class="studio-btn-icon">${ICONS.sidebar}</span>
+                <span>Script Editor</span>
+              </button>
+              <button type="button" class="scripts-overflow-item" data-switch-mode="hooks">
+                <span class="studio-btn-icon">${ICONS.sparkles}</span>
+                <span>Viral Hook Matrix (${VIRAL_HOOK_LIBRARY.length})</span>
+              </button>
+              <button type="button" class="scripts-overflow-item" data-switch-mode="cues">
+                <span class="studio-btn-icon">${ICONS.check}</span>
+                <span>Shot List &amp; Cues</span>
+              </button>
+              <button type="button" class="scripts-overflow-item" data-switch-mode="cuts">
+                <span class="studio-btn-icon">${ICONS.film}</span>
+                <span>Video Cuts Review</span>
+              </button>
+
+              <div class="scripts-overflow-divider"></div>
+              <div class="scripts-overflow-section-label">WORKSPACE ACTIONS</div>
               <button type="button" class="scripts-overflow-item" data-toggle-focus title="Toggle Distraction-Free Focus Mode">
                 <span data-focus-icon class="studio-btn-icon">${ICONS.focusExpand}</span>
                 <span data-focus-text>Focus Mode</span>
               </button>
-              <button type="button" class="scripts-overflow-item" data-toggle-top-asset-linker title="Attach or link project footage to script">
-                <span class="studio-btn-icon">${ICONS.paperclip}</span>
-                <span>Attach Asset…</span>
-              </button>
-              <button type="button" class="scripts-overflow-item scripts-toggle-assets-panel-btn" data-toggle-linked-panel title="Toggle Linked Footage Panel">
-                <span class="studio-btn-icon">${ICONS.film}</span>
-                <span>Footage Panel</span>
-                <span class="linked-count-badge" data-top-linked-badge>0</span>
-              </button>
-              <button type="button" class="scripts-overflow-item" data-share-script-link title="Copy public share link to clipboard">
-                <span class="studio-btn-icon">${ICONS.link}</span>
-                <span>Share Link</span>
-              </button>
-              <button type="button" class="scripts-overflow-item" data-send-to-project title="Send or link script to a project">
+              <button type="button" class="scripts-overflow-item" data-send-to-project title="Send or link script to another project">
                 <span class="studio-btn-icon">${ICONS.folder}</span>
                 <span>Send to Project…</span>
               </button>
-              <div class="scripts-overflow-divider"></div>
-              <div class="scripts-overflow-section-label">EXPORT SCRIPT</div>
-              <button type="button" class="scripts-overflow-item" data-export-md><span class="export-badge">.MD</span> <b>Markdown Document</b></button>
-              <button type="button" class="scripts-overflow-item" data-export-txt><span class="export-badge">.TXT</span> <b>Plain Text File</b></button>
-              <button type="button" class="scripts-overflow-item" data-copy-formatted><span class="export-badge">COPY</span> <b>Copy to Clipboard</b></button>
-              <button type="button" class="scripts-overflow-item" data-print-script><span class="export-badge">PDF</span> <b>Print / PDF Export</b></button>
             </div>
-          </div>
-
-          <div class="scripts-menu-popover scripts-assets-popover scripts-top-assets-popover" data-top-assets-popover hidden>
-            <div class="assets-popover-head">
-              <div class="assets-head-title-row">
-                <small>PROJECT FOOTAGE &amp; FOLDERS</small>
-              </div>
-              <input type="search" placeholder="Search all project files…" class="assets-filter-input" data-top-assets-filter-input>
-              <div class="assets-breadcrumb-bar" data-top-assets-breadcrumbs>
-                <span class="crumb-active"><span class="studio-inline-svg">${ICONS.folder}</span> All Files</span>
-              </div>
-            </div>
-            <div class="assets-popover-list scripts-assets-popover-list" data-top-assets-popover-list></div>
           </div>
         </div>
       </header>
 
+      <!-- Formatting Toolbar Ribbon -->
+      <div class="scripts-format-ribbon" role="toolbar" aria-label="Text Formatting & Cues">
+        <div class="format-group">
+          <div class="scripts-select-styled-wrap">
+            <select class="scripts-ribbon-select scripts-heading-select" data-format-block-select aria-label="Heading style">
+              <option value="H2">H2 Heading 2</option>
+              <option value="H1">H1 Scene Heading</option>
+              <option value="H3">H3 Sub-shot</option>
+              <option value="P">Body Text</option>
+            </select>
+            <span class="scripts-select-chevron">${ICONS.chevronDown}</span>
+          </div>
+        </div>
+
+        <div class="format-group">
+          <div class="scripts-select-styled-wrap">
+            <select class="scripts-ribbon-select scripts-tone-select" data-format-tone-select aria-label="Tone & Pacing" title="Pacing profile">
+              <option value="default">Default</option>
+              <option value="fast">Fast Paced</option>
+              <option value="conversational">Conversational</option>
+              <option value="cinematic">Cinematic</option>
+            </select>
+            <span class="scripts-select-chevron">${ICONS.chevronDown}</span>
+          </div>
+        </div>
+
+        <div class="format-sep"></div>
+
+        <div class="format-group">
+          <button type="button" class="scripts-format-btn" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+          <button type="button" class="scripts-format-btn" data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+          <button type="button" class="scripts-format-btn" data-cmd-link title="Insert Web Link (Ctrl+K)">
+            <span class="studio-btn-icon">${ICONS.link}</span>
+          </button>
+        </div>
+
+        <div class="format-sep"></div>
+
+        <div class="format-group">
+          <button type="button" class="scripts-ribbon-btn scripts-asset-link-btn" data-open-asset-linker title="Link Project Footage / Asset to Script">
+            <span class="studio-btn-icon">${ICONS.film}</span>
+            <span>Link Asset</span>
+          </button>
+        </div>
+
+        <div class="format-sep"></div>
+
+        <!-- + Add cue Dropdown (Horizontal animated bar) -->
+        <div class="format-group scripts-cue-dropdown-wrap">
+          <button type="button" class="scripts-ribbon-btn scripts-cue-dropdown-btn" data-toggle-cue-menu title="Insert Production Cue" aria-expanded="false" aria-haspopup="true">
+            <span class="studio-btn-icon">${ICONS.plus}</span>
+            <span>Add cue</span>
+            <span class="studio-btn-icon cue-chevron">${ICONS.chevronDown}</span>
+          </button>
+          <div class="scripts-menu-popover scripts-cue-popover" data-cue-menu hidden>
+            <span class="cue-bar-label">CUE</span>
+            <button type="button" class="cue-pill-btn cue-btn-hook" data-insert-cue="HOOK" title="Hook (Opening hook)">HOOK</button>
+            <button type="button" class="cue-pill-btn cue-btn-vo" data-insert-cue="VO" title="Voiceover line">VO</button>
+            <button type="button" class="cue-pill-btn cue-btn-broll" data-insert-cue="B-ROLL" title="B-Roll cut / footage">B-ROLL</button>
+            <button type="button" class="cue-pill-btn cue-btn-talent" data-insert-cue="TALENT" title="On-camera talent">TALENT</button>
+            <button type="button" class="cue-pill-btn cue-btn-sfx" data-insert-cue="SFX" title="Sound effect / sting">SFX</button>
+            <button type="button" class="cue-pill-btn cue-btn-graphic" data-insert-cue="GRAPHIC" title="On-screen text / graphic">GRAPHIC</button>
+            <button type="button" class="cue-pill-btn cue-btn-cta" data-insert-cue="CTA" title="Call to action">CTA</button>
+            <button type="button" class="cue-pill-btn cue-btn-transition" data-insert-cue="TRANSITION" title="Wipe / cut / transition">TRANSITION</button>
+          </div>
+        </div>
+
+        <div class="scripts-ribbon-spacer"></div>
+
+        <!-- Far Right: Footage Panel Toggle -->
+        <div class="format-group">
+          <button type="button" class="scripts-ribbon-btn scripts-assets-btn" data-toggle-linked-panel title="Toggle Project Footage & Assets Panel">
+            <span class="studio-btn-icon">${ICONS.film}</span>
+            <span>Footage Panel</span>
+            <span class="linked-count-badge" data-top-linked-badge>0</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Main Surface Grid: Studio Stage -->
       <div class="scripts-surface-main">
-        <!-- Main Studio Stage Area -->
         <main class="scripts-stage-area" data-scripts-stage>
           <!-- PANEL 1: SCRIPT EDITOR (DEFAULT) -->
           <section class="scripts-panel-view scripts-editor-view" data-panel-view="editor">
-            <div class="scripts-editor-meta-strip">
-              <div class="scripts-title-row">
-                <input type="text" class="scripts-main-title-input" data-script-title-input placeholder="Untitled Script" value="" aria-label="Script title">
-                <div class="scripts-status-badge-wrap">
-                  <label for="script-status-select">Status:</label>
-                  <select id="script-status-select" class="scripts-status-select" data-script-status-select>
-                    <option value="Draft">Draft</option>
-                    <option value="Review">In Review</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Recording">Recording</option>
-                  </select>
-                </div>
-                <div class="scripts-folder-badge-wrap">
-                  <label for="script-folder-select">Folder:</label>
-                  <select id="script-folder-select" class="scripts-folder-select" data-script-folder-select>
-                    <option value="">Project root</option>
-                    ${folders.map(f => `<option value="${escapeHTML(f.id)}">${escapeHTML(f.name)}</option>`).join("")}
-                  </select>
-                </div>
-              </div>
-              <div class="scripts-save-badge" data-save-indicator>Saved ✓</div>
-            </div>
-
-            <!-- Formatting & Cue Ribbon -->
-            <div class="scripts-format-ribbon" role="toolbar" aria-label="Text Formatting & Cues">
-              <div class="format-group">
-                <select class="scripts-ribbon-select" data-format-block-select aria-label="Text style">
-                  <option value="P">¶ Body Text</option>
-                  <option value="H1">H1 Scene Heading</option>
-                  <option value="H2">H2 Shot / Beat</option>
-                  <option value="H3">H3 Sub-shot</option>
-                </select>
-              </div>
-
-              <div class="format-group">
-                <select class="scripts-ribbon-select scripts-font-select" data-format-font-select aria-label="Font family" title="Change font for selection or heading">
-                  <option value="inherit">Font: Default</option>
-                  <option value="'Geist', -apple-system, sans-serif">Geist Sans</option>
-                  <option value="'Instrument Serif', Georgia, serif">Instrument Serif</option>
-                  <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
-                  <option value="'Syne', sans-serif">Syne Display</option>
-                  <option value="'Inter', -apple-system, sans-serif">Inter</option>
-                </select>
-              </div>
-
-              <div class="format-sep"></div>
-
-              <div class="format-group">
-                <button type="button" class="scripts-format-btn" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
-                <button type="button" class="scripts-format-btn" data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
-              </div>
-
-              <div class="format-sep"></div>
-
-              <div class="format-group">
-                <div class="scripts-dropdown-wrap">
-                  <button type="button" class="scripts-ribbon-btn scripts-attach-asset-btn" data-toggle-asset-linker title="Link uploaded project footage or file to selected line">
-                    <span class="studio-btn-icon">${ICONS.paperclip}</span> <span>Link Asset ▾</span>
-                  </button>
-                  <div class="scripts-menu-popover scripts-assets-popover" data-assets-popover hidden>
-                    <div class="assets-popover-head">
-                      <div class="assets-head-title-row">
-                        <small>PROJECT FOOTAGE &amp; FOLDERS</small>
-                      </div>
-                      <input type="search" placeholder="Search all project files…" class="assets-filter-input" data-assets-filter-input>
-                      <div class="assets-breadcrumb-bar" data-assets-breadcrumbs>
-                        <span class="crumb-active"><span class="studio-inline-svg">${ICONS.folder}</span> All Files</span>
-                      </div>
-                    </div>
-                    <div class="assets-popover-list scripts-assets-popover-list" data-assets-popover-list></div>
-                  </div>
-                </div>
-                <button type="button" class="scripts-format-btn" data-cmd-link title="Attach URL Link (Ctrl+K)">
-                  <span class="studio-btn-icon">${ICONS.link}</span>
-                </button>
-              </div>
-
-              <div class="format-sep"></div>
-
-              <div class="format-group scripts-cue-chips-row" role="group" aria-label="Production Cues">
-                <button type="button" class="cue-btn cue-hook" data-insert-cue="HOOK" title="Insert Scroll-Stopping Hook Cue">＋ Hook</button>
-                <button type="button" class="cue-chip-btn cue-vo" data-insert-cue="VO" title="Insert Voiceover Cue">[VO]</button>
-                <button type="button" class="cue-chip-btn cue-broll" data-insert-cue="B-ROLL" title="Insert B-Roll Cut">[B-ROLL]</button>
-                <button type="button" class="cue-chip-btn cue-talent" data-insert-cue="TALENT" title="Insert On-Camera Talent">[TALENT]</button>
-                <button type="button" class="cue-chip-btn cue-sfx" data-insert-cue="SFX" title="Insert Sound FX Cue">[SFX]</button>
-                <button type="button" class="cue-chip-btn cue-graphic" data-insert-cue="GRAPHIC" title="Insert Motion Graphic Cue">[GRAPHIC]</button>
-                <button type="button" class="cue-chip-btn cue-cta" data-insert-cue="CTA" title="Insert Call-To-Action">[CTA]</button>
-              </div>
-
-              <div class="format-sep"></div>
-
-              <!-- More Options Dropdown Menu -->
-              <div class="format-group">
-                <div class="scripts-dropdown-wrap">
-                  <button type="button" class="scripts-ribbon-btn scripts-more-btn" data-toggle-more-menu title="More formatting tools & cues">
-                    <span>••• More ▾</span>
-                  </button>
-                  <div class="scripts-menu-popover scripts-more-popover" data-more-menu hidden>
-                    <div class="more-popover-section">
-                      <small>TEXT FORMATTING</small>
-                      <button type="button" class="more-item-btn" data-cmd="underline">
-                        <u>U</u> <span>Underline (Ctrl+U)</span>
-                      </button>
-                    </div>
-
-                    <div class="more-popover-section">
-                      <small>HIGHLIGHT COLOR</small>
-                      <div class="hl-popover-colors">
-                        <button type="button" class="hl-btn hl-orange" data-highlight="orange" title="Orange Highlight"></button>
-                        <button type="button" class="hl-btn hl-yellow" data-highlight="yellow" title="Attention Yellow"></button>
-                        <button type="button" class="hl-btn hl-green" data-highlight="green" title="Emerald Green"></button>
-                        <button type="button" class="hl-btn hl-cyan" data-highlight="cyan" title="Sky Cyan"></button>
-                        <button type="button" class="hl-btn hl-purple" data-highlight="purple" title="Electric Purple"></button>
-                      </div>
-                      <button type="button" class="hl-clear-btn" data-highlight="clear">Clear Highlight</button>
-                    </div>
-
-                    <div class="more-popover-section">
-                      <small>PRODUCTION CUES</small>
-                      <div class="more-cues-grid">
-                        <button type="button" data-insert-cue="VO"><span class="cx-cue cue-vo">[VO]</span> Voiceover</button>
-                        <button type="button" data-insert-cue="B-ROLL"><span class="cx-cue cue-broll">[B-ROLL]</span> B-Roll Cut</button>
-                        <button type="button" data-insert-cue="TALENT"><span class="cx-cue cue-talent">[TALENT]</span> Talent</button>
-                        <button type="button" data-insert-cue="SFX"><span class="cx-cue cue-sfx">[SFX]</span> Sound FX</button>
-                        <button type="button" data-insert-cue="GRAPHIC"><span class="cx-cue cue-graphic">[GRAPHIC]</span> Graphic</button>
-                        <button type="button" data-insert-cue="TRANSITION"><span class="cx-cue cue-transition">[TRANSITION]</span> Wipe/Cut</button>
-                        <button type="button" data-insert-cue="CTA"><span class="cx-cue cue-cta">[CTA]</span> Call-To-Action</button>
-                      </div>
-                    </div>
-
-                    <div class="more-popover-section">
-                      <button type="button" class="more-item-btn" data-insert-divider>
-                        <span>──</span> <span>Insert Scene Break Divider</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <!-- Editor & Linked Footage Workspace -->
             <div class="scripts-editor-workspace" data-editor-workspace>
               <!-- Editable Surface -->
               <div class="scripts-canvas-container" data-canvas-container>
                 <div class="scripts-canvas-content" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" data-editor-surface placeholder="Type your script, hook breakdown, or paste text here…"></div>
+
+                <!-- Floating Selection Action Tooltip -->
+                <div class="cx-selection-tooltip" data-selection-tooltip hidden>
+                  <button type="button" class="cx-selection-btn cx-selection-link-btn" data-link-selection-asset title="Link project footage to selected text">
+                    <span class="studio-btn-icon">${ICONS.link}</span>
+                    <span>Link Asset</span>
+                  </button>
+                  <button type="button" class="cx-selection-btn cx-selection-comment-btn" data-add-selection-comment title="Add comment on selected text">
+                    <span class="studio-btn-icon">${ICONS.messageSquare}</span>
+                    <span>Add Comment</span>
+                  </button>
+                </div>
+
+                <!-- Floating Comment Popover Card -->
+                <div class="cx-comment-card-popover" data-comment-popover hidden>
+                  <div class="cx-comment-card-head">
+                    <div class="cx-comment-head-title">
+                      <span class="studio-btn-icon">${ICONS.messageSquare}</span>
+                      <span data-comment-popover-title>Comment</span>
+                    </div>
+                    <button type="button" class="cx-comment-close-btn" data-close-comment-popover aria-label="Close comment">
+                      <span class="studio-btn-icon">${ICONS.close}</span>
+                    </button>
+                  </div>
+
+                  <div class="cx-comment-card-body">
+                    <div class="cx-comment-view-mode" data-comment-view-mode hidden>
+                      <div class="cx-comment-author-row">
+                        <strong class="cx-comment-author-name" data-comment-view-author>Director</strong>
+                        <span class="cx-comment-time-ago" data-comment-view-time>Just now</span>
+                        <span class="cx-comment-resolved-tag" data-comment-resolved-tag hidden>Resolved</span>
+                      </div>
+                      <p class="cx-comment-view-text" data-comment-view-text></p>
+                      <div class="cx-comment-view-actions">
+                        <button type="button" class="cx-comment-resolve-btn" data-toggle-resolve-comment>
+                          <span class="studio-btn-icon">${ICONS.check}</span>
+                          <span data-resolve-btn-text>Resolve</span>
+                        </button>
+                        <button type="button" class="cx-comment-delete-btn" data-delete-comment title="Delete comment">
+                          <span class="studio-btn-icon">${ICONS.trash}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="cx-comment-edit-mode" data-comment-edit-mode>
+                      <div class="cx-comment-author-input-row">
+                        <input type="text" class="cx-comment-author-input" data-comment-author-input placeholder="Your name (e.g. Director)" value="Director">
+                      </div>
+                      <textarea class="cx-comment-textarea" data-comment-textarea placeholder="Add your feedback or notes for this highlighted line…"></textarea>
+                      <div class="cx-comment-form-actions">
+                        <button type="button" class="cx-comment-save-btn" data-save-comment>Save Comment</button>
+                        <button type="button" class="cx-comment-cancel-btn" data-cancel-comment>Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <!-- Right-Side Linked Assets Preview Sidebar -->
+              <!-- Right-Side Project Assets & Linked Footage Sidebar -->
               <aside class="scripts-linked-sidebar" data-linked-assets-sidebar>
                 <header class="linked-sidebar-head">
                   <div class="linked-sidebar-title">
                     <span class="linked-title-icon">${ICONS.film}</span>
-                    <strong>Linked Footage</strong>
-                    <span class="linked-count-badge" data-linked-badge>0</span>
+                    <strong>Footage &amp; Assets</strong>
                   </div>
-                  <button type="button" class="linked-collapse-btn" data-toggle-linked-panel title="Toggle linked assets sidebar">${ICONS.sidebar}</button>
+                  <div class="linked-sidebar-head-actions">
+                    <button type="button" class="linked-action-icon-btn" data-open-asset-linker title="Open Project Folder Picker">
+                      <span class="studio-inline-svg">${ICONS.folder}</span>
+                    </button>
+                    <button type="button" class="linked-collapse-btn" data-toggle-linked-panel title="Toggle footage sidebar">${ICONS.sidebar}</button>
+                  </div>
                 </header>
+
+                <!-- Navigation Tabs: Project Assets vs Linked In Script -->
+                <div class="linked-sidebar-tabs">
+                  <button type="button" class="linked-tab-btn active" data-asset-tab="project">
+                    <span>Project Assets</span>
+                    <span class="tab-badge" data-tab-project-count>${Array.isArray(files) ? files.length : 0}</span>
+                  </button>
+                  <button type="button" class="linked-tab-btn" data-asset-tab="linked">
+                    <span>In Script</span>
+                    <span class="tab-badge" data-linked-badge>0</span>
+                  </button>
+                </div>
 
                 <!-- Embedded Video Preview Screen -->
                 <div class="linked-preview-container" data-linked-preview-container hidden>
                   <div class="linked-preview-head">
                     <span class="preview-dot">●</span>
-                    <span class="preview-cut-name" data-linked-preview-name>Preview</span>
-                    <button type="button" class="preview-close-icon" data-close-linked-preview title="Close preview">${ICONS.close}</button>
+                    <span class="linked-preview-label">PREVIEW</span>
+                    <strong class="linked-preview-name" data-linked-preview-name>video.mp4</strong>
+                    <button type="button" class="preview-close-icon" data-close-linked-preview aria-label="Close preview">${ICONS.close}</button>
                   </div>
                   <div class="linked-preview-screen" data-linked-preview-screen></div>
                 </div>
 
-                <!-- Linked Assets Items List -->
-                <div class="linked-sidebar-list" data-linked-sidebar-list>
-                  <div class="linked-assets-empty">
-                    <span class="linked-empty-icon">${ICONS.film}</span>
-                    <p>No project footage linked</p>
-                    <small>Place your cursor anywhere in the script and click <b>Attach Asset</b> above to attach footage directly to script lines.</small>
+                <!-- Tab 1: Project Assets Browser (with Folder pills & drag-drop cards) -->
+                <div class="linked-tab-view linked-project-assets-view" data-tab-view="project">
+                  <div class="linked-search-bar">
+                    <input type="search" class="linked-filter-input" data-sidebar-asset-search placeholder="Filter footage..." aria-label="Filter footage">
+                  </div>
+                  <div class="linked-folder-filter-pills" data-sidebar-folder-pills></div>
+                  <div class="linked-assets-list" data-sidebar-project-files></div>
+                </div>
+
+                <!-- Tab 2: Linked in Script View -->
+                <div class="linked-tab-view linked-in-script-view" data-tab-view="linked" hidden>
+                  <div class="linked-sidebar-list" data-linked-sidebar-list>
+                    <div class="linked-assets-empty">
+                      <span class="linked-empty-icon">${ICONS.film}</span>
+                      <p>No project footage linked</p>
+                      <small>Select text and click <b>Link Asset</b> or click below to attach footage to this script.</small>
+                      <button type="button" class="scripts-empty-attach-btn" data-open-asset-linker>
+                        <span class="studio-btn-icon">${ICONS.plus}</span>
+                        <span>Attach asset</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </aside>
             </div>
 
-            <!-- Diagnostics & Pacing Teleprompter Footer -->
+            <!-- Diagnostics & Bottom Analytics Bar matching Screenshot -->
             <footer class="scripts-pacing-bar">
               <div class="pacing-metrics-left">
-                <div class="pacing-timer-box">
-                  <span class="pacing-icon"></span>
+                <div class="pacing-stat-item">
+                  <span class="studio-inline-svg">${ICONS.chart}</span>
                   <strong class="pacing-duration" data-speech-duration>00:00</strong>
-                  <span class="pacing-sep">·</span>
+                  <span class="pacing-stat-label">duration</span>
+                </div>
+                <span class="pacing-sep">·</span>
+                <div class="pacing-stat-item">
                   <span class="pacing-stat" data-word-count>0 words</span>
-                  <span class="pacing-sep">·</span>
+                </div>
+                <span class="pacing-sep">·</span>
+                <div class="pacing-stat-item">
                   <span class="pacing-wpm" data-current-wpm-label>135 WPM</span>
-                </div>
-                <div class="pacing-rating-pill" data-pacing-rating-pill>Optimal Short-Form (&lt;45s)</div>
-
-                <!-- Visual Retention Timeline Funnel -->
-                <div class="pacing-timeline-funnel" data-pacing-funnel title="Viewer retention pacing zones (0-3s hook, 3-15s setup, 15-45s value, 45s+ cta)">
-                  <div class="funnel-segment seg-hook" style="width: 20%;" title="0-3s Hook Zone: Immediate retention hook"><span>0-3s Hook</span></div>
-                  <div class="funnel-segment seg-setup" style="width: 35%;" title="3-15s Setup: Core premise"><span>3-15s Setup</span></div>
-                  <div class="funnel-segment seg-payoff" style="width: 30%;" title="15-45s Payoff: Demonstration"><span>15-45s Value</span></div>
-                  <div class="funnel-segment seg-cta" style="width: 15%;" title="45s+ CTA: Call to action"><span>CTA</span></div>
-                  <div class="funnel-needle" data-funnel-needle style="left: 0%;"></div>
-                </div>
-
-                <!-- Live Hook Strength Score Badge -->
-                <div class="hook-score-badge score-empty" data-hook-score-badge title="First sentence hook score (0-100) based on brevity, power keywords, and curiosity punchiness">
-                  <span class="hook-score-label">Hook Score:</span>
-                  <strong class="hook-score-val" data-hook-score-val>--</strong>
+                  <span class="pacing-stat-label">speaking pace</span>
                 </div>
               </div>
 
               <div class="pacing-metrics-right">
-                <div class="scripts-dropdown-wrap">
-                  <button type="button" class="scripts-action-button subtle scripts-adjust-layout-btn" data-toggle-layout-menu title="Adjust Editor Layout & Display">
-                    Adjust Layout ▾
-                  </button>
-                  <div class="scripts-menu-popover scripts-layout-popover" data-layout-menu hidden>
-                    <div class="layout-popover-group">
-                      <small>Editor Width</small>
-                      <div class="layout-btn-row" role="group" aria-label="Editor Width">
-                        <button type="button" data-set-width="680px">Compact</button>
-                        <button type="button" class="active" data-set-width="820px">Standard</button>
-                        <button type="button" data-set-width="1000px">Wide</button>
-                        <button type="button" data-set-width="100%">Full</button>
-                      </div>
-                    </div>
-                    <div class="layout-popover-group">
-                      <small>Font Size</small>
-                      <div class="layout-btn-row" role="group" aria-label="Font Size">
-                        <button type="button" data-set-size="14px">Small</button>
-                        <button type="button" class="active" data-set-size="15.5px">Normal</button>
-                        <button type="button" data-set-size="18px">Large</button>
-                      </div>
-                    </div>
-                    <div class="layout-popover-group">
-                      <small>Reading Speed</small>
-                      <div class="layout-btn-row" role="group" aria-label="Reading Speed">
-                        <button type="button" data-set-wpm="120">120 WPM</button>
-                        <button type="button" class="active" data-set-wpm="135">135 WPM</button>
-                        <button type="button" data-set-wpm="150">150 WPM</button>
-                      </div>
-                    </div>
-                    <div class="layout-popover-group">
-                      <small>Explorer Sidebar</small>
-                      <div class="layout-btn-row" role="group" aria-label="Sidebar">
-                        <button type="button" data-toggle-sidebar-view>Toggle Sidebar</button>
-                      </div>
-                    </div>
+                <div class="scripts-format-aspect-wrap">
+                  <select class="scripts-ribbon-select scripts-aspect-select" data-format-aspect-select title="Target video aspect ratio">
+                    <option value="short_9_16">Short-Form (9:16)</option>
+                    <option value="reel_45">Viral Reel (&lt;45s)</option>
+                    <option value="shorts_60">YouTube Shorts (60s)</option>
+                    <option value="long_16_9">Long-Form (16:9)</option>
+                  </select>
+                  <span class="scripts-select-chevron">${ICONS.chevronDown}</span>
+                </div>
+
+                <!-- Circular Hook Score Gauge matching Screenshot -->
+                <div class="scripts-circular-hook-meter" data-hook-score-badge title="Hook strength rating based on curiosity punch, brevity and keywords">
+                  <svg class="cx-gauge-svg" viewBox="0 0 36 36">
+                    <path class="cx-gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    <path class="cx-gauge-fill" data-hook-gauge-fill stroke-dasharray="85, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  </svg>
+                  <div class="cx-gauge-label-group">
+                    <strong class="hook-score-val" data-hook-score-val>85/100</strong>
+                    <span class="hook-score-label">Hook score</span>
                   </div>
                 </div>
               </div>
@@ -1222,23 +1261,23 @@ export async function renderScriptStudioSurface(container, {
           <section class="scripts-panel-view scripts-hooks-view" data-panel-view="hooks" hidden>
             <div class="hooks-view-head">
               <div class="hooks-head-intro">
-                <h3>Viral Hook & Formula Library</h3>
+                <h3>Viral Hook &amp; Formula Library</h3>
                 <p>48 battle-tested short-form hook formulas engineered for maximum 3-second retention. Click <b>Insert into Script</b> to drop any hook directly into your document, or <b>Copy</b> to use anywhere.</p>
               </div>
 
               <!-- Live Search & Match Counter -->
               <div class="hooks-search-row">
                 <div class="hooks-search-input-wrap">
-                  <span class="hooks-search-icon">${ICONS.search}</span>
-                  <input type="search" class="hooks-search-input" data-hook-search-input placeholder="Search formulas, examples, or keywords (e.g., 'secret', 'stop', 'mistake', 'money')…">
+                  <span class="studio-btn-icon">${ICONS.search}</span>
+                  <input type="search" placeholder="Search formulas by keyword (e.g., 'Stop doing', 'Lie', 'Secret')…" class="hooks-search-input" data-hooks-search-input>
                 </div>
                 <span class="hooks-match-count" data-hooks-match-count>${VIRAL_HOOK_LIBRARY.length} formulas available</span>
               </div>
 
-              <!-- AI Smart Hook Generator Card -->
-              <div class="smart-hook-generator-card" data-hook-generator>
-                <div class="generator-card-left">
-                  <span class="gen-sparkle-icon">✨</span>
+              <!-- AI Hook Angle Generator Tool -->
+              <div class="hook-ai-generator-card">
+                <div class="generator-card-head">
+                  <span class="gen-sparkle-icon">${ICONS.sparkles}</span>
                   <div>
                     <strong>Instant Viral Hook Generator</strong>
                     <small>Enter your video topic or niche to generate 3 tailored viral hook angles instantly.</small>
@@ -1246,63 +1285,55 @@ export async function renderScriptStudioSurface(container, {
                 </div>
                 <div class="generator-card-inputs">
                   <input type="text" class="gen-topic-input" data-gen-topic-input placeholder="e.g., Real Estate investing, B2B SaaS, Fitness fat loss…">
-                  <button type="button" class="scripts-action-button primary gen-submit-btn" data-gen-submit-btn>Generate Hooks ⚡</button>
+                  <button type="button" class="scripts-action-button primary gen-submit-btn" data-gen-submit-btn><span class="studio-btn-icon">${ICONS.sparkles}</span> Generate Hooks</button>
                 </div>
                 <div class="generator-results" data-gen-results-area hidden></div>
               </div>
               <div class="hooks-filter-row">
                 <button type="button" class="hook-cat-btn active" data-hook-filter="all">All Formulas (${VIRAL_HOOK_LIBRARY.length})</button>
-                <button type="button" class="hook-cat-btn" data-hook-filter="Contrarian & Pattern Disrupt">Contrarian</button>
-                <button type="button" class="hook-cat-btn" data-hook-filter="Curiosity & Value Gap">Curiosity Gap</button>
-                <button type="button" class="hook-cat-btn" data-hook-filter="High Stakes & Warning">High Stakes</button>
-                <button type="button" class="hook-cat-btn" data-hook-filter="Data & Proof-Led">Data & Proof</button>
-                <button type="button" class="hook-cat-btn" data-hook-filter="Speed & Actionable How-To">Speed / How-To</button>
-                <button type="button" class="hook-cat-btn" data-hook-filter="Story & Vulnerability">Story</button>
-                <button type="button" class="hook-cat-btn" data-hook-filter="Audience Callout & Niche">Audience Callout</button>
-                <button type="button" class="hook-cat-btn" data-hook-filter="Transformation & Teardown">Transformation</button>
+                <button type="button" class="hook-cat-btn" data-hook-filter="Contrarian &amp; Pattern Disrupt">Contrarian</button>
+                <button type="button" class="hook-cat-btn" data-hook-filter="Curiosity &amp; Value Gap">Curiosity Gap</button>
+                <button type="button" class="hook-cat-btn" data-hook-filter="High Stakes &amp; Warning">High Stakes</button>
+                <button type="button" class="hook-cat-btn" data-hook-filter="Data &amp; Proof-Led">Data &amp; Proof</button>
               </div>
             </div>
-            <div class="hooks-grid" data-hooks-grid>
+
+            <!-- Formula Cards Grid -->
+            <div class="hooks-formulas-grid" data-hooks-grid>
               ${VIRAL_HOOK_LIBRARY.map((hook, idx) => `
-                <article class="hook-card" data-hook-category="${escapeHTML(hook.category)}" data-hook-index="${idx}">
-                  <header class="hook-card-header">
-                    <span class="hook-category-badge">${escapeHTML(hook.category)}</span>
-                    <strong class="hook-card-title">${escapeHTML(hook.title)}</strong>
-                  </header>
-                  <div class="hook-card-body">
-                    <div class="hook-formula-box">
-                      <small>STRUCTURE</small>
-                      <p>${escapeHTML(hook.formula)}</p>
-                    </div>
-                    <div class="hook-example-box">
-                      <small>EXAMPLE</small>
-                      <p>“${escapeHTML(hook.example)}”</p>
-                    </div>
+                <div class="hook-formula-card" data-hook-index="${idx}" data-category="${escapeHTML(hook.category)}">
+                  <div class="hook-card-header">
+                    <span class="hook-category-tag">${escapeHTML(hook.category)}</span>
+                    <strong class="hook-title">${escapeHTML(hook.title)}</strong>
                   </div>
-                  <footer class="hook-card-footer">
-                    <button type="button" class="hook-copy-btn" data-copy-hook="${idx}" title="Copy formula and example">
-                      📋 Copy
-                    </button>
-                    <button type="button" class="hook-insert-btn" data-insert-hook="${idx}">
-                      ＋ Insert into Script
-                    </button>
-                  </footer>
-                </article>
+                  <div class="hook-formula-box">
+                    <small>STRUCTURE:</small>
+                    <p>${escapeHTML(hook.formula)}</p>
+                  </div>
+                  <div class="hook-example-box">
+                    <small>EXAMPLE LINE:</small>
+                    <p>"${escapeHTML(hook.example)}"</p>
+                  </div>
+                  <div class="hook-card-actions">
+                    <button type="button" class="hook-action-btn copy-btn" data-copy-hook="${idx}">Copy</button>
+                    <button type="button" class="hook-action-btn insert-btn" data-insert-hook="${idx}">Insert into Script</button>
+                  </div>
+                </div>
               `).join("")}
             </div>
           </section>
 
-          <!-- PANEL 3: ATTACHED VIDEO CUTS & ASSETS -->
+          <!-- PANEL 3: VIDEO CUTS REVIEW -->
           <section class="scripts-panel-view scripts-cuts-view" data-panel-view="cuts" hidden>
             <div class="cuts-view-head">
               <div>
-                <h3>Attached Video Cuts & Workspace Assets</h3>
+                <h3>Attached Video Cuts &amp; Reference Footage</h3>
                 <p>Attach project cuts or paste external video links (YouTube, Vimeo, Loom, Google Drive) to review timeline edits directly alongside your script.</p>
               </div>
               <div class="cuts-attach-inputs">
                 ${files && files.length ? `
                   <select class="cuts-file-select" data-select-project-file>
-                    <option value="">＋ Link Project File...</option>
+                    <option value="">Link Project File...</option>
                     ${files.map(f => `<option value="${escapeHTML(f.id)}" data-file-name="${escapeHTML(f.name)}" data-file-size="${f.size || 0}" data-file-type="${escapeHTML(f.type || "")}">${escapeHTML(f.name)} (${formatBytes(f.size || 0)})</option>`).join("")}
                   </select>
                   <button type="button" class="cuts-attach-btn" data-attach-file-btn>Attach File</button>
@@ -1327,7 +1358,7 @@ export async function renderScriptStudioSurface(container, {
                 <div class="cuts-active-player" data-active-player hidden>
                   <div class="cuts-player-header">
                     <strong data-active-cut-title>Video Title</strong>
-                    <button type="button" class="cuts-close-player" data-close-player>✕ Close Player</button>
+                    <button type="button" class="cuts-close-player" data-close-player>Close Player</button>
                   </div>
                   <div class="cuts-player-frame" data-active-player-frame></div>
                 </div>
@@ -1339,7 +1370,7 @@ export async function renderScriptStudioSurface(container, {
           <section class="scripts-panel-view scripts-cues-view" data-panel-view="cues" hidden>
             <div class="cues-view-head">
               <div>
-                <h3>Production Cue Checklist & Shot List</h3>
+                <h3>Production Cue Checklist &amp; Shot List</h3>
                 <p>Automated breakdown of all Voiceover, B-Roll, Talent, SFX, and Graphic cues extracted from the active script. Use this checklist during shoot day and timeline assembly.</p>
               </div>
               <div class="cues-head-actions">
@@ -1384,7 +1415,7 @@ export async function renderScriptStudioSurface(container, {
               <h3 id="template-dialog-title">Create New Script</h3>
               <small>Choose a proven short-form retention structure or start with a clean blank canvas.</small>
             </div>
-            <button type="button" class="template-dialog-close" data-close-template-modal aria-label="Close">✕</button>
+            <button type="button" class="template-dialog-close" data-close-template-modal aria-label="Close">${ICONS.close}</button>
           </header>
           <div class="template-cards-grid">
             ${SCRIPT_TEMPLATES.map(t => `
@@ -1398,6 +1429,49 @@ export async function renderScriptStudioSurface(container, {
               </div>
             `).join("")}
           </div>
+        </div>
+      </div>
+
+      <!-- Systematic Project Asset Linker Modal -->
+      <div class="asset-linker-modal-backdrop" data-asset-linker-modal hidden>
+        <div class="asset-linker-modal" role="dialog" aria-modal="true" aria-labelledby="asset-linker-heading">
+          <header class="asset-linker-modal-header">
+            <div class="asset-linker-header-main">
+              <span class="linker-modal-icon">${ICONS.film}</span>
+              <div>
+                <h3 class="asset-linker-title" id="asset-linker-heading">Link Project Footage &amp; Assets</h3>
+                <p class="asset-linker-subtitle" data-linker-target-context>Select footage from project folders to link directly to this script.</p>
+              </div>
+            </div>
+            <button type="button" class="asset-linker-modal-close" data-close-asset-linker aria-label="Close asset linker">×</button>
+          </header>
+
+          <div class="asset-linker-controls-row">
+            <div class="asset-linker-search-box">
+              <span class="linker-search-svg">${ICONS.search}</span>
+              <input type="search" class="asset-linker-modal-search" data-modal-asset-search placeholder="Search all footage, B-roll, or clips..." aria-label="Search assets">
+            </div>
+            <button type="button" class="asset-linker-back-folders-btn" data-modal-back-folders hidden>
+              ← Back to all folders
+            </button>
+          </div>
+
+          <!-- Quick Folder Select Pills -->
+          <div class="asset-linker-folder-pills" data-modal-folder-pills>
+            <!-- Generated dynamically: All Assets, Folder A, Folder B... -->
+          </div>
+
+          <!-- Modal Body Grid (Folders / Files) -->
+          <div class="asset-linker-grid" data-modal-assets-grid>
+            <!-- Folder cards or Asset cards generated dynamically -->
+          </div>
+
+          <footer class="asset-linker-modal-footer">
+            <div class="asset-linker-footer-hint">
+              💡 <b>Tip:</b> You can also drag &amp; drop footage directly from the right panel onto any sentence in the script.
+            </div>
+            <button type="button" class="workspace-button subtle" data-close-asset-linker>Close</button>
+          </footer>
         </div>
       </div>
     </div>
@@ -1422,7 +1496,6 @@ export async function renderScriptStudioSurface(container, {
   const scriptsCountEl = shell.querySelector("[data-scripts-count], [data-scripts-count-label], .scripts-count-label") || container.querySelector("[data-scripts-count], [data-scripts-count-label], .scripts-count-label");
   const totalRuntimeEl = shell.querySelector("[data-total-runtime], .scripts-total-runtime") || container.querySelector("[data-total-runtime], .scripts-total-runtime");
   const projNameLabel = shell.querySelector("[data-proj-name-label]") || container.querySelector("[data-proj-name-label]");
-  const publishBtn = container.querySelector("[data-toggle-publish]");
   const searchInput = shell.querySelector("[data-scripts-search]") || container.querySelector("[data-scripts-search]");
   const exportMenu = container.querySelector("[data-export-menu]");
   const templateModal = container.querySelector("[data-template-modal]");
@@ -1477,25 +1550,29 @@ export async function renderScriptStudioSurface(container, {
 
   function triggerAutoSave() {
     clearTimeout(autoSaveTimeout);
-    saveIndicator.textContent = "Saving…";
-    saveIndicator.classList.add("saving");
+    if (saveIndicator) {
+      saveIndicator.textContent = "Saving…";
+      saveIndicator.classList.add("saving");
+    }
 
     autoSaveTimeout = setTimeout(() => {
       const active = getActiveScript();
       if (active) {
-        active.title = titleInput.value.trim() || "Untitled Script";
-        active.content = editorSurface.innerHTML;
-        active.status = statusSelect.value;
-        active.folderId = folderSelect.value;
-        active.targetPacing = pacingGoalSelect.value;
+        if (titleInput) active.title = titleInput.value.trim() || "Untitled Script";
+        if (editorSurface) active.content = editorSurface.innerHTML;
+        if (statusSelect) active.status = statusSelect.value;
+        if (folderSelect) active.folderId = folderSelect.value;
+        if (pacingGoalSelect) active.targetPacing = pacingGoalSelect.value;
         active.updatedAt = Date.now();
         saveStorageScripts(projectId, scripts);
         renderScriptsList();
         renderLinkedAssetsSidebar(active);
         updateCuesSummary(active.content);
       }
-      saveIndicator.textContent = "Saved ✓";
-      saveIndicator.classList.remove("saving");
+      if (saveIndicator) {
+        saveIndicator.innerHTML = `${ICONS.check} <span>Saved</span>`;
+        saveIndicator.classList.remove("saving");
+      }
     }, 400);
   }
 
@@ -1528,9 +1605,9 @@ export async function renderScriptStudioSurface(container, {
     score = Math.max(15, Math.min(99, score));
     let rating = "Fair";
     let cls = "score-fair";
-    if (score >= 80) { rating = "Viral Tier 🔥"; cls = "score-high"; }
-    else if (score >= 60) { rating = "Strong ⚡"; cls = "score-good"; }
-    else { rating = "Weak Hook"; cls = "score-weak"; }
+    if (score >= 80) { rating = "Viral Tier"; cls = "score-high"; }
+    else if (score >= 60) { rating = "Strong"; cls = "score-good"; }
+    else { rating = "Developing"; cls = "score-weak"; }
 
     return { score, rating, class: cls, firstSentence };
   }
@@ -1552,13 +1629,17 @@ export async function renderScriptStudioSurface(container, {
 
     const hookScoreEl = container.querySelector("[data-hook-score-val]");
     const hookBadge = container.querySelector("[data-hook-score-badge]");
+    const hookGaugeFill = container.querySelector("[data-hook-gauge-fill]");
     const funnelNeedle = container.querySelector("[data-funnel-needle]");
     if (hookScoreEl) {
       const hookData = calculateHookScore(text);
-      hookScoreEl.textContent = hookData.score ? `${hookData.score}/100` : "--";
+      hookScoreEl.textContent = hookData.score ? `${hookData.score}/100` : "85/100";
+      if (hookGaugeFill) {
+        const scoreVal = hookData.score || 85;
+        hookGaugeFill.setAttribute("stroke-dasharray", `${scoreVal}, 100`);
+      }
       if (hookBadge) {
-        hookBadge.className = `hook-score-badge ${hookData.class}`;
-        hookBadge.title = hookData.firstSentence ? `Hook: "${hookData.firstSentence}" — Rating: ${hookData.rating}` : "No hook detected";
+        hookBadge.title = hookData.firstSentence ? `Hook: "${hookData.firstSentence}" — Rating: ${hookData.rating}` : "Hook score: 85/100";
       }
     }
     if (funnelNeedle) {
@@ -1630,7 +1711,7 @@ export async function renderScriptStudioSurface(container, {
       scriptsList.innerHTML = `
         <div class="scripts-empty-state">
           <p>No scripts found ${currentFilter !== "all" ? `in "${currentFilter}"` : ""}.</p>
-          <button type="button" class="scripts-empty-new-btn" data-new-script-btn>＋ Create Script</button>
+          <button type="button" class="scripts-empty-new-btn" data-new-script-btn>Create Script</button>
         </div>
       `;
       scriptsList.querySelector("[data-new-script-btn]")?.addEventListener("click", () => {
@@ -1649,13 +1730,12 @@ export async function renderScriptStudioSurface(container, {
         <article class="script-card-item ${isActive ? "active" : ""}" data-script-id="${escapeHTML(s.id)}" role="option" aria-selected="${isActive}">
           <div class="script-card-head">
             <span class="script-status-pill status-${(s.status || "draft").toLowerCase()}">${escapeHTML(s.status || "Draft")}</span>
-            ${s.published ? `<span class="script-live-tag">● LIVE</span>` : ""}
             <div class="script-card-actions">
-              <button type="button" class="script-action-icon-btn" data-dup-script="${escapeHTML(s.id)}" title="Duplicate Script">⎘</button>
-              <button type="button" class="script-action-icon-btn danger" data-del-script="${escapeHTML(s.id)}" title="Delete Script">✕</button>
+              <button type="button" class="script-action-icon-btn" data-dup-script="${escapeHTML(s.id)}" title="Duplicate Script">${ICONS.copy}</button>
+              <button type="button" class="script-action-icon-btn danger" data-del-script="${escapeHTML(s.id)}" title="Delete Script">${ICONS.trash}</button>
             </div>
           </div>
-          <strong class="script-card-title">${escapeHTML(s.title || "Untitled Script")}</strong>
+          <strong class="script-card-title" title="${escapeHTML(s.title || "Untitled Script")}">${escapeHTML(s.title || "Untitled Script")}</strong>
           <div class="script-card-foot">
             <small class="script-duration-tag">${metrics.durationFormatted} prompter</small>
             ${totalAttached > 0 ? `<small class="script-video-badge">${totalAttached} cut${totalAttached === 1 ? "" : "s"}</small>` : ""}
@@ -1701,12 +1781,13 @@ export async function renderScriptStudioSurface(container, {
     if (pacingGoalSelect) pacingGoalSelect.value = active.targetPacing || "reel_60";
     if (editorSurface) editorSurface.innerHTML = active.content || "<p></p>";
 
-    updatePublishBtn(active);
+    updateTopbarStatusDot(active.status || "Draft");
     updateMetrics(active.content);
     renderScriptsList();
     renderCutsPanel(active);
     renderShotListPanel(active);
     renderLinkedAssetsSidebar(active);
+    renderSidebarProjectAssets();
   }
 
   function duplicateScript(id) {
@@ -1738,13 +1819,6 @@ export async function renderScriptStudioSurface(container, {
     loadScript(scripts[0]?.id);
   }
 
-  function updatePublishBtn(script) {
-    if (!script) return;
-    const isPub = Boolean(script.published);
-    publishBtn.classList.toggle("is-published", isPub);
-    publishBtn.textContent = isPub ? "● Published to Showcase" : "Publish to Website";
-  }
-
   // -------------------------------------------------------------
   // PANEL 3: ATTACHED CUTS RENDERING & PLAYER
   // -------------------------------------------------------------
@@ -1774,7 +1848,7 @@ export async function renderScriptStudioSurface(container, {
           </div>
           <div class="cut-actions">
             ${a.url ? `<button type="button" class="cut-btn play" data-play-asset="${escapeHTML(a.id)}"><span class="studio-btn-icon">${ICONS.play}</span> Play</button>` : ""}
-            <button type="button" class="cut-btn del" data-del-asset="${escapeHTML(a.id)}">✕</button>
+            <button type="button" class="cut-btn del" data-del-asset="${escapeHTML(a.id)}">${ICONS.close}</button>
           </div>
         </div>
       `),
@@ -1787,7 +1861,7 @@ export async function renderScriptStudioSurface(container, {
           </div>
           <div class="cut-actions">
             <button type="button" class="cut-btn play" data-play-link="${escapeHTML(l.id)}"><span class="studio-btn-icon">${ICONS.play}</span> Play</button>
-            <button type="button" class="cut-btn del" data-del-link="${escapeHTML(l.id)}">✕</button>
+            <button type="button" class="cut-btn del" data-del-link="${escapeHTML(l.id)}">${ICONS.close}</button>
           </div>
         </div>
       `)
@@ -1955,7 +2029,7 @@ export async function renderScriptStudioSurface(container, {
     if (currentScene.items.length) sections.push(currentScene);
 
     if (!sections.length) {
-      grid.innerHTML = `<p class="cues-empty-note">No scene headings or cue items found. Use H1 / H2 headings and [VO], [B-ROLL], [TALENT] cue tags in the editor to populate this checklist.</p>`;
+      grid.innerHTML = `<p class="cues-empty-note">No scene headings or cue items found. Use H1 / H2 headings and VO, B-ROLL, TALENT cue tags in the editor to populate this checklist.</p>`;
       updateCuesProgress(0, 0);
       return;
     }
@@ -2057,7 +2131,7 @@ export async function renderScriptStudioSurface(container, {
       await navigator.clipboard.writeText(`SHOT LIST CHECKLIST — ${active.title}\n\n${text}`);
       const btn = e.currentTarget;
       const orig = btn.textContent;
-      btn.textContent = "Copied ✓";
+      btn.textContent = "Copied";
       setTimeout(() => { if (btn.isConnected) btn.textContent = orig; }, 1800);
     } catch {
       alert("Could not copy automatically.");
@@ -2154,7 +2228,7 @@ export async function renderScriptStudioSurface(container, {
       genResultsArea.innerHTML = `
         <div class="gen-results-title">
           <strong>3 Generated Angles for "${escapeHTML(topic)}"</strong>
-          <button type="button" class="gen-clear-btn" data-gen-clear>✕ Clear</button>
+          <button type="button" class="gen-clear-btn" data-gen-clear>Clear</button>
         </div>
         <div class="gen-cards-grid">
           ${generated.map((g, i) => `
@@ -2164,8 +2238,8 @@ export async function renderScriptStudioSurface(container, {
               </div>
               <p class="gen-text">“${escapeHTML(g.example)}”</p>
               <div class="gen-card-actions">
-                <button type="button" class="gen-copy-btn" data-gen-copy="${i}">📋 Copy</button>
-                <button type="button" class="gen-insert-btn" data-gen-insert="${i}">＋ Insert into Script</button>
+                <button type="button" class="gen-copy-btn" data-gen-copy="${i}">Copy</button>
+                <button type="button" class="gen-insert-btn" data-gen-insert="${i}">Insert into Script</button>
               </div>
             </div>
           `).join("")}
@@ -2183,7 +2257,7 @@ export async function renderScriptStudioSurface(container, {
           const item = generated[idx];
           if (!item) return;
 
-          const hookHtml = `<h1>Scene 1 · Scroll-Stopping Hook</h1>\n<p><span class="cx-cue cue-hook">[HOOK]</span> <mark class="cx-hl-orange">${escapeHTML(item.example)}</mark></p>\n`;
+          const hookHtml = `<h1>Scene 1 · Scroll-Stopping Hook</h1>\n<p><span class="cx-cue cue-hook">HOOK</span> <mark class="cx-hl-orange">${escapeHTML(item.example)}</mark></p>\n`;
           const editorTabBtn = container.querySelector('[data-studio-tab="editor"]');
           if (editorTabBtn) editorTabBtn.click();
           editorSurface.focus();
@@ -2204,8 +2278,8 @@ export async function renderScriptStudioSurface(container, {
           if (!item) return;
           try {
             await navigator.clipboard.writeText(item.example);
-            btn.textContent = "Copied ✓";
-            setTimeout(() => { if (btn.isConnected) btn.textContent = "📋 Copy"; }, 1600);
+            btn.textContent = "Copied";
+            setTimeout(() => { if (btn.isConnected) btn.textContent = "Copy"; }, 1600);
           } catch {}
         });
       });
@@ -2225,7 +2299,7 @@ export async function renderScriptStudioSurface(container, {
       const hook = VIRAL_HOOK_LIBRARY[idx];
       if (!hook) return;
 
-      const hookHtml = `<h1>Scene 1 · Scroll-Stopping Hook</h1>\\n<p><span class="cx-cue cue-hook">[HOOK]</span> <mark class="cx-hl-orange">${escapeHTML(hook.example)}</mark></p>\\n`;
+      const hookHtml = `<h1>Scene 1 · Scroll-Stopping Hook</h1>\\n<p><span class="cx-cue cue-hook">HOOK</span> <mark class="cx-hl-orange">${escapeHTML(hook.example)}</mark></p>\\n`;
 
       // Switch back to editor tab
       const editorTabBtn = container.querySelector('[data-studio-tab="editor"]');
@@ -2260,7 +2334,7 @@ export async function renderScriptStudioSurface(container, {
         ta.remove();
       }
       const prevText = btn.textContent;
-      btn.textContent = "✓ Copied!";
+      btn.textContent = "Copied";
       btn.classList.add("copied");
       setTimeout(() => {
         btn.textContent = prevText;
@@ -2270,15 +2344,40 @@ export async function renderScriptStudioSurface(container, {
   });
 
   // -------------------------------------------------------------
-  // STATUS FILTER PILLS IN EXPLORER
+  // STATUS FILTER IN EXPLORER (PILLS & HEADER SELECTOR)
   // -------------------------------------------------------------
-  shell.querySelectorAll("[data-filter-status]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      shell.querySelectorAll("[data-filter-status]").forEach(b => b.classList.toggle("active", b === btn));
-      currentFilter = btn.dataset.filterStatus;
-      renderScriptsList();
-    });
-  });
+  const statusPopover = shell.querySelector("[data-status-popover]");
+  // -------------------------------------------------------------
+  // SCRIPTS LIST COLLAPSE / HIDE TOGGLE
+  // -------------------------------------------------------------
+  const toggleCollapseBtn = shell.querySelector("[data-toggle-scripts-collapse]");
+  if (toggleCollapseBtn) {
+    const scriptsListEl = shell.querySelector("[data-workspace-scripts-list]");
+    const sidebarFooter = shell.querySelector(".scripts-explorer-footer");
+    const toggleLabel = toggleCollapseBtn.querySelector("[data-scripts-toggle-label]");
+    const chevron = toggleCollapseBtn.querySelector(".scripts-toggle-chevron");
+
+    function setListCollapsed(collapsed) {
+      if (scriptsListEl) scriptsListEl.hidden = collapsed;
+      if (sidebarFooter) sidebarFooter.hidden = collapsed;
+      if (toggleLabel) toggleLabel.textContent = collapsed ? "Show" : "Hide";
+      if (chevron) chevron.classList.toggle("is-collapsed", collapsed);
+    }
+
+    // Initialize from localStorage
+    try {
+      const savedState = localStorage.getItem("cx_scripts_list_collapsed") === "true";
+      if (savedState) setListCollapsed(true);
+    } catch {}
+
+    toggleCollapseBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const nextCollapsed = !scriptsListEl.hidden;
+      try { localStorage.setItem("cx_scripts_list_collapsed", String(nextCollapsed)); } catch {}
+      setListCollapsed(nextCollapsed);
+    };
+  }
 
   // Search filter
   searchInput?.addEventListener("input", () => {
@@ -2501,214 +2600,17 @@ export async function renderScriptStudioSurface(container, {
 
   cmdLinkBtn?.addEventListener("click", insertExternalLink);
 
-  // Project Asset Linker Popovers & Chip insertion
-  let currentLinkerFolderId = null;
+  // -------------------------------------------------------------
+  // SYSTEMATIC PROJECT ASSET LINKER MODAL & CHIP INSERTION
+  // -------------------------------------------------------------
+  let modalTargetRange = null;
+  let modalTargetText = "";
+  let modalSelectedFolderId = null;
 
-  function renderAssetLinkerInstance(filterQuery, targetList, targetBreadcrumbs, targetFilterInput) {
-    if (!targetList) return;
-    const projectFiles = Array.isArray(files) ? files : [];
-    const projectFolders = Array.isArray(folders) ? folders : [];
-
-    // Folder map for quick lookup
-    const folderMap = new Map();
-    projectFolders.forEach(f => {
-      const id = f.id || f.folder_id;
-      if (id) folderMap.set(id, f.name || "Untitled Folder");
-    });
-
-    const isSearching = Boolean(filterQuery && filterQuery.trim());
-    const query = (filterQuery || "").trim().toLowerCase();
-
-    // Render breadcrumb bar
-    if (targetBreadcrumbs) {
-      if (isSearching) {
-        targetBreadcrumbs.innerHTML = `
-          <button type="button" class="assets-crumb-btn" data-crumb-root><span class="studio-inline-svg">${ICONS.folder}</span> All Files</button>
-          <span class="assets-crumb-sep">/</span>
-          <span class="assets-crumb-cur">Search: "${escapeHTML(query)}"</span>
-        `;
-      } else if (currentLinkerFolderId) {
-        const curFolder = projectFolders.find(f => (f.id || f.folder_id) === currentLinkerFolderId);
-        const folderTitle = curFolder?.name || "Folder";
-        targetBreadcrumbs.innerHTML = `
-          <button type="button" class="assets-crumb-btn" data-crumb-root><span class="studio-inline-svg">${ICONS.folder}</span> All Files</button>
-          <span class="assets-crumb-sep">/</span>
-          <span class="assets-crumb-cur">${escapeHTML(folderTitle)}</span>
-        `;
-      } else {
-        targetBreadcrumbs.innerHTML = `
-          <span class="assets-crumb-cur"><span class="studio-inline-svg">${ICONS.folder}</span> Project Folders &amp; Files</span>
-        `;
-      }
-
-      targetBreadcrumbs.querySelector("[data-crumb-root]")?.addEventListener("click", () => {
-        currentLinkerFolderId = null;
-        if (targetFilterInput) targetFilterInput.value = "";
-        renderAllAssetLinkers("");
-      });
-    }
-
-    if (isSearching) {
-      // Global search across all project files
-      const matchedFiles = projectFiles.filter(f => {
-        const name = (f.name || f.original_name || "").toLowerCase();
-        return name.includes(query);
-      });
-
-      if (!matchedFiles.length) {
-        targetList.innerHTML = `<div class="assets-picker-empty">No assets matching "${escapeHTML(query)}" found.</div>`;
-        return;
-      }
-
-      targetList.innerHTML = matchedFiles.map(f => {
-        const fileId = f.id || f.asset_id;
-        const fileName = f.name || f.original_name || "Unnamed File";
-        const fileSize = formatBytes(f.size || f.size_bytes || 0);
-        const fileUrl = f.url || `/api/uploads?action=download&fileId=${encodeURIComponent(fileId)}`;
-        const parentFolderId = f.folder_id || f.folderId;
-        const parentFolderName = parentFolderId && folderMap.has(parentFolderId) ? folderMap.get(parentFolderId) : null;
-        return `
-          <button type="button" class="asset-picker-item" data-link-file-id="${escapeHTML(fileId)}" data-link-file-name="${escapeHTML(fileName)}" data-link-file-url="${escapeHTML(fileUrl)}" data-link-file-size="${f.size || f.size_bytes || 0}">
-            <span class="picker-item-icon">${ICONS.film}</span>
-            <div class="picker-item-info">
-              <strong class="picker-item-name" title="${escapeHTML(fileName)}">${escapeHTML(fileName)}</strong>
-              <div class="picker-item-subline">
-                <span class="picker-item-meta">${fileSize}</span>
-                ${parentFolderName ? `<span class="picker-item-folder-tag"><span class="studio-inline-svg">${ICONS.folder}</span> ${escapeHTML(parentFolderName)}</span>` : ""}
-              </div>
-            </div>
-            <span class="picker-item-action">+ Link</span>
-          </button>
-        `;
-      }).join("");
-
-      wireAssetPickerItemsInList(targetList);
-      return;
-    }
-
-    if (currentLinkerFolderId) {
-      // Inside a specific folder
-      const folderFiles = projectFiles.filter(f => (f.folder_id || f.folderId) === currentLinkerFolderId);
-      let html = `
-        <button type="button" class="asset-picker-back-btn" data-back-to-root>
-          <span class="back-arrow">←</span>
-          <span>Back to all folders</span>
-        </button>
-      `;
-
-      if (!folderFiles.length) {
-        html += `<div class="assets-picker-empty">This folder is empty. Upload footage in this folder from the workspace files tab.</div>`;
-      } else {
-        html += folderFiles.map(f => {
-          const fileId = f.id || f.asset_id;
-          const fileName = f.name || f.original_name || "Unnamed File";
-          const fileSize = formatBytes(f.size || f.size_bytes || 0);
-          const fileUrl = f.url || `/api/uploads?action=download&fileId=${encodeURIComponent(fileId)}`;
-          return `
-            <button type="button" class="asset-picker-item" data-link-file-id="${escapeHTML(fileId)}" data-link-file-name="${escapeHTML(fileName)}" data-link-file-url="${escapeHTML(fileUrl)}" data-link-file-size="${f.size || f.size_bytes || 0}">
-              <span class="picker-item-icon">${ICONS.film}</span>
-              <div class="picker-item-info">
-                <strong class="picker-item-name" title="${escapeHTML(fileName)}">${escapeHTML(fileName)}</strong>
-                <span class="picker-item-meta">${fileSize}</span>
-              </div>
-              <span class="picker-item-action">+ Link</span>
-            </button>
-          `;
-        }).join("");
-      }
-
-      targetList.innerHTML = html;
-      targetList.querySelector("[data-back-to-root]")?.addEventListener("click", () => {
-        currentLinkerFolderId = null;
-        renderAllAssetLinkers("");
-      });
-      wireAssetPickerItemsInList(targetList);
-      return;
-    }
-
-    // Top-level / Root view: show folders first, then root files
-    const rootFiles = projectFiles.filter(f => !f.folder_id && !f.folderId);
-    let html = "";
-
-    if (projectFolders.length > 0) {
-      html += `<div class="asset-picker-section-label">FOLDERS</div>`;
-      html += projectFolders.map(folder => {
-        const folderId = folder.id || folder.folder_id;
-        const count = projectFiles.filter(f => (f.folder_id || f.folderId) === folderId).length;
-        return `
-          <button type="button" class="asset-folder-picker-card" data-enter-folder-id="${escapeHTML(folderId)}">
-            <span class="folder-picker-icon">${ICONS.folder}</span>
-            <div class="folder-picker-info">
-              <strong class="folder-picker-title">${escapeHTML(folder.name || "Untitled Folder")}</strong>
-              <span class="folder-picker-count">${count} ${count === 1 ? "asset" : "assets"}</span>
-            </div>
-            <span class="folder-picker-arrow">→</span>
-          </button>
-        `;
-      }).join("");
-    }
-
-    if (rootFiles.length > 0) {
-      if (projectFolders.length > 0) {
-        html += `<div class="asset-picker-section-label">FILES</div>`;
-      }
-      html += rootFiles.map(f => {
-        const fileId = f.id || f.asset_id;
-        const fileName = f.name || f.original_name || "Unnamed File";
-        const fileSize = formatBytes(f.size || f.size_bytes || 0);
-        const fileUrl = f.url || `/api/uploads?action=download&fileId=${encodeURIComponent(fileId)}`;
-        return `
-          <button type="button" class="asset-picker-item" data-link-file-id="${escapeHTML(fileId)}" data-link-file-name="${escapeHTML(fileName)}" data-link-file-url="${escapeHTML(fileUrl)}" data-link-file-size="${f.size || f.size_bytes || 0}">
-            <span class="picker-item-icon">${ICONS.film}</span>
-            <div class="picker-item-info">
-              <strong class="picker-item-name" title="${escapeHTML(fileName)}">${escapeHTML(fileName)}</strong>
-              <span class="picker-item-meta">${fileSize}</span>
-            </div>
-            <span class="picker-item-action">+ Link</span>
-          </button>
-        `;
-      }).join("");
-    }
-
-    if (projectFolders.length === 0 && rootFiles.length === 0) {
-      html = `<div class="assets-picker-empty">No uploaded assets in this project yet. Upload footage in the project files view to link them to your script beats.</div>`;
-    }
-
-    targetList.innerHTML = html;
-
-    targetList.querySelectorAll("[data-enter-folder-id]").forEach(card => {
-      card.addEventListener("click", e => {
-        e.stopPropagation();
-        currentLinkerFolderId = card.dataset.enterFolderId;
-        renderAllAssetLinkers("");
-      });
-    });
-
-    wireAssetPickerItemsInList(targetList);
-  }
-
-  function wireAssetPickerItemsInList(targetList) {
-    targetList.querySelectorAll("[data-link-file-id]").forEach(btn => {
-      btn.addEventListener("click", e => {
-        e.stopPropagation();
-        const fileId = btn.dataset.linkFileId;
-        const fileName = btn.dataset.linkFileName;
-        const fileUrl = btn.dataset.linkFileUrl;
-        const fileSize = Number(btn.dataset.linkFileSize || 0);
-        insertAssetChipIntoEditor(fileId, fileName, fileUrl, fileSize);
-        if (assetsPopover) assetsPopover.hidden = true;
-        if (topAssetsPopover) topAssetsPopover.hidden = true;
-      });
-    });
-  }
-
-  function renderAllAssetLinkers(query = "") {
-    if (assetsList) renderAssetLinkerInstance(query, assetsList, assetsBreadcrumbs, assetsFilterInput);
-    if (topAssetsList) renderAssetLinkerInstance(query, topAssetsList, topAssetsBreadcrumbs, topAssetsFilterInput);
-  }
-
-  function insertAssetChipIntoEditor(fileId, fileName, fileUrl, fileSize) {
+  function insertAssetChipIntoEditor(fileId, fileName, fileUrl, fileSize, targetRange = null, targetText = null) {
+    if (!editorSurface) return;
     editorSurface.focus();
+
     const chip = document.createElement("span");
     chip.className = "cx-script-asset-chip";
     chip.dataset.assetId = fileId;
@@ -2719,16 +2621,42 @@ export async function renderScriptStudioSurface(container, {
     chip.title = `Project Asset: ${fileName} (Click to preview)`;
     chip.innerHTML = `<span class="asset-chip-icon">${ICONS.film}</span><span class="asset-chip-label">${escapeHTML(fileName)}</span><button type="button" class="asset-chip-del" title="Remove asset link" aria-label="Remove asset link">×</button>`;
 
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount && editorSurface.contains(sel.anchorNode)) {
-      const range = sel.getRangeAt(0);
-      range.collapse(false);
-      range.insertNode(chip);
+    const r = targetRange || (window.getSelection()?.rangeCount && editorSurface.contains(window.getSelection().anchorNode) ? window.getSelection().getRangeAt(0) : null);
+    const txt = targetText || (r && !r.collapsed ? r.toString().trim() : "");
+
+    if (r && txt && editorSurface.contains(r.commonAncestorContainer)) {
+      // Wrap highlighted phrase in an asset link mark
+      const mark = document.createElement("mark");
+      mark.className = "cx-linked-asset-phrase";
+      mark.dataset.assetId = fileId;
+      mark.dataset.assetName = fileName;
+      mark.dataset.assetUrl = fileUrl;
+      mark.title = `Linked to footage: ${fileName}`;
+
+      try {
+        r.surroundContents(mark);
+        mark.appendChild(document.createTextNode(" "));
+        mark.appendChild(chip);
+        const space = document.createTextNode("\u00A0");
+        mark.after(space);
+      } catch {
+        const frag = r.extractContents();
+        mark.appendChild(frag);
+        mark.appendChild(document.createTextNode(" "));
+        mark.appendChild(chip);
+        r.insertNode(mark);
+        const space = document.createTextNode("\u00A0");
+        mark.after(space);
+      }
+    } else if (r && editorSurface.contains(r.startContainer)) {
+      r.collapse(false);
+      r.insertNode(chip);
       const space = document.createTextNode("\u00A0");
       chip.after(space);
       const newRange = document.createRange();
       newRange.setStartAfter(space);
       newRange.collapse(true);
+      const sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(newRange);
     } else {
@@ -2751,6 +2679,7 @@ export async function renderScriptStudioSurface(container, {
       renderCutsPanel(active);
       renderScriptsList();
       renderLinkedAssetsSidebar(active);
+      renderSidebarProjectAssets();
     }
 
     triggerAutoSave();
@@ -2758,6 +2687,497 @@ export async function renderScriptStudioSurface(container, {
 
     // Directly preview in right-side sidebar
     playInLinkedSidebar(fileName, fileUrl);
+  }
+
+  // Systematic Modal: Open, Close, Render
+  const assetLinkerModal = container.querySelector("[data-asset-linker-modal]");
+
+  function openAssetLinkerModal(selectedRange = null, selectedText = "") {
+    if (!assetLinkerModal) return;
+
+    modalTargetRange = selectedRange ? selectedRange.cloneRange() : null;
+    modalTargetText = selectedText || "";
+
+    const contextSubtitle = assetLinkerModal.querySelector("[data-linker-target-context]");
+    if (contextSubtitle) {
+      if (modalTargetText) {
+        contextSubtitle.innerHTML = `Linking footage to highlighted text: <strong class="linker-highlighted-snippet">"${escapeHTML(modalTargetText.length > 45 ? modalTargetText.slice(0, 45) + "…" : modalTargetText)}"</strong>`;
+      } else {
+        contextSubtitle.textContent = `Select footage from your folders to insert at cursor position.`;
+      }
+    }
+
+    const searchInput = assetLinkerModal.querySelector("[data-modal-asset-search]");
+    if (searchInput) searchInput.value = "";
+    modalSelectedFolderId = null;
+
+    assetLinkerModal.hidden = false;
+    renderModalAssetGrid("");
+  }
+
+  function closeAssetLinkerModal() {
+    if (assetLinkerModal) assetLinkerModal.hidden = true;
+    modalTargetRange = null;
+    modalTargetText = "";
+  }
+
+  assetLinkerModal?.querySelectorAll("[data-close-asset-linker]").forEach(btn => {
+    btn.addEventListener("click", closeAssetLinkerModal);
+  });
+  assetLinkerModal?.addEventListener("click", e => {
+    if (e.target === assetLinkerModal) closeAssetLinkerModal();
+  });
+
+  const modalSearchInput = assetLinkerModal?.querySelector("[data-modal-asset-search]");
+  modalSearchInput?.addEventListener("input", () => {
+    renderModalAssetGrid(modalSearchInput.value.trim());
+  });
+
+  function renderModalAssetGrid(searchQuery = "") {
+    if (!assetLinkerModal) return;
+    const pillsContainer = assetLinkerModal.querySelector("[data-modal-folder-pills]");
+    const gridContainer = assetLinkerModal.querySelector("[data-modal-assets-grid]");
+    const backBtn = assetLinkerModal.querySelector("[data-modal-back-folders]");
+    if (!gridContainer) return;
+
+    const projectFiles = Array.isArray(files) ? files : [];
+    const projectFolders = Array.isArray(folders) ? folders : [];
+
+    const folderMap = new Map();
+    projectFolders.forEach(f => {
+      const id = f.id || f.folder_id;
+      if (id) folderMap.set(id, f.name || "Untitled Folder");
+    });
+
+    const isSearching = Boolean(searchQuery && searchQuery.trim());
+    const query = (searchQuery || "").trim().toLowerCase();
+
+    // Folder Quick Pills
+    if (pillsContainer) {
+      pillsContainer.innerHTML = `
+        <button type="button" class="linker-pill ${modalSelectedFolderId === null && !isSearching ? "active" : ""}" data-select-folder-pill="all">
+          <span class="pill-icon">${ICONS.folder}</span>
+          <span>All Assets (${projectFiles.length})</span>
+        </button>
+        ${projectFolders.map(folder => {
+          const fId = folder.id || folder.folder_id;
+          const count = projectFiles.filter(f => (f.folder_id || f.folderId) === fId).length;
+          return `
+            <button type="button" class="linker-pill ${modalSelectedFolderId === fId && !isSearching ? "active" : ""}" data-select-folder-pill="${escapeHTML(fId)}">
+              <span class="pill-icon">${ICONS.folder}</span>
+              <span>${escapeHTML(folder.name || "Folder")} (${count})</span>
+            </button>
+          `;
+        }).join("")}
+      `;
+
+      pillsContainer.querySelectorAll("[data-select-folder-pill]").forEach(pill => {
+        pill.addEventListener("click", () => {
+          const fid = pill.dataset.selectFolderPill;
+          modalSelectedFolderId = fid === "all" ? null : fid;
+          if (modalSearchInput) modalSearchInput.value = "";
+          renderModalAssetGrid("");
+        });
+      });
+    }
+
+    if (backBtn) {
+      backBtn.hidden = !modalSelectedFolderId && !isSearching;
+      backBtn.onclick = () => {
+        modalSelectedFolderId = null;
+        if (modalSearchInput) modalSearchInput.value = "";
+        renderModalAssetGrid("");
+      };
+    }
+
+    // 1. Search Mode
+    if (isSearching) {
+      const matched = projectFiles.filter(f => {
+        const name = (f.name || f.original_name || "").toLowerCase();
+        return name.includes(query);
+      });
+      if (!matched.length) {
+        gridContainer.innerHTML = `
+          <div class="asset-linker-empty">
+            <span class="linker-empty-icon">${ICONS.search}</span>
+            <h4>No assets match "${escapeHTML(query)}"</h4>
+            <p>Try searching for a different keyword or check your folder contents.</p>
+          </div>
+        `;
+        return;
+      }
+      gridContainer.innerHTML = `
+        <div class="asset-linker-cards-list">
+          ${matched.map(f => renderModalAssetCard(f, folderMap)).join("")}
+        </div>
+      `;
+      wireModalAssetCards(gridContainer);
+      return;
+    }
+
+    // 2. Specific Folder Mode
+    if (modalSelectedFolderId) {
+      const folderFiles = projectFiles.filter(f => (f.folder_id || f.folderId) === modalSelectedFolderId);
+      const curFolder = projectFolders.find(f => (f.id || f.folder_id) === modalSelectedFolderId);
+      const folderName = curFolder?.name || "Folder";
+
+      if (!folderFiles.length) {
+        gridContainer.innerHTML = `
+          <div class="asset-linker-empty">
+            <span class="linker-empty-icon">${ICONS.folder}</span>
+            <h4>Folder "${escapeHTML(folderName)}" is empty</h4>
+            <p>Upload video footage or clips into this folder in the workspace Files tab.</p>
+          </div>
+        `;
+        return;
+      }
+
+      gridContainer.innerHTML = `
+        <div class="asset-linker-cards-list">
+          ${folderFiles.map(f => renderModalAssetCard(f, folderMap)).join("")}
+        </div>
+      `;
+      wireModalAssetCards(gridContainer);
+      return;
+    }
+
+    // 3. Root View: Folders Grid first, then root files
+    const rootFiles = projectFiles.filter(f => !f.folder_id && !f.folderId);
+    let html = "";
+
+    if (projectFolders.length > 0) {
+      html += `
+        <div class="asset-linker-section-title">
+          <span>PROJECT FOLDERS (${projectFolders.length})</span>
+          <small>Select a folder to browse its uploaded footage</small>
+        </div>
+        <div class="asset-linker-folders-grid">
+          ${projectFolders.map(folder => {
+            const fId = folder.id || folder.folder_id;
+            const count = projectFiles.filter(f => (f.folder_id || f.folderId) === fId).length;
+            return `
+              <div class="asset-folder-card" data-open-modal-folder="${escapeHTML(fId)}">
+                <div class="folder-card-icon-wrap">
+                  <span class="folder-card-icon">${ICONS.folder}</span>
+                </div>
+                <div class="folder-card-details">
+                  <strong class="folder-card-title">${escapeHTML(folder.name || "Untitled Folder")}</strong>
+                  <span class="folder-card-meta">${count} ${count === 1 ? "asset" : "assets"}</span>
+                </div>
+                <button type="button" class="folder-card-open-btn" title="Open folder">Browse →</button>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    if (rootFiles.length > 0) {
+      html += `
+        <div class="asset-linker-section-title">
+          <span>FILES IN ROOT (${rootFiles.length})</span>
+        </div>
+        <div class="asset-linker-cards-list">
+          ${rootFiles.map(f => renderModalAssetCard(f, folderMap)).join("")}
+        </div>
+      `;
+    }
+
+    if (projectFolders.length === 0 && rootFiles.length === 0) {
+      html = `
+        <div class="asset-linker-empty">
+          <span class="linker-empty-icon">${ICONS.film}</span>
+          <h4>No assets uploaded in this project yet</h4>
+          <p>You can upload footage, audio, or images in the project Files tab, and they will immediately appear here ready to link.</p>
+        </div>
+      `;
+    }
+
+    gridContainer.innerHTML = html;
+
+    gridContainer.querySelectorAll("[data-open-modal-folder]").forEach(card => {
+      card.addEventListener("click", () => {
+        modalSelectedFolderId = card.dataset.openModalFolder;
+        renderModalAssetGrid("");
+      });
+    });
+
+    wireModalAssetCards(gridContainer);
+  }
+
+  function renderModalAssetCard(f, folderMap) {
+    const fileId = f.id || f.asset_id;
+    const fileName = f.name || f.original_name || "Unnamed File";
+    const fileSize = formatBytes(f.size || f.size_bytes || 0);
+    const fileUrl = f.url || `/api/uploads?action=download&fileId=${encodeURIComponent(fileId)}`;
+    const parentFolderId = f.folder_id || f.folderId;
+    const parentFolderName = parentFolderId && folderMap?.has(parentFolderId) ? folderMap.get(parentFolderId) : null;
+    const isVideo = (f.content_type || f.type || "").includes("video") || /\.(mp4|mov|webm|m4v)$/i.test(fileName);
+
+    return `
+      <div class="asset-linker-item-card">
+        <div class="linker-card-left">
+          <span class="linker-item-media-icon">${isVideo ? ICONS.film : ICONS.fileText || ICONS.folder}</span>
+          <div class="linker-item-meta">
+            <strong class="linker-item-name" title="${escapeHTML(fileName)}">${escapeHTML(fileName)}</strong>
+            <div class="linker-item-tags">
+              <span class="linker-tag-size">${fileSize}</span>
+              ${parentFolderName ? `<span class="linker-tag-folder">${ICONS.folder} ${escapeHTML(parentFolderName)}</span>` : `<span class="linker-tag-folder">Project root</span>`}
+            </div>
+          </div>
+        </div>
+        <div class="linker-card-actions">
+          <button type="button" class="linker-btn-preview" data-preview-modal-asset="${escapeHTML(fileId)}" data-asset-name="${escapeHTML(fileName)}" data-asset-url="${escapeHTML(fileUrl)}">
+            <span class="studio-btn-icon">${ICONS.play}</span> Preview
+          </button>
+          <button type="button" class="linker-btn-link" data-link-modal-asset="${escapeHTML(fileId)}" data-asset-name="${escapeHTML(fileName)}" data-asset-url="${escapeHTML(fileUrl)}" data-asset-size="${f.size || f.size_bytes || 0}">
+            <span class="studio-btn-icon">${ICONS.link}</span> + Link to Script
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function wireModalAssetCards(gridContainer) {
+    gridContainer.querySelectorAll("[data-link-modal-asset]").forEach(btn => {
+      btn.addEventListener("click", e => {
+        e.stopPropagation();
+        const fileId = btn.dataset.linkModalAsset;
+        const fileName = btn.dataset.assetName;
+        const fileUrl = btn.dataset.assetUrl;
+        const fileSize = Number(btn.dataset.assetSize || 0);
+
+        insertAssetChipIntoEditor(fileId, fileName, fileUrl, fileSize, modalTargetRange, modalTargetText);
+        closeAssetLinkerModal();
+      });
+    });
+
+    gridContainer.querySelectorAll("[data-preview-modal-asset]").forEach(btn => {
+      btn.addEventListener("click", e => {
+        e.stopPropagation();
+        const fileName = btn.dataset.assetName;
+        const fileUrl = btn.dataset.assetUrl;
+        playInLinkedSidebar(fileName, fileUrl);
+      });
+    });
+  }
+
+  // -------------------------------------------------------------
+  // RIGHT-SIDE PROJECT ASSETS EXPLORER (TABS & DRAG-AND-DROP)
+  // -------------------------------------------------------------
+  let sidebarSelectedFolderId = "all";
+  let sidebarAssetQuery = "";
+
+  function renderSidebarProjectAssets() {
+    const filesContainer = container.querySelector("[data-sidebar-project-files]");
+    const pillsContainer = container.querySelector("[data-sidebar-folder-pills]");
+    const tabProjectCount = container.querySelector("[data-tab-project-count]");
+    if (!filesContainer) return;
+
+    const projectFiles = Array.isArray(files) ? files : [];
+    const projectFolders = Array.isArray(folders) ? folders : [];
+
+    if (tabProjectCount) tabProjectCount.textContent = String(projectFiles.length);
+
+    const folderMap = new Map();
+    projectFolders.forEach(f => {
+      const id = f.id || f.folder_id;
+      if (id) folderMap.set(id, f.name || "Folder");
+    });
+
+    // Render Pills
+    if (pillsContainer) {
+      pillsContainer.innerHTML = `
+        <button type="button" class="sidebar-folder-pill ${sidebarSelectedFolderId === "all" ? "active" : ""}" data-sidebar-filter-folder="all">
+          All (${projectFiles.length})
+        </button>
+        ${projectFolders.map(folder => {
+          const fid = folder.id || folder.folder_id;
+          const count = projectFiles.filter(f => (f.folder_id || f.folderId) === fid).length;
+          return `
+            <button type="button" class="sidebar-folder-pill ${sidebarSelectedFolderId === fid ? "active" : ""}" data-sidebar-filter-folder="${escapeHTML(fid)}">
+              ${escapeHTML(folder.name || "Folder")} (${count})
+            </button>
+          `;
+        }).join("")}
+      `;
+
+      pillsContainer.querySelectorAll("[data-sidebar-filter-folder]").forEach(pill => {
+        pill.addEventListener("click", () => {
+          sidebarSelectedFolderId = pill.dataset.sidebarFilterFolder;
+          renderSidebarProjectAssets();
+        });
+      });
+    }
+
+    // Filter files
+    let filtered = projectFiles;
+    if (sidebarSelectedFolderId !== "all") {
+      filtered = filtered.filter(f => (f.folder_id || f.folderId) === sidebarSelectedFolderId);
+    }
+    if (sidebarAssetQuery) {
+      const q = sidebarAssetQuery.toLowerCase();
+      filtered = filtered.filter(f => (f.name || f.original_name || "").toLowerCase().includes(q));
+    }
+
+    if (!filtered.length) {
+      filesContainer.innerHTML = `
+        <div class="sidebar-assets-empty">
+          <span class="empty-icon">${ICONS.film}</span>
+          <p>No footage found</p>
+          <small>Upload footage in project folders to link them to script beats.</small>
+        </div>
+      `;
+      return;
+    }
+
+    filesContainer.innerHTML = filtered.map(f => {
+      const fileId = f.id || f.asset_id;
+      const fileName = f.name || f.original_name || "Asset";
+      const fileSize = formatBytes(f.size || f.size_bytes || 0);
+      const fileUrl = f.url || `/api/uploads?action=download&fileId=${encodeURIComponent(fileId)}`;
+      const parentFolderId = f.folder_id || f.folderId;
+      const parentFolderName = parentFolderId && folderMap.has(parentFolderId) ? folderMap.get(parentFolderId) : null;
+
+      return `
+        <div class="sidebar-draggable-asset-card" draggable="true" data-drag-file-id="${escapeHTML(fileId)}" data-drag-file-name="${escapeHTML(fileName)}" data-drag-file-url="${escapeHTML(fileUrl)}" data-drag-file-size="${f.size || f.size_bytes || 0}">
+          <div class="drag-card-top">
+            <span class="drag-handle" title="Drag and drop into script">⋮⋮</span>
+            <span class="card-media-icon">${ICONS.film}</span>
+            <div class="card-title-col">
+              <strong class="card-file-name" title="${escapeHTML(fileName)}">${escapeHTML(fileName)}</strong>
+              <div class="card-sub-info">
+                <span>${fileSize}</span>
+                ${parentFolderName ? `<span class="card-folder-tag">${escapeHTML(parentFolderName)}</span>` : ""}
+              </div>
+            </div>
+          </div>
+          <div class="drag-card-actions">
+            <button type="button" class="sidebar-card-btn preview" data-sidebar-preview="${escapeHTML(fileId)}" data-asset-name="${escapeHTML(fileName)}" data-asset-url="${escapeHTML(fileUrl)}">
+              <span class="studio-btn-icon">${ICONS.play}</span> Preview
+            </button>
+            <button type="button" class="sidebar-card-btn link" data-sidebar-link="${escapeHTML(fileId)}" data-asset-name="${escapeHTML(fileName)}" data-asset-url="${escapeHTML(fileUrl)}" data-asset-size="${f.size || f.size_bytes || 0}">
+              <span class="studio-btn-icon">${ICONS.link}</span> + Link
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    // Wire dragstart
+    filesContainer.querySelectorAll(".sidebar-draggable-asset-card").forEach(card => {
+      card.addEventListener("dragstart", e => {
+        card.classList.add("is-dragging");
+        e.dataTransfer.setData("application/x-cx-asset-id", card.dataset.dragFileId);
+        e.dataTransfer.setData("application/x-cx-asset-name", card.dataset.dragFileName);
+        e.dataTransfer.setData("application/x-cx-asset-url", card.dataset.dragFileUrl);
+        e.dataTransfer.setData("application/x-cx-asset-size", card.dataset.dragFileSize);
+        e.dataTransfer.effectAllowed = "copy";
+      });
+      card.addEventListener("dragend", () => {
+        card.classList.remove("is-dragging");
+      });
+    });
+
+    // Wire actions
+    filesContainer.querySelectorAll("[data-sidebar-link]").forEach(btn => {
+      btn.addEventListener("click", e => {
+        e.stopPropagation();
+        insertAssetChipIntoEditor(
+          btn.dataset.sidebarLink,
+          btn.dataset.assetName,
+          btn.dataset.assetUrl,
+          Number(btn.dataset.assetSize || 0)
+        );
+      });
+    });
+
+    filesContainer.querySelectorAll("[data-sidebar-preview]").forEach(btn => {
+      btn.addEventListener("click", e => {
+        e.stopPropagation();
+        playInLinkedSidebar(btn.dataset.assetName, btn.dataset.assetUrl);
+      });
+    });
+  }
+
+  // Search input in sidebar
+  const sidebarSearchInput = container.querySelector("[data-sidebar-asset-search]");
+  sidebarSearchInput?.addEventListener("input", () => {
+    sidebarAssetQuery = sidebarSearchInput.value.trim();
+    renderSidebarProjectAssets();
+  });
+
+  // Sidebar Tab Switching
+  const assetTabBtns = container.querySelectorAll("[data-asset-tab]");
+  assetTabBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tabName = btn.dataset.assetTab;
+      assetTabBtns.forEach(b => b.classList.toggle("active", b.dataset.assetTab === tabName));
+      container.querySelectorAll("[data-tab-view]").forEach(v => {
+        v.hidden = v.dataset.tabView !== tabName;
+      });
+    });
+  });
+
+  // Open asset linker modal buttons (delegated to support dynamically created empty state buttons)
+  container.addEventListener("click", e => {
+    const btn = e.target.closest("[data-open-asset-linker]");
+    if (btn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const sel = window.getSelection();
+      let r = null;
+      let txt = "";
+      if (sel && sel.rangeCount && !sel.isCollapsed && editorSurface && editorSurface.contains(sel.anchorNode)) {
+        r = sel.getRangeAt(0);
+        txt = sel.toString().trim();
+      }
+      openAssetLinkerModal(r, txt);
+    }
+  });
+
+  // Editor Drag & Drop Listeners
+  if (editorSurface) {
+    editorSurface.addEventListener("dragover", e => {
+      if (e.dataTransfer.types.includes("application/x-cx-asset-id")) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+        editorSurface.classList.add("is-drop-active");
+      }
+    });
+
+    editorSurface.addEventListener("dragleave", () => {
+      editorSurface.classList.remove("is-drop-active");
+    });
+
+    editorSurface.addEventListener("drop", e => {
+      const fileId = e.dataTransfer.getData("application/x-cx-asset-id");
+      if (!fileId) return;
+      e.preventDefault();
+      editorSurface.classList.remove("is-drop-active");
+      const fileName = e.dataTransfer.getData("application/x-cx-asset-name") || "Asset";
+      const fileUrl = e.dataTransfer.getData("application/x-cx-asset-url") || "";
+      const fileSize = Number(e.dataTransfer.getData("application/x-cx-asset-size") || 0);
+
+      let dropRange = null;
+      if (document.caretRangeFromPoint) {
+        dropRange = document.caretRangeFromPoint(e.clientX, e.clientY);
+      } else if (document.caretPositionFromPoint) {
+        const pos = document.caretPositionFromPoint(e.clientX, e.clientY);
+        if (pos) {
+          dropRange = document.createRange();
+          dropRange.setStart(pos.offsetNode, pos.offset);
+          dropRange.collapse(true);
+        }
+      }
+      if (dropRange && editorSurface.contains(dropRange.startContainer)) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(dropRange);
+      }
+
+      insertAssetChipIntoEditor(fileId, fileName, fileUrl, fileSize);
+    });
   }
 
   // -------------------------------------------------------------
@@ -2812,7 +3232,11 @@ export async function renderScriptStudioSurface(container, {
         <div class="linked-assets-empty">
           <span class="linked-empty-icon">${ICONS.film}</span>
           <p>No project footage linked</p>
-          <small>Place your cursor anywhere in the script and click <b>Attach Asset</b> above to attach footage directly to script lines.</small>
+          <small>Place your cursor anywhere in the script and click <b>Attach asset</b> to link footage directly.</small>
+          <button type="button" class="scripts-empty-attach-btn" data-open-asset-linker>
+            <span class="studio-btn-icon">${ICONS.plus}</span>
+            <span>Attach asset</span>
+          </button>
         </div>
       `;
       return;
@@ -3026,19 +3450,42 @@ export async function renderScriptStudioSurface(container, {
     }
   });
 
-  // Share Script Link action
-  shareScriptLinkBtn?.addEventListener("click", async e => {
+  // -------------------------------------------------------------
+  // SHARE SCRIPT MODAL & ACTION
+  // -------------------------------------------------------------
+  container.querySelectorAll("[data-share-script-modal], [data-share-script-link]").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      if (overflowMenu) overflowMenu.hidden = true;
+      const active = getActiveScript();
+      if (active) openShareScriptModal(active, projectId);
+    });
+  });
+
+  // Export Dropdown Toggle
+  const exportToggleBtn = container.querySelector("[data-toggle-export-menu]");
+  exportToggleBtn?.addEventListener("click", e => {
     e.stopPropagation();
-    if (overflowMenu) overflowMenu.hidden = true;
-    const active = getActiveScript();
-    if (!active) return;
-    const showcaseLink = `${window.location.origin}${window.location.pathname}#workspace?panel=showcase&script=${encodeURIComponent(active.id)}&project=${encodeURIComponent(projectId || "default")}`;
-    try {
-      await navigator.clipboard.writeText(showcaseLink);
-      notify("Share link copied to clipboard! ✓");
-    } catch {
-      notify(`Share link: ${showcaseLink}`);
+    const wasHidden = exportMenu ? exportMenu.hidden : true;
+    container.querySelectorAll(".scripts-menu-popover").forEach(m => {
+      m.hidden = true;
+      m.classList.remove("is-open");
+    });
+    if (exportMenu) {
+      exportMenu.hidden = !wasHidden;
+      exportMenu.classList.toggle("is-open", wasHidden);
+      exportToggleBtn.classList.toggle("active", wasHidden);
     }
+  });
+
+  container.querySelectorAll("[data-export-md], [data-export-txt], [data-copy-formatted], [data-print-script]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (exportMenu) {
+        exportMenu.hidden = true;
+        exportMenu.classList.remove("is-open");
+        exportToggleBtn?.classList.remove("active");
+      }
+    });
   });
 
   // Send Script to Project Modal & Action
@@ -3101,7 +3548,7 @@ export async function renderScriptStudioSurface(container, {
         targetScripts.unshift(scriptClone);
         saveStorageScripts(targetPid, targetScripts);
         close();
-        notify(`Script linked and sent to "${targetProject.name}"! ✓`);
+        notify(`Script linked and sent to "${targetProject.name}"`);
       });
     });
   }
@@ -3128,14 +3575,27 @@ export async function renderScriptStudioSurface(container, {
   const cueMenu = container.querySelector("[data-cue-menu]");
   cueTrigger?.addEventListener("click", e => {
     e.stopPropagation();
-    const wasHidden = cueMenu.hidden;
-    container.querySelectorAll(".scripts-menu-popover").forEach(m => m.hidden = true);
-    cueMenu.hidden = !wasHidden;
+    const wasHidden = cueMenu ? cueMenu.hidden : true;
+    container.querySelectorAll(".scripts-menu-popover").forEach(m => {
+      m.hidden = true;
+      m.classList.remove("is-open");
+    });
+    if (cueMenu) {
+      cueMenu.hidden = !wasHidden;
+      cueMenu.classList.toggle("is-open", wasHidden);
+      cueTrigger.classList.toggle("active", wasHidden);
+      cueTrigger.setAttribute("aria-expanded", String(wasHidden));
+    }
   });
 
   document.addEventListener("click", () => {
     if (hlMenu) hlMenu.hidden = true;
-    if (cueMenu) cueMenu.hidden = true;
+    if (cueMenu) {
+      cueMenu.hidden = true;
+      cueMenu.classList.remove("is-open");
+      cueTrigger?.classList.remove("active");
+      cueTrigger?.setAttribute("aria-expanded", "false");
+    }
     if (assetsPopover) assetsPopover.hidden = true;
     if (topAssetsPopover) topAssetsPopover.hidden = true;
     if (moreMenu) moreMenu.hidden = true;
@@ -3172,10 +3632,15 @@ export async function renderScriptStudioSurface(container, {
   container.querySelectorAll("[data-insert-cue]").forEach(btn => {
     btn.addEventListener("click", () => {
       const cueType = btn.dataset.insertCue;
-      if (cueMenu) cueMenu.hidden = true;
+      if (cueMenu) {
+        cueMenu.hidden = true;
+        cueMenu.classList.remove("is-open");
+      }
+      cueTrigger?.classList.remove("active");
+      cueTrigger?.setAttribute("aria-expanded", "false");
       if (moreMenu) moreMenu.hidden = true;
       const cueClass = `cue-${cueType.toLowerCase().replace(/[^a-z]/g, "")}`;
-      const badgeHtml = `&nbsp;<span class="cx-cue ${cueClass}">[${cueType}]</span>&nbsp;`;
+      const badgeHtml = `&nbsp;<span class="cx-cue ${cueClass}">${cueType}</span>&nbsp;`;
       document.execCommand("insertHTML", false, badgeHtml);
       editorSurface.focus();
       updateMetrics();
@@ -3236,10 +3701,344 @@ export async function renderScriptStudioSurface(container, {
       insertExternalLink();
     }
   });
-  titleInput.addEventListener("input", triggerAutoSave);
-  statusSelect.addEventListener("change", triggerAutoSave);
-  folderSelect.addEventListener("change", triggerAutoSave);
-  pacingGoalSelect.addEventListener("change", triggerAutoSave);
+
+  // Mode Switcher (from overflow menu)
+  container.querySelectorAll("[data-switch-mode]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const mode = btn.dataset.switchMode;
+      container.querySelectorAll(".scripts-panel-view").forEach(p => p.hidden = true);
+      const target = container.querySelector(`[data-panel-view="${mode}"]`);
+      if (target) target.hidden = false;
+      if (overflowMenu) overflowMenu.hidden = true;
+    });
+  });
+
+  // Aspect ratio selector
+  const formatAspectSelect = container.querySelector("[data-format-aspect-select]");
+  formatAspectSelect?.addEventListener("change", () => {
+    const active = getActiveScript();
+    if (active) {
+      active.aspectRatio = formatAspectSelect.value;
+      triggerAutoSave();
+    }
+  });
+
+  // Tone selector
+  const toneSelect = container.querySelector("[data-format-tone-select]");
+  toneSelect?.addEventListener("change", () => {
+    const active = getActiveScript();
+    if (!active) return;
+    const val = toneSelect.value;
+    if (val === "fast") active.targetWpm = 160;
+    else if (val === "cinematic") active.targetWpm = 115;
+    else active.targetWpm = 135;
+    updateMetrics();
+    triggerAutoSave();
+  });
+
+  // -------------------------------------------------------------
+  // SELECTION-BASED COMMENTING SYSTEM
+  // -------------------------------------------------------------
+  const selectionTooltip = container.querySelector("[data-selection-tooltip]");
+  const addCommentBtn = container.querySelector("[data-add-selection-comment]");
+  const commentPopover = container.querySelector("[data-comment-popover]");
+  const commentPopoverTitle = container.querySelector("[data-comment-popover-title]");
+  const closeCommentBtn = container.querySelector("[data-close-comment-popover]");
+  const commentViewMode = container.querySelector("[data-comment-view-mode]");
+  const commentEditMode = container.querySelector("[data-comment-edit-mode]");
+  const commentViewAuthor = container.querySelector("[data-comment-view-author]");
+  const commentViewTime = container.querySelector("[data-comment-view-time]");
+  const commentViewText = container.querySelector("[data-comment-view-text]");
+  const commentResolvedTag = container.querySelector("[data-comment-resolved-tag]");
+  const resolveCommentBtn = container.querySelector("[data-toggle-resolve-comment]");
+  const resolveBtnText = container.querySelector("[data-resolve-btn-text]");
+  const deleteCommentBtn = container.querySelector("[data-delete-comment]");
+  const commentAuthorInput = container.querySelector("[data-comment-author-input]");
+  const commentTextarea = container.querySelector("[data-comment-textarea]");
+  const saveCommentBtn = container.querySelector("[data-save-comment]");
+  const cancelCommentBtn = container.querySelector("[data-cancel-comment]");
+
+  let activeSelectionRange = null;
+  let activeSelectionText = "";
+  let currentCommentId = null;
+  let currentCommentAnchor = null;
+  let isCreatingNewComment = false;
+
+  function hideSelectionTooltip() {
+    if (selectionTooltip) selectionTooltip.hidden = true;
+  }
+
+  function hideCommentPopover() {
+    if (commentPopover) commentPopover.hidden = true;
+    if (isCreatingNewComment && currentCommentAnchor && !currentCommentAnchor.dataset.saved) {
+      unwrapAnchor(currentCommentAnchor);
+    }
+    isCreatingNewComment = false;
+    currentCommentId = null;
+    currentCommentAnchor = null;
+  }
+
+  function unwrapAnchor(anchor) {
+    if (!anchor || !anchor.parentNode) return;
+    const parent = anchor.parentNode;
+    while (anchor.firstChild) {
+      parent.insertBefore(anchor.firstChild, anchor);
+    }
+    parent.removeChild(anchor);
+  }
+
+  function formatTimeAgo(ts) {
+    if (!ts) return "just now";
+    const diff = Math.floor((Date.now() - Number(ts)) / 1000);
+    if (diff < 60) return "just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  }
+
+  function handleSelectionCheck() {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !editorSurface) {
+      hideSelectionTooltip();
+      return;
+    }
+    if (sel.rangeCount === 0) {
+      hideSelectionTooltip();
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    if (!editorSurface.contains(range.commonAncestorContainer)) {
+      hideSelectionTooltip();
+      return;
+    }
+    const text = sel.toString().trim();
+    if (!text || text.length < 2) {
+      hideSelectionTooltip();
+      return;
+    }
+    activeSelectionRange = range.cloneRange();
+    activeSelectionText = text;
+
+    const rect = range.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    if (!selectionTooltip) return;
+
+    selectionTooltip.hidden = false;
+    const top = Math.max(10, rect.top - containerRect.top - 40);
+    const left = Math.max(10, rect.left - containerRect.left + (rect.width / 2) - 60);
+    selectionTooltip.style.top = `${top}px`;
+    selectionTooltip.style.left = `${left}px`;
+  }
+
+  editorSurface.addEventListener("mouseup", () => {
+    setTimeout(handleSelectionCheck, 20);
+  });
+  editorSurface.addEventListener("keyup", e => {
+    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Shift"].includes(e.key)) {
+      setTimeout(handleSelectionCheck, 20);
+    }
+  });
+
+  const linkSelectionBtn = container.querySelector("[data-link-selection-asset]");
+  linkSelectionBtn?.addEventListener("mousedown", e => e.preventDefault());
+  linkSelectionBtn?.addEventListener("click", e => {
+    e.stopPropagation();
+    hideSelectionTooltip();
+    openAssetLinkerModal(activeSelectionRange, activeSelectionText);
+  });
+
+  addCommentBtn?.addEventListener("mousedown", e => e.preventDefault());
+  addCommentBtn?.addEventListener("click", e => {
+    e.stopPropagation();
+    if (!activeSelectionRange) return;
+
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(activeSelectionRange);
+
+    const commentId = `cmt_${Date.now()}`;
+    const mark = document.createElement("mark");
+    mark.className = "cx-comment-anchor";
+    mark.dataset.commentId = commentId;
+    mark.title = "Highlighted Comment · Click to review";
+
+    try {
+      activeSelectionRange.surroundContents(mark);
+    } catch {
+      const frag = activeSelectionRange.extractContents();
+      mark.appendChild(frag);
+      activeSelectionRange.insertNode(mark);
+    }
+
+    hideSelectionTooltip();
+    openCommentCard(mark, commentId, true);
+  });
+
+  function openCommentCard(anchor, commentId, isNew = false) {
+    if (!commentPopover) return;
+    currentCommentId = commentId;
+    currentCommentAnchor = anchor;
+    isCreatingNewComment = isNew;
+
+    const rect = anchor.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const top = Math.max(10, rect.bottom - containerRect.top + 8);
+    const left = Math.max(10, Math.min(containerRect.width - 320, rect.left - containerRect.left));
+    commentPopover.style.top = `${top}px`;
+    commentPopover.style.left = `${left}px`;
+    commentPopover.hidden = false;
+
+    const active = getActiveScript();
+    const existing = (active?.comments || []).find(c => c.id === commentId);
+
+    if (isNew || !existing) {
+      if (commentPopoverTitle) commentPopoverTitle.textContent = "Add Comment";
+      if (commentViewMode) commentViewMode.hidden = true;
+      if (commentEditMode) commentEditMode.hidden = false;
+      if (commentTextarea) {
+        commentTextarea.value = "";
+        setTimeout(() => commentTextarea.focus(), 50);
+      }
+    } else {
+      if (commentPopoverTitle) commentPopoverTitle.textContent = "Comment Note";
+      if (commentViewMode) commentViewMode.hidden = false;
+      if (commentEditMode) commentEditMode.hidden = true;
+      if (commentViewAuthor) commentViewAuthor.textContent = existing.author || "Director";
+      if (commentViewTime) commentViewTime.textContent = formatTimeAgo(existing.createdAt);
+      if (commentViewText) commentViewText.textContent = existing.text;
+      if (commentResolvedTag) commentResolvedTag.hidden = !existing.resolved;
+      if (resolveBtnText) resolveBtnText.textContent = existing.resolved ? "Reopen" : "Resolve";
+      anchor.classList.toggle("is-resolved", Boolean(existing.resolved));
+    }
+  }
+
+  editorSurface.addEventListener("click", e => {
+    const anchor = e.target.closest(".cx-comment-anchor");
+    if (anchor) {
+      e.stopPropagation();
+      const commentId = anchor.dataset.commentId;
+      openCommentCard(anchor, commentId, false);
+    }
+  });
+
+  closeCommentBtn?.addEventListener("click", e => {
+    e.stopPropagation();
+    hideCommentPopover();
+  });
+
+  cancelCommentBtn?.addEventListener("click", e => {
+    e.stopPropagation();
+    hideCommentPopover();
+  });
+
+  saveCommentBtn?.addEventListener("click", e => {
+    e.stopPropagation();
+    const text = commentTextarea?.value.trim();
+    if (!text) {
+      hideCommentPopover();
+      return;
+    }
+    const author = commentAuthorInput?.value.trim() || "Director";
+    const active = getActiveScript();
+    if (!active) return;
+    if (!Array.isArray(active.comments)) active.comments = [];
+
+    const existingIdx = active.comments.findIndex(c => c.id === currentCommentId);
+    if (existingIdx >= 0) {
+      active.comments[existingIdx].text = text;
+      active.comments[existingIdx].author = author;
+      active.comments[existingIdx].updatedAt = Date.now();
+    } else {
+      active.comments.push({
+        id: currentCommentId,
+        text,
+        author,
+        createdAt: Date.now(),
+        resolved: false
+      });
+    }
+    if (currentCommentAnchor) {
+      currentCommentAnchor.dataset.saved = "true";
+    }
+    isCreatingNewComment = false;
+    hideCommentPopover();
+    triggerAutoSave();
+    notify("Comment saved");
+  });
+
+  resolveCommentBtn?.addEventListener("click", e => {
+    e.stopPropagation();
+    const active = getActiveScript();
+    if (!active) return;
+    const cmt = (active.comments || []).find(c => c.id === currentCommentId);
+    if (cmt) {
+      cmt.resolved = !cmt.resolved;
+      if (currentCommentAnchor) {
+        currentCommentAnchor.classList.toggle("is-resolved", cmt.resolved);
+      }
+      hideCommentPopover();
+      triggerAutoSave();
+      notify(cmt.resolved ? "Comment resolved" : "Comment reopened");
+    }
+  });
+
+  deleteCommentBtn?.addEventListener("click", e => {
+    e.stopPropagation();
+    const active = getActiveScript();
+    if (active && Array.isArray(active.comments)) {
+      active.comments = active.comments.filter(c => c.id !== currentCommentId);
+    }
+    if (currentCommentAnchor) {
+      unwrapAnchor(currentCommentAnchor);
+    }
+    hideCommentPopover();
+    triggerAutoSave();
+    notify("Comment deleted");
+  });
+
+  document.addEventListener("click", e => {
+    if (!e.target.closest("[data-selection-tooltip]") && !e.target.closest("[data-editor-surface]")) {
+      hideSelectionTooltip();
+    }
+    if (!e.target.closest("[data-comment-popover]") && !e.target.closest(".cx-comment-anchor")) {
+      if (commentPopover && !commentPopover.hidden) {
+        hideCommentPopover();
+      }
+    }
+    if (!e.target.closest("[data-cue-menu]") && !e.target.closest("[data-toggle-cue-menu]")) {
+      const cm = container.querySelector("[data-cue-menu]");
+      if (cm) cm.hidden = true;
+    }
+  });
+  const topbarStatusDot = container.querySelector("[data-topbar-status-dot]");
+  const updateTopbarStatusDot = status => {
+    if (topbarStatusDot) {
+      topbarStatusDot.className = `status-indicator-dot dot-${(status || "draft").toLowerCase()}`;
+    }
+  };
+
+  titleInput?.addEventListener("input", triggerAutoSave);
+  statusSelect?.addEventListener("change", () => {
+    const active = getActiveScript();
+    if (!active) return;
+    active.status = statusSelect.value;
+    updateTopbarStatusDot(active.status);
+    saveStorageScripts(projectId, scripts);
+    renderScriptsList();
+    notify(`Status: ${active.status}`);
+    triggerAutoSave();
+  });
+  folderSelect?.addEventListener("change", () => {
+    const active = getActiveScript();
+    if (!active) return;
+    active.folderId = folderSelect.value;
+    saveStorageScripts(projectId, scripts);
+    const folderName = folderSelect.options[folderSelect.selectedIndex]?.text || "Project root";
+    notify(`Script assigned to ${folderName}`);
+    renderScriptsList();
+    triggerAutoSave();
+  });
+  pacingGoalSelect?.addEventListener("change", triggerAutoSave);
 
   // -------------------------------------------------------------
   // FOCUS MODE TOGGLE
@@ -3365,23 +4164,6 @@ export async function renderScriptStudioSurface(container, {
   });
 
   // -------------------------------------------------------------
-  // PUBLISH TO WEBSITE SHOWCASE
-  // -------------------------------------------------------------
-  publishBtn.addEventListener("click", () => {
-    const active = getActiveScript();
-    if (!active) return;
-    active.published = !active.published;
-    active.publishedAt = active.published ? Date.now() : null;
-    saveStorageScripts(projectId, scripts);
-    updatePublishBtn(active);
-    renderScriptsList();
-
-    if (active.published) {
-      openShowcaseModal(active, activeProject);
-    }
-  });
-
-  // -------------------------------------------------------------
   // TELEPROMPTER LAUNCHER
   // -------------------------------------------------------------
   container.querySelectorAll("[data-launch-teleprompter]").forEach(btn => {
@@ -3450,7 +4232,7 @@ export function openFullscreenTeleprompter(script, onWpmChange = () => {}) {
     <header class="prompter-control-bar">
       <div class="prompter-bar-left">
         <button type="button" class="prompter-bar-btn close-btn" data-close-prompter title="Exit Teleprompter (Esc)">
-          ✕ Exit
+          Exit
         </button>
         <span class="prompter-script-title">${escapeHTML(script.title)}</span>
       </div>
@@ -3488,15 +4270,15 @@ export function openFullscreenTeleprompter(script, onWpmChange = () => {}) {
           <span data-play-icon class="studio-inline-svg">${ICONS.play}</span> <span data-play-label>Start (Space)</span>
         </button>
         <button type="button" class="prompter-bar-btn" data-restart-prompter title="Restart from Top (R)">
-          ↺ Restart
+          Restart
         </button>
       </div>
     </header>
 
     <!-- Reading Eye-Line Focus Bar -->
     <div class="prompter-eyeline-guide" aria-hidden="true">
-      <div class="eyeline-marker left">▲ Focus Eye-Line</div>
-      <div class="eyeline-marker right">▲</div>
+      <div class="eyeline-marker left">Focus Eye-Line</div>
+      <div class="eyeline-marker right"></div>
     </div>
 
     <!-- Scrolling Text Canvas -->
@@ -3730,109 +4512,97 @@ export function openScriptStudioModal(root, initialProject, folders = [], action
 }
 
 // -------------------------------------------------------------
-// PUBLIC WEBSITE SHOWCASE MODAL
+// SHARE SCRIPT MODAL (STANDALONE / EXPORTED)
 // -------------------------------------------------------------
-export function openShowcaseModal(script, project) {
+export function openShareScriptModal(script, projectId = "default") {
+  if (!script) return;
+  const existing = document.querySelector(".script-share-modal-backdrop");
+  if (existing) existing.remove();
+
+  const shareUrl = `${window.location.origin}${window.location.pathname}#workspace?panel=showcase&script=${encodeURIComponent(script.id)}&project=${encodeURIComponent(projectId || "default")}`;
+  const metrics = calculateSpeechMetrics(script.content ? script.content.replace(/<[^>]*>/g, "") : "", script.targetWpm || 135);
+
   const modal = document.createElement("div");
-  modal.className = "workspace-modal-backdrop script-showcase-layer";
-  const metrics = calculateSpeechMetrics(script.content.replace(/<[^>]*>/g, ""), script.targetWpm || 135);
-  const primaryLink = (script.videoLinks || [])[0];
-  const primaryAsset = (script.attachedAssets || [])[0];
-  const primaryVideoUrl = primaryLink?.url || primaryAsset?.url || null;
-  const embedUrl = primaryVideoUrl ? getVideoEmbedUrl(primaryVideoUrl) : null;
-  const showcaseLink = `${window.location.origin}${window.location.pathname}#workspace?panel=showcase&script=${encodeURIComponent(script.id)}&project=${encodeURIComponent(project.id || project.project_id || "default")}`;
-
+  modal.className = "workspace-modal-backdrop script-share-modal-backdrop";
   modal.innerHTML = `
-    <div class="script-showcase-modal">
-      <header class="showcase-header">
-        <div class="showcase-header-tag">
-          <span class="cx-showcase-pill">CONTENT X · PUBLIC SHOWCASE</span>
-          <span class="cx-verified-pill">${ICONS.check} Verified Production</span>
+    <div class="workspace-modal script-share-modal" role="dialog" aria-modal="true" aria-labelledby="share-modal-title">
+      <header class="workspace-modal-head">
+        <div class="share-modal-head-title">
+          <span class="studio-btn-icon">${ICONS.share}</span>
+          <h3 id="share-modal-title">Share Script</h3>
         </div>
-        <button type="button" class="script-studio-close" data-close-showcase aria-label="Close">${ICONS.close}</button>
+        <button type="button" class="workspace-modal-close" data-close-share-modal aria-label="Close">${ICONS.close}</button>
       </header>
-      <div class="showcase-body">
-        <div class="showcase-hero">
-          <span class="showcase-project-name">Project: ${escapeHTML(project.name)}</span>
-          <h2>${escapeHTML(script.title)}</h2>
-          <div class="showcase-meta-row">
-            <span><b>${metrics.durationFormatted}</b> Teleprompter Speaking Duration</span>
-            <span><b>${metrics.words}</b> Words (~${metrics.targetWpm} WPM)</span>
-            <span class="showcase-live-badge"><span class="cx-live-pulse-dot"></span> Published on Website</span>
+      <div class="workspace-modal-body">
+        <div class="share-script-info-card">
+          <span class="share-script-title">${escapeHTML(script.title || "Untitled Script")}</span>
+          <div class="share-script-meta">
+            <span class="share-meta-pill status-pill status-${(script.status || "draft").toLowerCase()}">${escapeHTML(script.status || "Draft")}</span>
+            <span class="share-meta-dot">·</span>
+            <span>${metrics.durationFormatted} speech</span>
+            <span class="share-meta-dot">·</span>
+            <span>${metrics.words} words</span>
           </div>
         </div>
-
-        ${primaryVideoUrl ? `
-          <div class="showcase-media-frame">
-            ${embedUrl ? `<iframe src="${embedUrl}" allowfullscreen></iframe>` : `
-              <div class="showcase-external-video-card">
-                <span class="showcase-play-icon">${ICONS.play}</span>
-                <div class="showcase-video-info">
-                  <strong>${escapeHTML(primaryLink?.title || primaryAsset?.name || "Attached Video Cut")}</strong>
-                  <small>${escapeHTML(primaryLink?.platform || "Direct Video")}: ${escapeHTML(primaryVideoUrl)}</small>
-                </div>
-                <a href="${escapeHTML(primaryVideoUrl)}" target="_blank" rel="noopener noreferrer" class="workspace-button primary">Watch Cut ↗</a>
-              </div>
-            `}
-          </div>
-        ` : `
-          <div class="showcase-no-media-note">
-            <small>Attach a project cut or paste a YouTube / Loom link in Script Studio to embed the video player directly here.</small>
-          </div>
-        `}
-
-        <div class="showcase-script-card">
-          <div class="showcase-script-head">
-            <strong>Hook Breakdown & Production Cues</strong>
-            <button type="button" class="workspace-button subtle" data-copy-showcase-text>Copy Script</button>
-          </div>
-          <div class="showcase-script-content">
-            ${script.content}
-          </div>
+        <p class="share-modal-description">
+          Anyone with this link can view this script in a clean reader format with formatted scenes and retention cues.
+        </p>
+        <div class="share-url-box">
+          <input type="text" readonly value="${escapeHTML(shareUrl)}" class="share-url-input" data-share-url-input aria-label="Shareable link">
+          <button type="button" class="workspace-button primary share-copy-btn" data-copy-share-url>
+            <span class="studio-btn-icon">${ICONS.copy}</span>
+            <span data-copy-label>Copy Link</span>
+          </button>
         </div>
-
-        <div class="showcase-share-footer">
-          <div class="showcase-share-input-group">
-            <input type="text" readonly value="${showcaseLink}" data-showcase-url-input>
-            <button type="button" class="workspace-button primary" data-btn-copy-url>Copy Public Link</button>
-          </div>
-          <div class="showcase-cta-strip">
-            <span>Want retention-led short-form videos edited like this?</span>
-            <a href="#pricing" class="workspace-button subtle" data-close-to-pricing>View Content X Plans →</a>
-          </div>
+        <div class="share-modal-actions">
+          <a href="${escapeHTML(shareUrl)}" target="_blank" rel="noopener noreferrer" class="workspace-button subtle share-open-btn">
+            Open in new tab ↗
+          </a>
         </div>
       </div>
     </div>
   `;
-  document.body.append(modal);
+
+  document.body.appendChild(modal);
 
   const close = () => modal.remove();
-  modal.querySelector("[data-close-showcase]").addEventListener("click", close);
-  modal.querySelectorAll("[data-close-to-pricing]").forEach(b => b.addEventListener("click", close));
-  modal.addEventListener("click", e => { if (e.target === modal) close(); });
+  modal.querySelector("[data-close-share-modal]")?.addEventListener("click", close);
+  modal.addEventListener("click", ev => { if (ev.target === modal) close(); });
 
-  modal.querySelector("[data-btn-copy-url]").addEventListener("click", async e => {
+  const copyBtn = modal.querySelector("[data-copy-share-url]");
+  const copyLabel = modal.querySelector("[data-copy-label]");
+  const urlInput = modal.querySelector("[data-share-url-input]");
+
+  copyBtn?.addEventListener("click", async () => {
+    urlInput?.select();
+    urlInput?.setSelectionRange(0, 99999);
     try {
-      await navigator.clipboard.writeText(showcaseLink);
-      const btn = e.currentTarget;
-      const old = btn.textContent;
-      btn.textContent = "Copied! ✓";
-      setTimeout(() => { if (btn.isConnected) btn.textContent = old; }, 1800);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        document.execCommand("copy");
+      }
+      if (copyLabel) copyLabel.textContent = "Copied!";
+      copyBtn.classList.add("copied");
+      setTimeout(() => {
+        if (copyLabel?.isConnected) {
+          copyLabel.textContent = "Copy Link";
+          copyBtn.classList.remove("copied");
+        }
+      }, 2000);
     } catch {
-      modal.querySelector("[data-showcase-url-input]")?.select();
+      document.execCommand("copy");
+      if (copyLabel) copyLabel.textContent = "Copied!";
     }
   });
 
-  modal.querySelector("[data-copy-showcase-text]")?.addEventListener("click", async e => {
-    const text = modal.querySelector(".showcase-script-content")?.innerText || "";
-    try {
-      await navigator.clipboard.writeText(text);
-      const btn = e.currentTarget;
-      const old = btn.textContent;
-      btn.textContent = "Copied ✓";
-      setTimeout(() => { if (btn.isConnected) btn.textContent = old; }, 1800);
-    } catch {}
+  urlInput?.addEventListener("click", () => {
+    urlInput.select();
   });
+}
+
+export function openShowcaseModal(script, project) {
+  openShareScriptModal(script, project?.id || project?.project_id);
 }
 
 // -------------------------------------------------------------
@@ -3849,8 +4619,8 @@ export async function renderScriptShowcaseSurface(container, { project, projects
     container.innerHTML = `
       <div class="showcase-empty-state">
         <span class="studio-empty-icon">${ICONS.film}</span>
-        <h3>No Published Script Found</h3>
-        <p>This script may not have been published yet or is being edited.</p>
+        <h3>No Script Found</h3>
+        <p>This script could not be found or is unavailable.</p>
         <a class="workspace-button primary" href="${projectId ? `#workspace?project=${encodeURIComponent(projectId)}&panel=scripts` : "#workspace?panel=scripts"}">Open in Scripts Studio</a>
       </div>
     `;
@@ -3869,8 +4639,8 @@ export async function renderScriptShowcaseSurface(container, { project, projects
       <header class="showcase-page-header">
         <div class="showcase-header-left">
           <a class="workspace-button subtle" href="#workspace?project=${encodeURIComponent(projectId)}&panel=scripts">← Back to Editor</a>
-          <span class="cx-showcase-pill">CONTENT X · PUBLIC SHOWCASE</span>
-          <span class="cx-verified-pill">${ICONS.check} Verified Production</span>
+          <span class="cx-showcase-pill">CONTENT X · SHARED SCRIPT</span>
+          <span class="cx-verified-pill">${ICONS.check} Clean View</span>
         </div>
         <div class="showcase-header-actions">
           <button type="button" class="workspace-button subtle" data-copy-showcase-link>
@@ -3887,7 +4657,7 @@ export async function renderScriptShowcaseSurface(container, { project, projects
           <div class="showcase-meta-row">
             <span><b>${metrics.durationFormatted}</b> Speaking Duration</span>
             <span><b>${metrics.words}</b> Words (~${metrics.targetWpm} WPM)</span>
-            <span class="showcase-live-badge"><span class="cx-live-pulse-dot"></span> Published Live on Website</span>
+            <span class="showcase-live-badge"><span class="cx-live-pulse-dot"></span> Shared Script · View Mode</span>
             <span class="showcase-realtime-badge">Real-time sync</span>
           </div>
         </div>
@@ -3926,7 +4696,7 @@ export async function renderScriptShowcaseSurface(container, { project, projects
         <div class="showcase-page-footer">
           <div class="showcase-share-input-group">
             <input type="text" readonly value="${escapeHTML(showcaseLink)}" data-showcase-page-url>
-            <button type="button" class="workspace-button primary" data-copy-page-url>Copy Public Link</button>
+            <button type="button" class="workspace-button primary" data-copy-page-url>Copy Share Link</button>
           </div>
           <div class="showcase-cta-strip">
             <span>Want retention-led short-form videos edited like this?</span>
@@ -3952,7 +4722,7 @@ export async function renderScriptShowcaseSurface(container, { project, projects
       await navigator.clipboard.writeText(showcaseLink);
       const btn = e.currentTarget;
       const old = btn.textContent;
-      btn.textContent = "Copied! ✓";
+      btn.textContent = "Copied";
       setTimeout(() => { if (btn.isConnected) btn.textContent = old; }, 1800);
     } catch {}
   });
@@ -3963,7 +4733,7 @@ export async function renderScriptShowcaseSurface(container, { project, projects
       await navigator.clipboard.writeText(text);
       const btn = e.currentTarget;
       const old = btn.textContent;
-      btn.textContent = "Copied ✓";
+      btn.textContent = "Copied";
       setTimeout(() => { if (btn.isConnected) btn.textContent = old; }, 1800);
     } catch {}
   });

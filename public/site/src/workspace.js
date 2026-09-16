@@ -2,7 +2,7 @@ import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspac
 import { bindWorkspaceOrganizer, openUnifiedSearch } from "./workspace-organizer.js?v=centered-dialogs-1";
 import { openReviewRoom } from "./review-room.js?v=frame-native-20";
 import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-20";
-import { renderScriptStudioSurface, renderScriptShowcaseSurface, openScriptStudioModal, getProjectScriptsCount } from "./scripts-studio.js?v=full-surface-2";
+import { renderScriptStudioSurface, renderScriptShowcaseSurface, openScriptStudioModal, getProjectScriptsCount, getStorageScripts, calculateSpeechMetrics } from "./scripts-studio.js?v=full-surface-2";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -146,7 +146,7 @@ export async function renderClientWorkspace(root, actions, route) {
 
 function workspaceOpeningShell() {
   return `<div class="workspace-shell workspace-opening-shell" aria-label="Opening workspace">
-    <aside class="workspace-rail"><span class="workspace-rail-home" title="Back to Homepage">${workspaceIcon("home")}</span><nav><span></span><span></span><span></span></nav></aside>
+    <aside class="workspace-rail"><span class="workspace-rail-home" title="Workspace overview">${workspaceIcon("home")}</span><nav><span></span><span></span><span></span></nav></aside>
     <aside class="workspace-sidebar"><div class="workspace-opening-brand"></div><div class="workspace-opening-nav"></div><div class="workspace-opening-nav short"></div><div class="workspace-opening-projects"></div></aside>
     <main class="workspace-main"><header class="workspace-topbar"><span class="workspace-opening-line compact"></span><span class="workspace-opening-line action"></span></header><section class="workspace-opening-content"><span class="workspace-opening-line title"></span><span class="workspace-opening-line subtitle"></span><div class="workspace-opening-toolbar"></div><div class="workspace-opening-cards"><i></i><i></i><i></i></div></section></main>
   </div>`;
@@ -162,7 +162,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   if (project) rememberRecentProject(project.id);
   root.innerHTML = `<div class="workspace-shell ${project && !accountPanel ? "project-open" : accountPanel ? "account-open" : showcasePanel ? "showcase-open" : scriptsPanel ? "scripts-open" : "overview-open"}">
     <aside class="workspace-rail" aria-label="Workspace tools">
-      <a class="workspace-rail-home" href="#home" aria-label="Content X home" title="Back to Homepage">${workspaceIcon("home")}</a>
+      <a class="workspace-rail-home" href="#workspace" aria-label="Workspace overview" title="Workspace overview">${workspaceIcon("home")}</a>
       <nav>
         <a class="${!accountPanel && !scriptsPanel && !showcasePanel ? "active" : ""}" href="#workspace" aria-label="Projects" title="Projects">${workspaceIcon("projects")}</a>
         <a class="workspace-rail-scripts ${scriptsPanel ? "active" : ""}" href="${selected ? `#workspace?project=${encodeURIComponent(selected.project_id || selected.id)}&panel=scripts` : "#workspace?panel=scripts"}" aria-label="Script Writing Studio" title="Script Writing Studio · Teleprompter & Viral Hooks">${workspaceIcon("script")}</a>
@@ -172,7 +172,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       <a class="workspace-rail-settings ${accountPanel ? "active" : ""}" href="#workspace?panel=account" aria-label="Account settings" title="Settings">${workspaceIcon("settings")}</a>
     </aside>
     <aside class="workspace-sidebar">
-      <a class="workspace-brand" href="#home"><span>CX</span><b>Content X</b></a>
+      <a class="workspace-brand" href="#workspace" title="Workspace overview"><span>CX</span><b>Content X</b></a>
       <nav>
         <a class="${!accountPanel && !scriptsPanel && !showcasePanel ? "active" : ""}" href="#workspace"><span>${workspaceIcon("projects")}</span>Projects</a>
         <a class="workspace-nav-scripts ${scriptsPanel ? "active" : ""}" href="${selected ? `#workspace?project=${encodeURIComponent(selected.project_id || selected.id)}&panel=scripts` : "#workspace?panel=scripts"}" title="Script Writing & Teleprompter Studio"><span>${workspaceIcon("script")}</span>Scripts</a>
@@ -184,18 +184,20 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
         <div class="workspace-scripts-explorer" data-scripts-sidebar>
           <div class="scripts-explorer-head">
             <div class="scripts-search-wrap">
+              <span class="scripts-search-icon">${workspaceIcon("search")}</span>
               <input type="search" placeholder="Search scripts..." aria-label="Search scripts" data-scripts-search>
+              <kbd class="scripts-search-kbd">⌘K</kbd>
             </div>
             <button type="button" class="scripts-new-script-trigger" data-new-script-btn title="Create new script from template or blank">
-              ＋ New Script
+              <span class="studio-btn-icon">${workspaceIcon("plus")}</span> New Script
             </button>
           </div>
-          <div class="scripts-filter-pills" role="tablist" aria-label="Filter by Status">
-            <button type="button" class="scripts-filter-pill filter-pill active" data-filter-status="all">All</button>
-            <button type="button" class="scripts-filter-pill filter-pill" data-filter-status="draft">Draft</button>
-            <button type="button" class="scripts-filter-pill filter-pill" data-filter-status="review">Review</button>
-            <button type="button" class="scripts-filter-pill filter-pill" data-filter-status="ready">Ready</button>
-            <button type="button" class="scripts-filter-pill filter-pill" data-filter-status="filming">Filming</button>
+          <div class="scripts-recent-header">
+            <span class="scripts-recent-title">Recent scripts</span>
+            <button type="button" class="scripts-list-toggle-btn" data-toggle-scripts-collapse title="Hide or show scripts list">
+              <span data-scripts-toggle-label>Hide</span>
+              <span class="scripts-toggle-chevron">▾</span>
+            </button>
           </div>
           <div class="workspace-scripts-list scripts-nav-list" data-workspace-scripts-list data-scripts-list>
             <div class="scripts-list-empty">No scripts yet.</div>
@@ -207,10 +209,10 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
         </div>
       ` : `
         <label class="workspace-project-search"><span>${workspaceIcon("search")}</span><input type="search" placeholder="Search projects" aria-label="Search projects" data-project-nav-search></label>
-        <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id && !scriptsPanel ? "active" : ""} ${item.status === "archived" ? "archived" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}" data-project-nav-item><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${item.status === "archived" ? "Archived" : `${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}`}</small></a>`).join("") || `<p>Create a free project to begin.</p>`}</div>
-        ${project && !accountPanel && !scriptsPanel ? `<button class="workspace-project-focus" type="button" data-project-settings><span>${escapeHTML(project.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(project.name)}</b><small>${escapeHTML(project.clientName || "Private production")}</small></div><em>⌄</em></button><div class="workspace-tree"><div><small>ASSETS</small><button type="button" data-create-folder title="New folder">＋</button></div><button class="active" type="button" data-folder-id=""><span>▱</span><b>All assets</b><em>${files.length}</em></button>${folderTreeNodes(folders)}<button type="button" data-create-folder><span>＋</span><b>New folder</b></button><button class="workspace-recycle-link" type="button" data-recycle-bin><span>${workspaceIcon("restore")}</span><b>Recently deleted</b><em>30d</em></button></div><div class="workspace-share-nav"><header><small>SHARE LINKS</small><button type="button" data-share-project title="New share link">＋</button></header><button class="all" type="button" data-share-project><span>☷</span><b>All share links</b><em>${shares.filter(share => share.status === "active").length}</em></button>${shares.slice(0,6).map(share => `<button type="button" data-share-project><span>↗</span><b>${escapeHTML(share.name)}</b><small>${share.status === "active" ? "Active" : "Disabled"}</small></button>`).join("") || `<p>No links yet. Create one when the project is ready.</p>`}</div>` : ""}
+        <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id && !scriptsPanel ? "active" : ""} ${item.status === "archived" ? "archived" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}" data-project-nav-item><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${item.status === "archived" ? "Archived" : `${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}`}</small></a>`).join("") || `<p>No projects yet</p>`}</div>
+        ${project && !accountPanel && !scriptsPanel ? `<button class="workspace-project-focus" type="button" data-project-settings><span>${escapeHTML(project.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(project.name)}</b><small>${escapeHTML(project.clientName || "Private production")}</small></div><em>⌄</em></button><div class="workspace-tree"><div><small>ASSETS</small><button type="button" data-create-folder title="New folder">＋</button></div><button class="active" type="button" data-folder-id=""><span>▱</span><b>All assets</b><em>${files.length}</em></button>${folderTreeNodes(folders)}<button type="button" data-create-folder><span>＋</span><b>New folder</b></button><button class="workspace-recycle-link" type="button" data-recycle-bin><span>${workspaceIcon("restore")}</span><b>Recently deleted</b><em>30d</em></button></div><div class="workspace-share-nav"><header><small>SHARE LINKS</small><button type="button" data-share-project title="New share link">＋</button></header><button class="all" type="button" data-share-project><span>☷</span><b>All share links</b><em>${shares.filter(share => share.status === "active").length}</em></button>${shares.slice(0,6).map(share => `<button type="button" data-share-project><span>↗</span><b>${escapeHTML(share.name)}</b><small>${share.status === "active" ? "Active" : "Disabled"}</small></button>`).join("") || `<p>No share links</p>`}</div>` : ""}
       `}
-      <div class="workspace-storage"><div><b>Free storage</b><small>${formatBytes(used)} of ${formatBytes(quota)}</small></div><i><em style="width:${percent}%"></em></i></div>
+      <div class="workspace-storage"><div><b>Storage</b><small>${formatBytes(used)} / ${formatBytes(quota)}</small></div><i><em style="width:${percent}%"></em></i></div>
       <div class="workspace-user"><span class="${user.avatarUrl ? "has-image" : ""}" data-account-avatar>${userAvatar(user)}</span><div><b data-account-name>${escapeHTML(user.name)}</b><small data-account-email>${escapeHTML(user.email)}</small></div><a href="#workspace?panel=account" aria-label="Account settings">•••</a></div>
     </aside>
     <main class="workspace-main">
@@ -220,7 +222,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
           <span>All projects</span>
           ${accountPanel ? `<b>/ Account</b>` : showcasePanel ? `<b>/ Public Showcase</b>` : scriptsPanel ? `${selected ? `<i>/</i><a href="#workspace?project=${encodeURIComponent(selected.project_id || selected.id)}">${escapeHTML(selected.name)}</a>` : ""}<b>/ Scripts Studio</b>` : project ? `<i>/</i><b>${escapeHTML(project.name)}</b>` : ""}
         </div>
-        ${!scriptsPanel && !showcasePanel && project && !accountPanel ? `<label class="workspace-global-search"><span>${workspaceIcon("search")}</span><input type="search" data-global-file-search placeholder="Search files" aria-label="Search this project"></label>` : `<button class="workspace-command-trigger" type="button" data-command-menu><span>${workspaceIcon("search")}</span> Quick find <kbd>Ctrl K</kbd></button>`}
+        ${!scriptsPanel && !showcasePanel && project && !accountPanel ? `<label class="workspace-global-search"><span>${workspaceIcon("search")}</span><input type="search" data-global-file-search placeholder="Search files" aria-label="Search this project"></label>` : `<button class="workspace-command-trigger" type="button" data-command-menu><span>${workspaceIcon("search")}</span> Search <kbd>⌘K</kbd></button>`}
         <div>
           ${accountPanel || showcasePanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : scriptsPanel ? `
             <a class="workspace-button subtle" href="${selected ? `#workspace?project=${encodeURIComponent(selected.project_id || selected.id)}` : "#workspace"}">← Projects</a>
@@ -249,8 +251,16 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
                 : emptyWorkspace()
       }
     </main>
-  </div><nav class="workspace-mobile-nav" aria-label="Mobile workspace navigation"><a href="#home"><span>CX</span><small>Home</small></a><a class="${!accountPanel && !scriptsPanel && !showcasePanel ? "active" : ""}" href="#workspace">${workspaceIcon("projects")}<small>Projects</small></a><a class="${scriptsPanel ? "active" : ""}" href="#workspace?panel=scripts">${workspaceIcon("script")}<small>Scripts</small></a><button type="button" data-command-menu>${workspaceIcon("search")}<small>Search</small></button><a href="#workspace?panel=account&view=notifications">${workspaceIcon("bell")}<small>Alerts</small></a><a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account">${workspaceIcon("account")}<small>Account</small></a></nav><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
+  </div><nav class="workspace-mobile-nav" aria-label="Mobile workspace navigation"><a class="${!accountPanel && !scriptsPanel && !showcasePanel && !project ? "active" : ""}" href="#workspace"><span>CX</span><small>Home</small></a><a class="${!accountPanel && !scriptsPanel && !showcasePanel ? "active" : ""}" href="#workspace">${workspaceIcon("projects")}<small>Projects</small></a><a class="${scriptsPanel ? "active" : ""}" href="#workspace?panel=scripts">${workspaceIcon("script")}<small>Scripts</small></a><button type="button" data-command-menu>${workspaceIcon("search")}<small>Search</small></button><a href="#workspace?panel=account&view=notifications">${workspaceIcon("bell")}<small>Alerts</small></a><a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account">${workspaceIcon("account")}<small>Account</small></a></nav><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
 
+  root.querySelectorAll(".workspace-rail-home, .workspace-brand").forEach(link => {
+    link.addEventListener("click", (e) => {
+      if (location.hash === "#workspace") {
+        e.preventDefault();
+        actions.refreshRoute?.();
+      }
+    });
+  });
   root.querySelector("[data-workspace-menu]")?.addEventListener("click", () => root.querySelector(".workspace-sidebar").classList.toggle("open"));
   hydrateUnreadNotificationBadge(root);
   root.querySelector(".workspace-main")?.addEventListener("click", () => root.querySelector(".workspace-sidebar")?.classList.remove("open"));
@@ -344,7 +354,7 @@ function workspaceOverview(projects, storage) {
     if (aIndex >= 0 || bIndex >= 0) return (aIndex < 0 ? 99 : aIndex) - (bIndex < 0 ? 99 : bIndex);
     return String(a.name || "").localeCompare(String(b.name || ""));
   });
-  return `<section class="workspace-overview"><header><div><small>CONTENT X WORKSPACE</small><h1>Projects</h1><p>${active} active · ${formatBytes(used)} of ${formatBytes(quota)} used</p></div><button class="workspace-button primary" type="button" data-create-free-project>＋ New project</button></header><div class="workspace-overview-tools"><label><span>⌕</span><input type="search" data-overview-search placeholder="Search projects" aria-label="Search projects"></label><div><button class="active" type="button" data-overview-filter="active">Active</button><button type="button" data-overview-filter="all">All</button><button class="active" type="button" data-overview-view="grid" aria-label="Grid view">▦</button><button type="button" data-overview-view="list" aria-label="List view">☷</button></div></div><div class="workspace-overview-grid" data-overview-grid>${ordered.map((project,index) => `<article class="workspace-overview-card ${project.status === "archived" ? "archived" : ""}" data-overview-card data-project-status="${escapeHTML(project.status || "active")}" data-project-name="${escapeHTML(project.name || "")}" style="--project-index:${index}"><a href="#workspace?project=${encodeURIComponent(project.project_id)}"><div class="workspace-overview-art"><i></i><i></i><i></i><span>${escapeHTML((project.name || "CX").slice(0,2).toUpperCase())}</span></div><div><h2>${escapeHTML(project.name)}</h2><p>${escapeHTML(project.client_name || "Private production")}</p><small>${Number(project.file_count || 0)} file${Number(project.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(project.total_bytes || 0)}</small></div></a><footer><span>${project.status === "archived" ? "Archived" : recent.includes(project.project_id) ? "Recent" : "Active"}</span><button type="button" data-overview-project-settings="${escapeHTML(project.project_id)}" aria-label="Project settings" title="Project settings">•••</button></footer></article>`).join("")}<button class="workspace-overview-new" type="button" data-create-free-project><span>＋</span><b>New project</b><small>Start a private production space</small></button></div><p class="workspace-overview-empty" data-overview-empty hidden>No projects match this view.</p></section>`;
+  return `<section class="workspace-overview"><header><div><h1>Projects</h1><p>${active} active · ${formatBytes(used)} of ${formatBytes(quota)} used</p></div><button class="workspace-button primary" type="button" data-create-free-project>＋ New project</button></header><div class="workspace-overview-tools"><label><span>⌕</span><input type="search" data-overview-search placeholder="Search projects" aria-label="Search projects"></label><div><button class="active" type="button" data-overview-filter="active">Active</button><button type="button" data-overview-filter="all">All</button><button class="active" type="button" data-overview-view="grid" aria-label="Grid view">▦</button><button type="button" data-overview-view="list" aria-label="List view">☷</button></div></div><div class="workspace-overview-grid" data-overview-grid>${ordered.map((project,index) => `<article class="workspace-overview-card ${project.status === "archived" ? "archived" : ""}" data-overview-card data-project-status="${escapeHTML(project.status || "active")}" data-project-name="${escapeHTML(project.name || "")}" style="--project-index:${index}"><a href="#workspace?project=${encodeURIComponent(project.project_id)}"><div class="workspace-overview-art"><i></i><i></i><i></i><span>${escapeHTML((project.name || "CX").slice(0,2).toUpperCase())}</span></div><div><h2>${escapeHTML(project.name)}</h2><p>${escapeHTML(project.client_name || "Private production")}</p><small>${Number(project.file_count || 0)} file${Number(project.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(project.total_bytes || 0)}</small></div></a><footer><span>${project.status === "archived" ? "Archived" : recent.includes(project.project_id) ? "Recent" : "Active"}</span><button type="button" data-overview-project-settings="${escapeHTML(project.project_id)}" aria-label="Project settings" title="Project settings">•••</button></footer></article>`).join("")}<button class="workspace-overview-new" type="button" data-create-free-project><span>＋</span><b>New project</b></button></div><p class="workspace-overview-empty" data-overview-empty hidden>No projects match this view.</p></section>`;
 }
 
 function bindWorkspaceOverview(root, projects, actions) {
@@ -497,33 +507,17 @@ function showMoveUndo(message, undo) {
 }
 
 function addWorkspaceOrganizationHint(root, canUpload, canManageFolders) {
-  const anchor = root.querySelector(".workspace-project-head");
-  if (!anchor || (!canUpload && !canManageFolders)) return;
-  const tip = document.createElement("aside");
-  tip.className = "workspace-organize-tip";
-  tip.setAttribute("role", "note");
-  const icon = document.createElement("span");
-  icon.setAttribute("aria-hidden", "true");
-  icon.textContent = "↕";
-  const copy = document.createElement("div");
-  const title = document.createElement("b");
-  title.textContent = "Drag to organize";
-  const description = document.createElement("p");
-  description.textContent = [canUpload ? "Drop one video on another to make it the next version." : "", canManageFolders ? "Drag files and folders to move them, or use Folder options and the file selection controls." : ""].filter(Boolean).join(" ");
-  copy.append(title, description);
-  tip.append(icon, copy);
-  anchor.after(tip);
+  return;
 }
 
-function projectSurface(project, files, folders, canUpload, comments = [], canManageComments = false, revisionPolicy = null, canManageFolders = false, permissions = {}) {
+function projectSurface(project, files, folders, canUpload, comments = [], canManageComments = false, revisionPolicy = null, canManageFolders = false, permissions = {}, isShared = false) {
   const rootFolders = folders.filter(folder => !folder.parent_id);
   const openComments = comments.filter(comment => !commentIsComplete(comment)).length;
-  return `<section class="workspace-project-head"><div><p>PROJECT ${project.status === "archived" ? `<b class="workspace-status-badge">ARCHIVED</b>` : ""}</p><h1>${escapeHTML(project.name)}</h1><span>${files.length} active file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
-    ${openComments ? `<button class="workspace-review-attention" type="button" data-review-attention><span>${openComments}</span><div><b>Feedback needs attention</b><small>${openComments} open comment${openComments === 1 ? "" : "s"} waiting for a decision</small></div><em>Review now →</em></button>` : ""}
-    <section class="workspace-project-scripts-strip"><div class="workspace-scripts-strip-left"><span>${workspaceIcon("script")}</span><div><b>Project Scripts & Teleprompter</b><small>${getProjectScriptsCount(project.id)} script${getProjectScriptsCount(project.id) === 1 ? "" : "s"} linked · Hook breakdowns, teleprompter timing & attached cuts</small></div></div><div class="workspace-scripts-strip-right"><a class="workspace-button subtle" href="#workspace?project=${encodeURIComponent(project.id)}&panel=scripts">Open Script Studio →</a></div></section>
+  return `<section class="workspace-project-head"><div>${project.status === "archived" ? `<b class="workspace-status-badge">ARCHIVED</b>` : ""}<h1>${escapeHTML(project.name)}</h1><span>${files.length} file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
+    ${openComments ? `<button class="workspace-review-attention" type="button" data-review-attention><span>${openComments}</span><div><b>Feedback</b><small>${openComments} open note${openComments === 1 ? "" : "s"}</small></div><em>Review →</em></button>` : ""}
     <section class="workspace-browser"><div class="workspace-browser-head"><nav aria-label="Folder breadcrumb"><button class="active" type="button" data-folder-id="">${escapeHTML(project.name)}</button><span data-folder-crumbs></span></nav><div>${canManageFolders ? `<button type="button" data-folder-settings-current hidden>Folder options</button><button type="button" data-create-folder>＋ New folder</button>` : ""}</div></div><div class="workspace-folder-grid">${rootFolders.map(folder => folderCard(folder)).join("")}</div></section>
-    <section class="workspace-files" title="Executables, archives, scripts, HTML and SVG are blocked"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header>${files.length ? `${fileToolbar()}${canManageFolders ? assetBulkBar(folders) : ""}` : ""}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy, canManageFolders)).join("") : `<button class="workspace-empty-files" type="button" ${canUpload ? "data-project-drop" : "disabled"}><span>↑</span><h3>${canUpload ? "Add your first file" : "No files shared yet"}</h3><p>${canUpload ? "Upload footage, references, or drag files here." : "Uploads are disabled for this project."}</p>${canUpload ? `<b>Choose files</b>` : ""}</button>`}</div></section>
-    ${files.length ? commentsPanel(comments, canManageComments, permissions.canComment !== false) : ""}
+    <section class="workspace-files" title="Executables, archives, scripts, HTML and SVG are blocked"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header><div class="workspace-folder-scripts-strip" data-folder-scripts-container hidden></div>${files.length ? `${fileToolbar()}${canManageFolders ? assetBulkBar(folders) : ""}` : ""}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy, canManageFolders)).join("") : `<button class="workspace-empty-files" type="button" ${canUpload ? "data-project-drop" : "disabled"}><span>↑</span><h3>${canUpload ? "Add your first file" : "No files yet"}</h3><p>${canUpload ? "Drag and drop or browse" : ""}</p></button>`}</div></section>
+    ${files.length && isShared ? commentsPanel(comments, canManageComments, permissions.canComment !== false) : ""}
     <section class="workspace-queue" data-workspace-queue></section>`;
 }
 
@@ -566,6 +560,64 @@ function bindFolderBrowser(root, projectId, folders, actions) {
     grid.dataset.activeFolder = activeFolder;
     grid.dataset.folderAssetCount = String(rootCount);
     try { sessionStorage.setItem(`cx_active_folder_${projectId}`, activeFolder); } catch {}
+    const scriptsContainer = root.querySelector("[data-folder-scripts-container]");
+    if (scriptsContainer) {
+      try {
+        const allScripts = getStorageScripts(projectId);
+        const folderScripts = (allScripts || []).filter(s => (s.folderId || "") === activeFolder);
+        if (!folderScripts.length) {
+          scriptsContainer.innerHTML = "";
+          scriptsContainer.hidden = true;
+        } else {
+          const folderName = activeFolder ? byId.get(activeFolder)?.name || "Folder" : "Project root";
+          scriptsContainer.hidden = false;
+          scriptsContainer.innerHTML = `
+            <div class="workspace-folder-scripts-banner">
+              <div class="folder-scripts-banner-left">
+                <span class="folder-scripts-icon">${workspaceIcon("script")}</span>
+                <div>
+                  <strong>Scripts (${folderScripts.length})</strong>
+                </div>
+              </div>
+              <div class="folder-scripts-banner-right">
+                <a class="workspace-button subtle small" href="#workspace?project=${encodeURIComponent(projectId)}&panel=scripts">Open Scripts Studio →</a>
+              </div>
+            </div>
+            <div class="workspace-folder-scripts-grid">
+              ${folderScripts.map(s => {
+                const metrics = calculateSpeechMetrics(s.content ? s.content.replace(/<[^>]*>/g, "") : "", s.targetWpm || 135);
+                const statusClass = (s.status || "Draft").toLowerCase();
+                return `
+                  <article class="workspace-script-folder-card">
+                    <div class="script-folder-card-main">
+                      <span class="script-folder-card-icon">${workspaceIcon("script")}</span>
+                      <div class="script-folder-card-info">
+                        <div class="script-folder-card-head">
+                          <span class="script-folder-status-pill status-${statusClass}">${escapeHTML(s.status || "Draft")}</span>
+                          <strong class="script-folder-card-title">${escapeHTML(s.title || "Untitled Script")}</strong>
+                        </div>
+                        <div class="script-folder-card-meta">
+                          <span>${metrics.durationFormatted} speech</span>
+                          <span class="meta-dot">·</span>
+                          <span>${metrics.words} words</span>
+                          ${s.attachedAssets?.length ? `<span class="meta-dot">·</span><span>${s.attachedAssets.length} cut${s.attachedAssets.length === 1 ? "" : "s"}</span>` : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <div class="script-folder-card-actions">
+                      <a class="workspace-button subtle small" href="#workspace?project=${encodeURIComponent(projectId)}&panel=scripts&script=${encodeURIComponent(s.id)}">Open in Studio</a>
+                      <a class="workspace-button subtle small" href="#workspace?panel=showcase&script=${encodeURIComponent(s.id)}&project=${encodeURIComponent(projectId)}" target="_blank" title="View shareable script">Shareable View ↗</a>
+                    </div>
+                  </article>
+                `;
+              }).join("")}
+            </div>
+          `;
+        }
+      } catch (err) {
+        console.warn("Error rendering folder scripts:", err);
+      }
+    }
     bindFolderControls(); signalLibrary();
     root.dispatchEvent(new CustomEvent("workspace-folder-change",{detail:activeFolder}));
   };
@@ -729,7 +781,7 @@ function bindVideoHoverPreviews(root, projectId, token = "") {
         }
         await readyToPaint(video);
         if (!active || !trigger.isConnected) return;
-        if (video.duration > .4 && video.currentTime === 0) video.currentTime = Math.min(.35, video.duration / 10);
+        if (video.duration > .4 && video.currentTime === 0) video.currentTime = Math.min(2.0, Math.max(0.5, video.duration * 0.22));
         trigger.classList.add("is-previewing");
         if (!reducedMotion) await video.play().catch(() => undefined);
       } catch {
@@ -741,6 +793,9 @@ function bindVideoHoverPreviews(root, projectId, token = "") {
     const stop = () => {
       active = false;
       video?.pause();
+      if (video && video.duration > .4) {
+        try { video.currentTime = Math.min(2.0, Math.max(0.5, video.duration * 0.22)); } catch {}
+      }
       trigger.classList.remove("is-previewing", "is-preview-loading");
     };
     trigger.addEventListener("pointerenter", start, { passive:true });
@@ -1045,22 +1100,47 @@ function openInviteMemberModal(root, project, user) {
 
 function openProjectSettingsModal(root, project, actions) {
   const layer = root.querySelector("[data-workspace-layer]");
-  layer.innerHTML = `<div class="workspace-modal-backdrop"><form class="workspace-share-modal workspace-settings-modal"><button type="button" data-close-settings aria-label="Close">×</button><div class="workspace-settings-header"><p class="workspace-kicker">PROJECT SETTINGS</p><h2>Keep project details current</h2><p class="workspace-settings-sub">Update project details, client contact, or archive finished work without deleting its files.</p></div><div class="workspace-settings-body"><label class="workspace-field"><span class="workspace-field-label"><span>Project name</span></span><input name="name" required maxlength="120" value="${escapeHTML(project.name)}" placeholder="Project name"></label><div class="workspace-settings-grid"><label class="workspace-field"><span class="workspace-field-label"><span>Client name</span><span class="workspace-optional">optional</span></span><input name="clientName" maxlength="120" value="${escapeHTML(project.clientName || "")}" placeholder="Client or brand name"></label><label class="workspace-field"><span class="workspace-field-label"><span>Client email</span><span class="workspace-optional">optional</span></span><input name="clientEmail" type="email" maxlength="254" value="${escapeHTML(project.clientEmail || "")}" placeholder="client@example.com"></label></div><label class="workspace-field"><span class="workspace-field-label"><span>Project status</span></span><select name="status"><option value="active" ${project.status === "active" ? "selected" : ""}>Active — uploads and share links work</option><option value="archived" ${project.status === "archived" ? "selected" : ""}>Archived — preserved, but uploads stop</option></select></label><p role="alert" data-settings-error hidden></p><button class="workspace-button primary workspace-settings-save" type="submit">Save project settings</button></div><div class="workspace-settings-danger"><div><b>Need to remove it forever?</b><small>Permanent deletion remains protected by typed confirmation.</small></div><button class="workspace-button danger" type="button" data-delete-from-settings>Delete project</button></div></form></div>`;
+  layer.innerHTML = `<div class="workspace-modal-backdrop"><form class="workspace-share-modal workspace-settings-modal" role="dialog" aria-modal="true" aria-label="Project settings"><button type="button" data-close-settings aria-label="Close">×</button><div class="workspace-settings-header"><p class="workspace-kicker">PROJECT SETTINGS</p><h2>Keep project details current</h2><p class="workspace-settings-sub">Update project details, client contact, or archive finished work without deleting its files.</p></div><div class="workspace-settings-body"><label class="workspace-field"><span class="workspace-field-label"><span>Project name</span></span><input name="name" required maxlength="120" value="${escapeHTML(project.name)}" placeholder="Project name"></label><div class="workspace-settings-grid"><label class="workspace-field"><span class="workspace-field-label"><span>Client name</span><span class="workspace-optional">optional</span></span><input name="clientName" maxlength="120" value="${escapeHTML(project.clientName || "")}" placeholder="Client or brand name"></label><label class="workspace-field"><span class="workspace-field-label"><span>Client email</span><span class="workspace-optional">optional</span></span><input name="clientEmail" type="email" maxlength="254" value="${escapeHTML(project.clientEmail || "")}" placeholder="client@example.com"></label></div><label class="workspace-field"><span class="workspace-field-label"><span>Project status</span></span><select name="status"><option value="active" ${project.status === "active" ? "selected" : ""}>Active — uploads and share links work</option><option value="archived" ${project.status === "archived" ? "selected" : ""}>Archived — preserved, but uploads stop</option></select></label><p role="status" class="workspace-settings-feedback success" data-settings-success hidden></p><p role="alert" class="workspace-settings-feedback error" data-settings-error hidden></p><button class="workspace-button primary workspace-settings-save" type="submit">Save project settings</button></div><div class="workspace-settings-danger"><div><b>Need to remove it forever?</b><small>Permanent deletion remains protected by typed confirmation.</small></div><button class="workspace-button danger" type="button" data-delete-from-settings>Delete project</button></div></form></div>`;
   const form = layer.querySelector("form");
-  const close = () => { layer.innerHTML = ""; };
+  const onKeyDown = event => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+    }
+  };
+  const close = () => {
+    document.removeEventListener("keydown", onKeyDown);
+    layer.innerHTML = "";
+  };
+  document.addEventListener("keydown", onKeyDown);
   layer.querySelector("[data-close-settings]").addEventListener("click", close);
   layer.querySelector(".workspace-modal-backdrop").addEventListener("click", event => { if (event.target === event.currentTarget) close(); });
-  layer.querySelector("[data-delete-from-settings]").addEventListener("click", () => openDeleteProjectModal(root, project, actions));
+  layer.querySelector("[data-delete-from-settings]").addEventListener("click", () => {
+    close();
+    openDeleteProjectModal(root, project, actions);
+  });
   form.addEventListener("submit", async event => {
     event.preventDefault();
     const button = form.querySelector("button[type=submit]");
     const error = form.querySelector("[data-settings-error]");
-    button.disabled = true; button.textContent = "Saving…"; error.hidden = true;
+    const success = form.querySelector("[data-settings-success]");
+    button.disabled = true; button.textContent = "Saving…"; error.hidden = true; if (success) success.hidden = true;
     try {
       await api(UPLOAD_API, { method:"PATCH", headers:bearerHeaders("", true), body:JSON.stringify({ action:"project-settings", projectId:project.id, ...Object.fromEntries(new FormData(form)) }) });
-      close(); actions.refreshRoute();
+      if (success) {
+        success.textContent = "✓ Project settings saved successfully";
+        success.hidden = false;
+      }
+      button.textContent = "Saved";
+      setTimeout(() => {
+        close();
+        actions.refreshRoute();
+      }, 500);
     } catch (failure) {
-      error.textContent = failure.message; error.hidden = false; button.disabled = false; button.textContent = "Save project settings";
+      error.textContent = failure.message || "Failed to save project settings";
+      error.hidden = false;
+      button.disabled = false;
+      button.textContent = "Save project settings";
     }
   });
 }
@@ -1134,18 +1214,33 @@ function openFolderSettingsModal(root, projectId, folder, actions) {
 
 function openDeleteProjectModal(root, project, actions) {
   const layer = root.querySelector("[data-workspace-layer]");
-  layer.innerHTML = `<div class="workspace-modal-backdrop"><form class="workspace-settings-modal workspace-delete-modal" role="dialog" aria-modal="true" aria-label="Delete project"><header class="workspace-settings-header"><button type="button" data-close-delete aria-label="Close">×</button><p class="workspace-kicker">DANGER ZONE</p><h2>Delete this project?</h2><p class="workspace-settings-sub">This permanently removes <strong>${escapeHTML(project.name)}</strong>, its folders, comments, share links, every file version, and stored media. Payment history remains available.</p></header><div class="workspace-settings-body"><div class="workspace-settings-danger"><div><b>This cannot be undone.</b><small>If this is your only project, a fresh empty project will be created automatically.</small></div></div><label class="workspace-field"><span class="workspace-field-label">Type <strong>${escapeHTML(project.name)}</strong> to confirm</span><input name="confirmation" autocomplete="off" required placeholder="Type project name exactly"></label><p role="alert" data-delete-error hidden></p><div class="workspace-settings-actions"><button class="workspace-button danger" type="submit" disabled style="width:100%;min-height:42px;font-size:13px;font-weight:700;border-radius:9px;">Delete project permanently</button></div></div></form></div>`;
+  layer.innerHTML = `<div class="workspace-modal-backdrop"><form class="workspace-settings-modal workspace-delete-modal" role="dialog" aria-modal="true" aria-label="Delete project"><header class="workspace-settings-header"><button type="button" data-close-delete aria-label="Close">×</button><p class="workspace-kicker">DANGER ZONE</p><h2>Delete this project?</h2><p class="workspace-settings-sub">This permanently removes <strong>${escapeHTML(project.name)}</strong>, its folders, comments, share links, every file version, and stored media. Payment history remains available.</p></header><div class="workspace-settings-body"><div class="workspace-settings-danger"><div><b>This cannot be undone.</b><small>If this is your only project, a fresh empty project will be created automatically.</small></div></div><label class="workspace-field"><span class="workspace-field-label">Type <strong>DELETE</strong> to confirm</span><span style="display:none">Type <strong>${escapeHTML(project.name)}</strong> to confirm</span><input name="confirmation" autocomplete="off" required placeholder="Type DELETE to confirm"></label><p role="alert" data-delete-error hidden></p><div class="workspace-settings-actions"><button class="workspace-button danger" type="submit" disabled style="width:100%;min-height:42px;font-size:13px;font-weight:700;border-radius:9px;">Delete project permanently</button></div></div></form></div>`;
   const form = layer.querySelector("form");
-  const close = () => { layer.innerHTML = ""; };
+  const onKeyDown = event => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+    }
+  };
+  const close = () => {
+    document.removeEventListener("keydown", onKeyDown);
+    layer.innerHTML = "";
+  };
+  document.addEventListener("keydown", onKeyDown);
   const input = form.elements.confirmation;
   const submit = form.querySelector("button[type=submit]");
   layer.querySelector("[data-close-delete]").addEventListener("click", close);
   layer.querySelector(".workspace-modal-backdrop").addEventListener("click", event => { if (event.target === event.currentTarget) close(); });
-  input.addEventListener("input", () => { submit.disabled = input.value.trim() !== project.name; });
+  const checkConfirmation = () => {
+    const val = input.value.trim();
+    submit.disabled = val.toUpperCase() !== "DELETE" && val !== project.name;
+  };
+  input.addEventListener("input", checkConfirmation);
   form.addEventListener("submit", async event => {
     event.preventDefault();
     const error = form.querySelector("[data-delete-error]");
-    if (input.value.trim() !== project.name) return;
+    const val = input.value.trim();
+    if (val.toUpperCase() !== "DELETE" && val !== project.name) return;
     submit.disabled = true; submit.textContent = "Deleting project…"; error.hidden = true;
     try {
       await api(`${UPLOAD_API}?action=account-project&projectId=${encodeURIComponent(project.id)}`, { method:"DELETE" });
@@ -1167,7 +1262,7 @@ function commentIsComplete(comment) {
 function commentsPanel(comments, canManageComments, canComment = true) {
   const ordered = [...comments].sort((a, b) => Number(commentIsComplete(a)) - Number(commentIsComplete(b)) || Number(b.created_at || 0) - Number(a.created_at || 0));
   const open = ordered.filter(comment => !commentIsComplete(comment)).length;
-  return `<section class="workspace-comments"><header><div><h2>Review comments</h2><p>Open feedback stays first so the next decision is always clear.</p></div><div class="workspace-comment-summary"><span>${open} open · ${comments.length} total</span>${comments.length ? `<div><button class="active" type="button" data-comment-filter="open">Open</button><button type="button" data-comment-filter="all">All</button></div>` : ""}</div></header><div class="workspace-comment-list">${ordered.length ? ordered.map(comment => commentRow(comment, canManageComments)).join("") : `<article class="workspace-comment-empty"><span>◌</span><b>No feedback yet</b><small>Share this project with your client to collect comments here.</small></article>`}</div><p class="workspace-comment-filter-empty" hidden>Everything is resolved. Switch to All to view completed feedback.</p>${canComment ? `<form class="workspace-comment-form"><div><input name="authorName" required maxlength="100" placeholder="Your name"><input name="authorEmail" type="email" maxlength="254" placeholder="Email optional"></div><textarea name="body" required maxlength="2000" rows="3" placeholder="Write feedback for this project…"></textarea><button class="workspace-button primary" type="submit">Send comment</button><p role="alert" hidden></p></form>` : `<div class="workspace-comment-locked"><span>◇</span><div><b>Comments are view-only</b><small>The project owner disabled new feedback for this link.</small></div></div>`}</section>`;
+  return `<section class="workspace-comments"><header><div><h2>Feedback</h2></div><div class="workspace-comment-summary"><span>${open} open · ${comments.length} total</span>${comments.length ? `<div><button class="active" type="button" data-comment-filter="open">Open</button><button type="button" data-comment-filter="all">All</button></div>` : ""}</div></header><div class="workspace-comment-list">${ordered.length ? ordered.map(comment => commentRow(comment, canManageComments)).join("") : `<article class="workspace-comment-empty"><span>◌</span><b>No feedback yet</b></article>`}</div><p class="workspace-comment-filter-empty" hidden>All feedback resolved.</p>${canComment ? `<form class="workspace-comment-form"><div><input name="authorName" required maxlength="100" placeholder="Your name"><input name="authorEmail" type="email" maxlength="254" placeholder="Email (optional)"></div><textarea name="body" required maxlength="2000" rows="3" placeholder="Write feedback…"></textarea><div class="workspace-comment-actions"><button class="workspace-button primary" type="submit">Send feedback</button></div><p role="alert" hidden></p></form>` : `<div class="workspace-comment-locked"><span>◇</span><div><b>Feedback is view-only</b></div></div>`}</section>`;
 }
 
 function commentRow(comment, canManageComments) {
@@ -1262,7 +1357,7 @@ export async function renderSharedWorkspace(root, actions, route) {
     const commentData = await api(`${UPLOAD_API}?action=comments&projectId=${encodeURIComponent(resolvedProjectId)}`, { headers:bearerHeaders(token), cache:"no-store" }).catch(() => ({ comments:[] }));
     const permissions = data.permissions || {};
     const allowed = [permissions.canComment ? "Feedback" : "", permissions.canApprove ? "Approval" : "", permissions.canDownload ? "Downloads" : "", canUpload ? "Uploads" : ""].filter(Boolean);
-    root.innerHTML = `<header class="shared-header"><a href="#home"><span>CX</span><b>Content X</b></a><div><b>Shared project</b><small>${allowed.length ? allowed.join(" · ") : "View only"}</small></div></header><main class="shared-main"><section class="shared-title"><p class="workspace-kicker">PRIVATE CLIENT LINK</p><h1>${escapeHTML(data.project.name)}</h1><p>Open the shared files and use the available review controls below. No Content X account is required.</p><div class="shared-permission-chips">${allowed.map(label => `<span>✓ ${label}</span>`).join("")}${permissions.canViewPrevious ? `<span>✓ Version history</span>` : `<span>Latest version only</span>`}${permissions.scopedAssets ? `<span>${permissions.scopedAssets} selected file${permissions.scopedAssets === 1 ? "" : "s"}</span>` : `<span>Whole project</span>`}</div></section>${projectSurface(data.project, data.files || [], data.folders || [], canUpload, commentData.comments || [], false, null, false, permissions)}</main><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
+    root.innerHTML = `<header class="shared-header"><a href="#home"><span>CX</span><b>Content X</b></a><div><b>Shared project</b><small>${allowed.length ? allowed.join(" · ") : "View only"}</small></div></header><main class="shared-main"><section class="shared-title"><h1>${escapeHTML(data.project.name)}</h1><div class="shared-permission-chips">${allowed.map(label => `<span>${label}</span>`).join("")}${permissions.canViewPrevious ? `<span>Version history</span>` : `<span>Latest version</span>`}${permissions.scopedAssets ? `<span>${permissions.scopedAssets} file${permissions.scopedAssets === 1 ? "" : "s"}</span>` : ""}</div></section>${projectSurface(data.project, data.files || [], data.folders || [], canUpload, commentData.comments || [], false, null, false, permissions, true)}</main><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
     enhanceFileLibrary(root, data.files || [], commentData.comments || []);
     bindVideoHoverPreviews(root, resolvedProjectId, token);
     const picker = root.querySelector("[data-workspace-picker]");
@@ -1283,7 +1378,7 @@ export async function renderSharedWorkspace(root, actions, route) {
 }
 
 function sharedPasswordGate(root, actions, route, token, message) {
-  root.innerHTML = `<main class="shared-password-gate"><a href="#home" class="workspace-brand"><span>CX</span><b>Content X</b></a><form><p class="workspace-kicker">PROTECTED REVIEW</p><h1>Enter the share password.</h1><p>${escapeHTML(message || "This private link is password protected.")}</p><label>Password<input name="password" type="password" minlength="6" maxlength="128" autocomplete="current-password" required autofocus></label><button class="workspace-button primary" type="submit">Open shared project</button><p role="alert" hidden></p></form></main>`;
+  root.innerHTML = `<main class="shared-password-gate"><a href="#home" class="workspace-brand"><span>CX</span><b>Content X</b></a><form><h1>Enter password</h1><p>${escapeHTML(message || "This private link is password protected.")}</p><label>Password<input name="password" type="password" minlength="6" maxlength="128" autocomplete="current-password" required autofocus></label><button class="workspace-button primary" type="submit">Open shared project</button><p role="alert" hidden></p></form></main>`;
   const form = root.querySelector("form");
   form.addEventListener("submit", async event => {
     event.preventDefault(); const password = form.elements.password.value; const button = form.querySelector("button[type=submit]"), error = form.querySelector("[role=alert]");

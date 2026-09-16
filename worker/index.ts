@@ -46,8 +46,12 @@ const worker = {
       return withSecurityHeaders(request, response);
     }
 
-    if (url.pathname.startsWith("/site/") || url.pathname.startsWith("/site-v2/")) {
-      return withSecurityHeaders(request, await env.ASSETS.fetch(request));
+    const isStaticAsset = url.pathname.startsWith("/site/") ||
+      url.pathname.startsWith("/site-v2/") ||
+      url.pathname.match(/\.(svg|png|jpg|jpeg|webp|ico|mp4|webm|woff2|txt|json)$/i);
+    if (isStaticAsset) {
+      const assetRes = await env.ASSETS.fetch(request);
+      if (assetRes.status !== 404) return withSecurityHeaders(request, assetRes);
     }
 
     return withSecurityHeaders(request, await handler.fetch(request, env, ctx));
@@ -60,13 +64,20 @@ function withSecurityHeaders(request: Request, response: Response): Response {
   const url = new URL(request.url);
   const headers = new Headers(response.headers);
   const contentType = headers.get("content-type") || "";
-  const isSiteFile = url.pathname === "/" ||
+  const isHtml = url.pathname === "/" ||
     url.pathname === "/site/index.html" ||
     url.pathname === "/site-v2/index.html" ||
-    url.pathname.startsWith("/site/src/") ||
-    url.pathname.startsWith("/site-v2/src/");
-  if (isSiteFile || contentType.includes("text/html")) {
+    contentType.includes("text/html");
+  if (isHtml) {
     headers.set("Cache-Control", "no-store, must-revalidate");
+  } else if (url.pathname.startsWith("/site/src/") || url.pathname.startsWith("/site-v2/src/")) {
+    if (url.searchParams.has("v")) {
+      headers.set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+    } else {
+      headers.set("Cache-Control", "no-store, must-revalidate");
+    }
+  } else if (url.pathname.match(/\.(mp4|webm|webp|png|jpg|jpeg|svg|woff2|ico)$/i)) {
+    headers.set("Cache-Control", "public, max-age=604800, immutable");
   }
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("X-XSS-Protection", "0");
@@ -86,9 +97,9 @@ function withSecurityHeaders(request: Request, response: Response): Response {
       "frame-ancestors 'self'",
       "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://accounts.google.com",
       "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://accounts.google.com https://static.cloudflareinsights.com",
-      "style-src 'self' 'unsafe-inline' https://accounts.google.com",
+      "style-src 'self' 'unsafe-inline' https://accounts.google.com https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
-      "font-src 'self' data:",
+      "font-src 'self' data: https://fonts.gstatic.com",
       "media-src 'self' blob:",
       "worker-src 'self' blob:",
       "manifest-src 'self'",

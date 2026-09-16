@@ -4,6 +4,32 @@ import { VIRAL_HOOK_LIBRARY } from "./scripts-studio.js";
 const esc = str => String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const NOTIFICATION_API = "/api/notifications";
 
+const VIDEO_HIGHLIGHT_OFFSETS = {
+  "landscape1.mp4": 1.8,
+  "landscape3.mp4": 2.2,
+  "premium1.mp4": 2.8,
+  "premium2.mp4": 2.4,
+  "standard3.mp4": 2.6,
+  "quick1.mp4": 2.0,
+  "video3.mp4": 2.2,
+};
+
+function getHighlightTimestamp(vid) {
+  if (vid.dataset.highlightTime) {
+    const val = parseFloat(vid.dataset.highlightTime);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  const cleanSrc = (vid.currentSrc || vid.src || "").split("?")[0].split("#")[0];
+  const filename = cleanSrc.substring(cleanSrc.lastIndexOf("/") + 1);
+  if (VIDEO_HIGHLIGHT_OFFSETS[filename]) {
+    return VIDEO_HIGHLIGHT_OFFSETS[filename];
+  }
+  const dur = vid.duration || 0;
+  if (dur > 5) return Math.min(2.5, dur * 0.22);
+  if (dur > 1) return dur * 0.28;
+  return 1.0;
+}
+
 function startMutedPreviewVideos(root) {
   root._previewObserver?.disconnect?.();
   const videos = [...root.querySelectorAll("[data-preview-autoplay]")];
@@ -18,27 +44,85 @@ function startMutedPreviewVideos(root) {
     video.muted = true;
     video.defaultMuted = true;
     video.loop = true;
-    video.autoplay = true;
     video.playsInline = true;
+    video.preload = "auto";
     video.setAttribute("muted", "");
     video.setAttribute("loop", "");
-    video.setAttribute("autoplay", "");
     video.setAttribute("playsinline", "");
     video.removeAttribute("controls");
+
+    const seekToThumbnail = () => {
+      const targetTime = getHighlightTimestamp(video);
+      if (video.duration && targetTime < video.duration) {
+        if (Math.abs(video.currentTime - targetTime) > 0.3) {
+          try { video.currentTime = targetTime; } catch {}
+        }
+      }
+    };
+
+    const capturePoster = () => {
+      if (!video.poster && video.videoWidth > 0 && video.videoHeight > 0) {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.min(640, video.videoWidth);
+          canvas.height = Math.round(canvas.width * (video.videoHeight / video.videoWidth));
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const data = canvas.toDataURL("image/jpeg", 0.88);
+          if (data && data.length > 200) {
+            video.poster = data;
+          }
+        } catch {}
+      }
+      reveal();
+    };
+
+    video.addEventListener("loadedmetadata", seekToThumbnail, { once:true });
+    video.addEventListener("seeked", () => {
+      capturePoster();
+      reveal();
+    }, { once:true });
     video.addEventListener("loadeddata", reveal, { once:true });
     video.addEventListener("canplay", reveal, { once:true });
     video.addEventListener("playing", reveal, { once:true });
     video.addEventListener("error", showFallback, { once:true });
 
-    // Cached media can finish loading before an off-screen preview is observed.
-    // Reveal that existing frame immediately instead of waiting for an event
-    // which has already fired.
     if (video.readyState >= 2) reveal();
     else if (video.error) showFallback();
 
-    const play = () => video.play?.().catch(() => {});
-    if (video.readyState >= 2) play();
-    else video.addEventListener("canplay", play, { once:true });
+    // Stop autoplay of videos: keep paused and seek to best part thumbnail
+    video.pause();
+    if (video.readyState >= 1) {
+      seekToThumbnail();
+    }
+    setTimeout(reveal, 600);
+
+    if (mediaFrame && !mediaFrame._cxVideoBound) {
+      mediaFrame._cxVideoBound = true;
+      mediaFrame.style.cursor = "pointer";
+      mediaFrame.addEventListener("mouseenter", () => {
+        mediaFrame.classList.add("is-preview-active");
+        if (video.paused) video.play?.().catch(() => {});
+      });
+      mediaFrame.addEventListener("mouseleave", () => {
+        mediaFrame.classList.remove("is-preview-active");
+        video.pause?.();
+        // Restore best part thumbnail when mouse leaves
+        const target = getHighlightTimestamp(video);
+        try { video.currentTime = target; } catch {}
+      });
+      mediaFrame.addEventListener("click", () => {
+        if (video.paused) {
+          mediaFrame.classList.add("is-preview-active");
+          video.play?.().catch(() => {});
+        } else {
+          mediaFrame.classList.remove("is-preview-active");
+          video.pause?.();
+          const target = getHighlightTimestamp(video);
+          try { video.currentTime = target; } catch {}
+        }
+      });
+    }
   };
   const priority = videos.find(video => video.closest(".hero-product"));
   if (priority) start(priority);
@@ -126,7 +210,7 @@ export function renderMarketing(root, data, actions) {
       <section class="stat-strip section-shell">${data.stats.map(s => `<div><strong>${s.value}</strong><span>${s.label}</span></div>`).join("")}<p>Trusted by creators, coaches<br>and growing brands.</p></section>
       <section id="work" class="section-shell block-section">
         <div class="section-heading"><p class="eyebrow"><span></span>Selected work</p><h2>Edits designed to <em>hold attention.</em></h2><p>Every cut has a job: earn the next second, make the message clear, and leave the brand looking premium.</p></div>
-        <div class="work-grid">${data.cases.map((item, i) => `<article class="work-card"><div class="work-media"><video src="${item.src}" muted loop playsinline preload="metadata" data-preview-autoplay></video><span>0${i + 1}</span></div><div><p>${item.label}</p><h3>${item.title}</h3><small>${item.copy}</small></div></article>`).join("")}</div>
+        <div class="work-grid">${data.cases.map((item, i) => `<article class="work-card"><div class="work-media"><video src="${item.src}" muted loop playsinline preload="auto" data-preview-autoplay data-highlight-time="${item.posterTime || 2.5}"></video><span>0${i + 1}</span></div><div><p>${item.label}</p><h3>${item.title}</h3><small>${item.copy}</small></div></article>`).join("")}</div>
       </section>
       <section id="workflow" class="workflow-section block-section"><div class="section-shell"><div class="section-heading split"><div><p class="eyebrow"><span></span>Your workflow</p><h2>From raw footage to <em>approved.</em></h2></div><p>Everything your project needs lives in one place—so feedback stays clear and delivery keeps moving.</p></div><div class="workflow-grid">${data.workflow.map(w => `<article class="workflow-step workflow-step-${w.step}"><span class="workflow-step-number">${w.step}</span><div class="step-icon">${["↑","✦","◌","✓"][Number(w.step)-1]}</div><h3>${w.title}</h3><p>${w.copy}</p></article>`).join("")}</div><div class="feature-banner"><div><span class="live-dot"></span><small>THE CONTENT X WORKSPACE</small><h3>Review video without the back-and-forth.</h3><p>Click any moment to add a timestamped note. Compare versions, resolve feedback and approve the final cut—all in your browser.</p><button class="pill pill-hot" data-action="workspace">Open interactive demo →</button></div><div class="review-mini"><div class="review-video"><video src="videos/video3.mp4" muted loop playsinline preload="metadata" data-preview-autoplay></video><span>00:12</span></div><div class="review-note"><b>MK</b><p><strong>00:12</strong> Can we make this transition faster?</p><button>Reply</button></div></div></div></div></section>
       <section id="scripts" class="section-shell block-section scripts-showcase-section">

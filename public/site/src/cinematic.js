@@ -69,8 +69,24 @@ export function enhanceCinematic(root) {
 
   const updateVideos = () => previews.forEach(video => {
     const behindAnotherCard = video.closest(".cx-story-card") && !compact.matches && active !== 0;
-    if (enabled && !document.hidden && visibleVideos.has(video) && !behindAnotherCard) video.play()?.catch(() => {});
-    else video.pause();
+    if (!enabled || document.hidden || behindAnotherCard) video.pause();
+  });
+  previews.forEach(video => {
+    video.pause();
+    const target = 2.2;
+    const seek = () => { if (video.duration && target < video.duration) try { video.currentTime = target; } catch {} };
+    if (video.readyState >= 1) seek(); else video.addEventListener("loadedmetadata", seek, { once: true });
+    const card = video.closest(".cx-story-card, .cx-film");
+    if (card && !card._cxBound) {
+      card._cxBound = true;
+      card.addEventListener("mouseenter", () => {
+        if (enabled && !document.hidden) video.play()?.catch(() => {});
+      });
+      card.addEventListener("mouseleave", () => {
+        video.pause();
+        try { video.currentTime = target; } catch {}
+      });
+    }
   });
   const selectStep = index => {
     if (index === active) return;

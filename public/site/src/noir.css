@@ -263,19 +263,32 @@ html[data-theme="dark"] .cx-rail-brand,
 html[data-theme="dark"] .account-orbit-mark,
 html[data-theme="dark"] .account-card-logo > span {
   background-image: url("/site/assets/logo-mark-128.png") !important;
-  background-size: cover !important;
+  background-size: 110% !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
-  background-color: #121317 !important;
+  background-color: #08080a !important;
   color: transparent !important;
   text-indent: -9999px !important;
   overflow: hidden !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45) !important;
-  filter: brightness(0.92) contrast(1.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 4px 18px rgba(255, 92, 32, 0.32), 0 2px 8px rgba(0, 0, 0, 0.6) !important;
+}
+
+html[data-theme="dark"] .brand-mark {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 11px !important;
 }
 
 html[data-theme="dark"] .brand-mark.mini {
-  border-radius: 7px !important;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4) !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-theme="dark"] #app .workspace-brand > span {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 9px !important;
 }

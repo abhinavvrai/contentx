@@ -218,7 +218,21 @@ export function renderTalentProfile(root, actions) {
   root.querySelectorAll("[data-package-index]").forEach(button => button.addEventListener("click", () => { root.querySelectorAll("[data-package-index]").forEach(item => item.classList.toggle("active", item === button)); showPackage(Number(button.dataset.packageIndex)); }));
   showPackage(Math.min(1, profile.packages.length - 1));
   root.querySelector("[data-message-provider]").addEventListener("click", () => openQuestionModal(profile));
-  root.querySelectorAll("[data-preview-autoplay]").forEach(video => video.play?.().catch(() => {}));
+  root.querySelectorAll("[data-preview-autoplay]").forEach(video => {
+    video.pause();
+    const frame = video.closest(".market-sample-media");
+    const target = (video.src.includes("premium1") ? 2.8 : (video.src.includes("premium2") ? 2.4 : 2.6));
+    const seek = () => { if (video.duration && target < video.duration) try { video.currentTime = target; } catch {} };
+    if (video.readyState >= 1) seek(); else video.addEventListener("loadedmetadata", seek, { once: true });
+    if (frame && !frame._cxBound) {
+      frame._cxBound = true;
+      frame.addEventListener("mouseenter", () => video.play?.().catch(() => {}));
+      frame.addEventListener("mouseleave", () => {
+        video.pause();
+        try { video.currentTime = target; } catch {}
+      });
+    }
+  });
 }
 
 export function renderProviderOnboarding(root, actions) {
