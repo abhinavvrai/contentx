@@ -2,7 +2,7 @@ import { enhanceFileLibrary, fileToolbar, hasTimestamp } from "./studio-workspac
 import { bindWorkspaceOrganizer, openUnifiedSearch } from "./workspace-organizer.js?v=centered-dialogs-1";
 import { openReviewRoom } from "./review-room.js?v=frame-native-20";
 import { renderWorkspaceAccountPanel } from "./account.js?v=frame-native-20";
-import { renderScriptStudioSurface, renderScriptShowcaseSurface, openScriptStudioModal, getProjectScriptsCount, getStorageScripts, calculateSpeechMetrics } from "./scripts-studio.js?v=full-surface-2";
+import { renderScriptStudioSurface, renderScriptShowcaseSurface, openScriptStudioModal, getProjectScriptsCount } from "./scripts-studio.js?v=full-surface-2";
 
 const UPLOAD_API = "/api/uploads";
 const BRIEF_API = "/api/briefs";
@@ -276,7 +276,6 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
   if (accountPanel || scriptsPanel || showcasePanel || !project) return;
   enhanceFileLibrary(root, files, comments);
   bindVideoHoverPreviews(root, project.id, "");
-  addWorkspaceOrganizationHint(root, projectData.permissions?.canUpload !== false, project.status === "active");
   bindFolderBrowser(root, project.id, folders, actions);
   bindAssetSelection(root, project.id, actions);
   bindVideoVersionPicker(root, project.id, actions, files, comments);
@@ -506,17 +505,13 @@ function showMoveUndo(message, undo) {
   toast.append(text, button, dismiss); document.body.append(toast);
 }
 
-function addWorkspaceOrganizationHint(root, canUpload, canManageFolders) {
-  return;
-}
-
 function projectSurface(project, files, folders, canUpload, comments = [], canManageComments = false, revisionPolicy = null, canManageFolders = false, permissions = {}, isShared = false) {
   const rootFolders = folders.filter(folder => !folder.parent_id);
   const openComments = comments.filter(comment => !commentIsComplete(comment)).length;
   return `<section class="workspace-project-head"><div>${project.status === "archived" ? `<b class="workspace-status-badge">ARCHIVED</b>` : ""}<h1>${escapeHTML(project.name)}</h1><span>${files.length} file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
     ${openComments ? `<button class="workspace-review-attention" type="button" data-review-attention><span>${openComments}</span><div><b>Feedback</b><small>${openComments} open note${openComments === 1 ? "" : "s"}</small></div><em>Review →</em></button>` : ""}
     <section class="workspace-browser"><div class="workspace-browser-head"><nav aria-label="Folder breadcrumb"><button class="active" type="button" data-folder-id="">${escapeHTML(project.name)}</button><span data-folder-crumbs></span></nav><div>${canManageFolders ? `<button type="button" data-folder-settings-current hidden>Folder options</button><button type="button" data-create-folder>＋ New folder</button>` : ""}</div></div><div class="workspace-folder-grid">${rootFolders.map(folder => folderCard(folder)).join("")}</div></section>
-    <section class="workspace-files" title="Executables, archives, scripts, HTML and SVG are blocked"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header><div class="workspace-folder-scripts-strip" data-folder-scripts-container hidden></div>${files.length ? `${fileToolbar()}${canManageFolders ? assetBulkBar(folders) : ""}` : ""}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy, canManageFolders)).join("") : `<button class="workspace-empty-files" type="button" ${canUpload ? "data-project-drop" : "disabled"}><span>↑</span><h3>${canUpload ? "Add your first file" : "No files yet"}</h3><p>${canUpload ? "Drag and drop or browse" : ""}</p></button>`}</div></section>
+    <section class="workspace-files" title="Executables, archives, scripts, HTML and SVG are blocked"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header>${files.length ? `${fileToolbar()}${canManageFolders ? assetBulkBar(folders) : ""}` : ""}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy, canManageFolders)).join("") : `<button class="workspace-empty-files" type="button" ${canUpload ? "data-project-drop" : "disabled"}><span>↑</span><h3>${canUpload ? "Add your first file" : "No files yet"}</h3><p>${canUpload ? "Drag and drop or browse" : ""}</p></button>`}</div></section>
     ${files.length && isShared ? commentsPanel(comments, canManageComments, permissions.canComment !== false) : ""}
     <section class="workspace-queue" data-workspace-queue></section>`;
 }
@@ -559,65 +554,6 @@ function bindFolderBrowser(root, projectId, folders, actions) {
     const manage = root.querySelector("[data-folder-settings-current]"); if (manage) { manage.hidden = !activeFolder; manage.dataset.folderSettingsCurrent = activeFolder; }
     grid.dataset.activeFolder = activeFolder;
     grid.dataset.folderAssetCount = String(rootCount);
-    try { sessionStorage.setItem(`cx_active_folder_${projectId}`, activeFolder); } catch {}
-    const scriptsContainer = root.querySelector("[data-folder-scripts-container]");
-    if (scriptsContainer) {
-      try {
-        const allScripts = getStorageScripts(projectId);
-        const folderScripts = (allScripts || []).filter(s => (s.folderId || "") === activeFolder);
-        if (!folderScripts.length) {
-          scriptsContainer.innerHTML = "";
-          scriptsContainer.hidden = true;
-        } else {
-          const folderName = activeFolder ? byId.get(activeFolder)?.name || "Folder" : "Project root";
-          scriptsContainer.hidden = false;
-          scriptsContainer.innerHTML = `
-            <div class="workspace-folder-scripts-banner">
-              <div class="folder-scripts-banner-left">
-                <span class="folder-scripts-icon">${workspaceIcon("script")}</span>
-                <div>
-                  <strong>Scripts (${folderScripts.length})</strong>
-                </div>
-              </div>
-              <div class="folder-scripts-banner-right">
-                <a class="workspace-button subtle small" href="#workspace?project=${encodeURIComponent(projectId)}&panel=scripts">Open Scripts Studio →</a>
-              </div>
-            </div>
-            <div class="workspace-folder-scripts-grid">
-              ${folderScripts.map(s => {
-                const metrics = calculateSpeechMetrics(s.content ? s.content.replace(/<[^>]*>/g, "") : "", s.targetWpm || 135);
-                const statusClass = (s.status || "Draft").toLowerCase();
-                return `
-                  <article class="workspace-script-folder-card">
-                    <div class="script-folder-card-main">
-                      <span class="script-folder-card-icon">${workspaceIcon("script")}</span>
-                      <div class="script-folder-card-info">
-                        <div class="script-folder-card-head">
-                          <span class="script-folder-status-pill status-${statusClass}">${escapeHTML(s.status || "Draft")}</span>
-                          <strong class="script-folder-card-title">${escapeHTML(s.title || "Untitled Script")}</strong>
-                        </div>
-                        <div class="script-folder-card-meta">
-                          <span>${metrics.durationFormatted} speech</span>
-                          <span class="meta-dot">·</span>
-                          <span>${metrics.words} words</span>
-                          ${s.attachedAssets?.length ? `<span class="meta-dot">·</span><span>${s.attachedAssets.length} cut${s.attachedAssets.length === 1 ? "" : "s"}</span>` : ""}
-                        </div>
-                      </div>
-                    </div>
-                    <div class="script-folder-card-actions">
-                      <a class="workspace-button subtle small" href="#workspace?project=${encodeURIComponent(projectId)}&panel=scripts&script=${encodeURIComponent(s.id)}">Open in Studio</a>
-                      <a class="workspace-button subtle small" href="#workspace?panel=showcase&script=${encodeURIComponent(s.id)}&project=${encodeURIComponent(projectId)}" target="_blank" title="View shareable script">Shareable View ↗</a>
-                    </div>
-                  </article>
-                `;
-              }).join("")}
-            </div>
-          `;
-        }
-      } catch (err) {
-        console.warn("Error rendering folder scripts:", err);
-      }
-    }
     bindFolderControls(); signalLibrary();
     root.dispatchEvent(new CustomEvent("workspace-folder-change",{detail:activeFolder}));
   };
