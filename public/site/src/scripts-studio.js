@@ -84,14 +84,7 @@ export function defaultStarterScripts(projectId) {
       targetPacing: "reel_60",
       targetWpm: 135,
       attachedAssets: [],
-      videoLinks: [
-        {
-          id: "vl_demo",
-          title: "Rough Cut Draft — Vertical 9:16",
-          url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-          platform: "YouTube"
-        }
-      ],
+      videoLinks: [],
       published: true,
       publishedAt: now - 3600000,
       comments: [
@@ -909,6 +902,18 @@ export async function renderScriptStudioSurface(container, {
         </div>
 
         <div class="scripts-breadcrumb-actions">
+          <!-- On-Screen Project Selector -->
+          <div class="scripts-topbar-select-wrap scripts-project-select-wrap" title="Current project">
+            <span class="studio-btn-icon">${ICONS.sidebar}</span>
+            <select class="scripts-topbar-select scripts-project-select" data-active-project-select aria-label="Select active project">
+              ${(projects && projects.length ? projects : [activeProject]).map(p => {
+                const pid = p.project_id || p.id;
+                return `<option value="${escapeHTML(pid)}" ${pid === projectId ? "selected" : ""}>${escapeHTML(p.name)}</option>`;
+              }).join("")}
+            </select>
+            <span class="scripts-select-chevron">${ICONS.chevronDown}</span>
+          </div>
+
           <!-- On-Screen Status Selector -->
           <div class="scripts-topbar-select-wrap scripts-status-select-wrap" title="Change script status">
             <span class="status-indicator-dot dot-draft" data-topbar-status-dot></span>
@@ -3548,7 +3553,10 @@ export async function renderScriptStudioSurface(container, {
         targetScripts.unshift(scriptClone);
         saveStorageScripts(targetPid, targetScripts);
         close();
-        notify(`Script linked and sent to "${targetProject.name}"`);
+        notify(`Script linked to "${targetProject.name}"`);
+        setTimeout(() => {
+          location.hash = `#workspace?project=${encodeURIComponent(targetPid)}&panel=scripts&script=${encodeURIComponent(scriptClone.id)}`;
+        }, 150);
       });
     });
   }
@@ -4631,6 +4639,7 @@ export async function renderScriptShowcaseSurface(container, { project, projects
   const primaryLink = (script.videoLinks || [])[0];
   const primaryAsset = (script.attachedAssets || [])[0];
   const primaryVideoUrl = primaryLink?.url || primaryAsset?.url || null;
+  const isDirectVideo = primaryVideoUrl && /\.(mp4|mov|webm|m4v)($|\?)/i.test(primaryVideoUrl);
   const embedUrl = primaryVideoUrl ? getVideoEmbedUrl(primaryVideoUrl) : null;
   const showcaseLink = window.location.href;
 
@@ -4665,18 +4674,18 @@ export async function renderScriptShowcaseSurface(container, { project, projects
         <div class="showcase-content-split ${primaryVideoUrl ? "has-video" : "no-video"}">
           ${primaryVideoUrl ? `
             <div class="showcase-media-column">
-              <div class="showcase-media-frame">
-                ${embedUrl ? `<iframe src="${embedUrl}" allowfullscreen></iframe>` : `
+                ${isDirectVideo ? `
+                  <video controls playsinline preload="metadata" src="${escapeHTML(primaryVideoUrl)}" style="width:100%;height:100%;object-fit:contain;border-radius:12px;background:#050608;"></video>
+                ` : `
                   <div class="showcase-external-video-card">
                     <span class="showcase-play-icon">${ICONS.play}</span>
                     <div class="showcase-video-info">
                       <strong>${escapeHTML(primaryLink?.title || primaryAsset?.name || "Attached Video Cut")}</strong>
-                      <small>${escapeHTML(primaryLink?.platform || "Direct Video")}: ${escapeHTML(primaryVideoUrl)}</small>
+                      <small>${escapeHTML(primaryLink?.platform || "Web Video")}</small>
                     </div>
                     <a href="${escapeHTML(primaryVideoUrl)}" target="_blank" rel="noopener noreferrer" class="workspace-button primary">Watch Cut ↗</a>
                   </div>
                 `}
-              </div>
             </div>
           ` : ""}
 

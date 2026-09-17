@@ -239,10 +239,66 @@ export function renderAccountAccess(root, actions) {
   const resetToken = resetParams.get("reset");
   const resetEmail = resetParams.get("email") || "";
 
+  function renderPostRegisterOnboarding(user) {
+    panel.innerHTML = `
+      <p class="eyebrow"><span></span>Welcome to Content X</p>
+      <h2>Tell us a bit about you</h2>
+      <p>Help us customize your workspace experience.</p>
+      <form data-onboarding-form>
+        <div class="account-onboarding-grid">
+          <label>
+            <span>How did you find us?</span>
+            <select name="referralSource">
+              <option value="">Select an option</option>
+              <option value="youtube">YouTube</option>
+              <option value="social_media">Social Media (Instagram, X, LinkedIn)</option>
+              <option value="google">Google Search</option>
+              <option value="word_of_mouth">Friend / Colleague recommendation</option>
+              <option value="other">Somewhere else</option>
+            </select>
+          </label>
+          <label>
+            <span>What will you use Content X for?</span>
+            <select name="useCase">
+              <option value="">Select your main goal</option>
+              <option value="video_editing">Video editing &amp; client reviews</option>
+              <option value="agency">Agency / Production studio</option>
+              <option value="solo_creator">Solo creator / Freelancer</option>
+              <option value="client_approvals">Client approvals &amp; version control</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px;">
+          <button class="pill pill-hot" type="submit">Continue to workspace →</button>
+          <button class="account-text-link" type="button" data-skip-onboarding style="text-align:center;">Skip for now</button>
+        </div>
+      </form>
+    `;
+    const finish = (values = {}) => {
+      if (values.referralSource || values.useCase) {
+        try {
+          localStorage.setItem("cx_user_onboarding", JSON.stringify({
+            referralSource: values.referralSource || "",
+            useCase: values.useCase || "",
+            savedAt: Date.now()
+          }));
+        } catch {}
+      }
+      finishAccountAccess(user, returningTo);
+    };
+    panel.querySelector("[data-onboarding-form]").addEventListener("submit", e => {
+      e.preventDefault();
+      const values = Object.fromEntries(new FormData(e.currentTarget));
+      finish(values);
+    });
+    panel.querySelector("[data-skip-onboarding]").addEventListener("click", () => finish());
+  }
+
   function show(mode) {
     tabs.forEach(button => button.classList.toggle("active", button.dataset.accountTab === mode));
     const register = mode === "register";
-    panel.innerHTML = `<p class="eyebrow"><span></span>${register ? "New creator account" : "Welcome back"}</p><h2>${register ? "Create your account." : "Sign in to continue."}</h2><p>${register ? "Use your verified Google account or a password to open your free review workspace." : "Open your workspace, project files, versions and private share links."}</p><div class="account-provider-actions" aria-label="Sign-in options">${accountProviders.google?.available ? `<div class="account-google-option"><button type="button" class="account-google-pending" data-google-pending disabled>${googleIcon}<span>Continue with Google</span></button><div data-google-button hidden></div></div>` : ""}</div>${accountProviders.google?.available ? '<div class="account-divider"><span>or continue with password</span></div>' : ""}<form data-password-form>${register ? '<label>Full name<input name="name" autocomplete="name" required placeholder="Your full name"></label>' : ""}<label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><label>Password<input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="10" maxlength="128" required placeholder="10+ character passphrase"></label>${register ? `<div class="account-onboarding-grid"><label><span>How did you find us?</span> <span class="account-optional">optional</span><select name="referralSource"><option value="">Select an option</option><option value="youtube">YouTube</option><option value="social_media">Social Media (Instagram, X, LinkedIn)</option><option value="google">Google Search</option><option value="word_of_mouth">Friend / Colleague recommendation</option><option value="other">Somewhere else</option></select></label><label><span>What will you use Content X for?</span> <span class="account-optional">optional</span><select name="useCase"><option value="">Select your main goal</option><option value="video_editing">Video editing &amp; client reviews</option><option value="agency">Agency / Production studio</option><option value="solo_creator">Solo creator / Freelancer</option><option value="client_approvals">Client approvals &amp; version control</option><option value="other">Other</option></select></label></div><small class="password-tip">A long phrase is better than a short complex password.</small>` : '<button class="account-text-link" type="button" data-forgot-password>Forgot password?</button>'}<p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Create account →" : "Sign in →"}</button></form>`;
+    panel.innerHTML = `<p class="eyebrow"><span></span>${register ? "New creator account" : "Welcome back"}</p><h2>${register ? "Create your account." : "Sign in to continue."}</h2><p>${register ? "Use your verified Google account or a password to open your free review workspace." : "Open your workspace, project files, versions and private share links."}</p><div class="account-provider-actions" aria-label="Sign-in options">${accountProviders.google?.available ? `<div class="account-google-option"><button type="button" class="account-google-pending" data-google-pending disabled>${googleIcon}<span>Continue with Google</span></button><div data-google-button hidden></div></div>` : ""}</div>${accountProviders.google?.available ? '<div class="account-divider"><span>or continue with password</span></div>' : ""}<form data-password-form>${register ? '<label>Full name<input name="name" autocomplete="name" required placeholder="Your full name"></label>' : ""}<label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><label>Password<input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="10" maxlength="128" required placeholder="10+ character passphrase"></label>${register ? '<small class="password-tip">A long phrase is better than a short complex password.</small>' : '<button class="account-text-link" type="button" data-forgot-password>Forgot password?</button>'}<p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Create account →" : "Sign in →"}</button></form>`;
     panel.querySelector("[data-password-form]").addEventListener("submit", async event => {
       event.preventDefault();
       const button = event.currentTarget.querySelector("button[type=submit]");
@@ -250,17 +306,12 @@ export function renderAccountAccess(root, actions) {
       button.disabled = true; button.textContent = register ? "Creating account…" : "Signing in…"; error.hidden = true;
       try {
         const values = Object.fromEntries(new FormData(event.currentTarget));
-        if (register && (values.referralSource || values.useCase)) {
-          try {
-            localStorage.setItem("cx_user_onboarding", JSON.stringify({
-              referralSource: values.referralSource || "",
-              useCase: values.useCase || "",
-              savedAt: Date.now()
-            }));
-          } catch {}
-        }
         const result = await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:register ? "register" : "login", ...values }) });
-        finishAccountAccess(result.user, returningTo);
+        if (register) {
+          renderPostRegisterOnboarding(result.user);
+        } else {
+          finishAccountAccess(result.user, returningTo);
+        }
       } catch (failure) {
         error.textContent = failure.message; error.hidden = false;
         button.disabled = false; button.textContent = register ? "Create account →" : "Sign in →";

@@ -227,13 +227,11 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
           ${accountPanel || showcasePanel ? `<a class="workspace-button" href="#workspace">View projects</a>` : scriptsPanel ? `
             <a class="workspace-button subtle" href="${selected ? `#workspace?project=${encodeURIComponent(selected.project_id || selected.id)}` : "#workspace"}">← Projects</a>
           ` : project ? `
-            <a class="workspace-button subtle" href="#workspace?project=${encodeURIComponent(project.id)}&panel=scripts" title="Script Writing Studio">¶ Scripts</a>
             <button class="workspace-button subtle" type="button" data-project-activity title="Activity log">Activity</button>
             <button class="workspace-button subtle" type="button" data-project-settings aria-label="Project settings" title="Project settings">•••</button>
             <button class="workspace-button" type="button" data-share-project ${project.status === "archived" ? "disabled" : ""}>Share</button>
             <button class="workspace-button primary" type="button" data-upload-files ${project.status === "archived" ? "disabled" : ""}>${workspaceIcon("plus")} Add</button>
           ` : `
-            <a class="workspace-button subtle" href="#workspace?panel=scripts" title="Script Writing Studio">¶ Scripts</a>
             <button class="workspace-button primary workspace-create-project" type="button" data-create-free-project><span aria-hidden="true">＋</span><b>Create project</b></button>
           `}
         </div>
@@ -255,10 +253,11 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
 
   root.querySelectorAll(".workspace-rail-home, .workspace-brand").forEach(link => {
     link.addEventListener("click", (e) => {
-      if (location.hash === "#workspace") {
-        e.preventDefault();
-        actions.refreshRoute?.();
+      e.preventDefault();
+      if (location.hash !== "#workspace") {
+        location.hash = "#workspace";
       }
+      actions.refreshRoute?.();
     });
   });
   root.querySelector("[data-workspace-menu]")?.addEventListener("click", () => root.querySelector(".workspace-sidebar").classList.toggle("open"));
@@ -510,8 +509,8 @@ function projectSurface(project, files, folders, canUpload, comments = [], canMa
   const openComments = comments.filter(comment => !commentIsComplete(comment)).length;
   return `<section class="workspace-project-head"><div>${project.status === "archived" ? `<b class="workspace-status-badge">ARCHIVED</b>` : ""}<h1>${escapeHTML(project.name)}</h1><span>${files.length} file${files.length === 1 ? "" : "s"} · Updated ${formatDate(project.updatedAt)}</span></div><div class="workspace-view-toggle" aria-label="File layout"><button class="active" type="button" data-file-view="grid" aria-pressed="true">Grid</button><button type="button" data-file-view="list" aria-pressed="false">List</button></div></section>
     ${openComments ? `<button class="workspace-review-attention" type="button" data-review-attention><span>${openComments}</span><div><b>Feedback</b><small>${openComments} open note${openComments === 1 ? "" : "s"}</small></div><em>Review →</em></button>` : ""}
-    <section class="workspace-browser"><div class="workspace-browser-head"><nav aria-label="Folder breadcrumb"><button class="active" type="button" data-folder-id="">${escapeHTML(project.name)}</button><span data-folder-crumbs></span></nav><div>${canManageFolders ? `<button type="button" data-folder-settings-current hidden>Folder options</button><button type="button" data-create-folder>＋ New folder</button>` : ""}</div></div><div class="workspace-folder-grid">${rootFolders.map(folder => folderCard(folder)).join("")}</div></section>
-    <section class="workspace-files" title="Executables, archives, scripts, HTML and SVG are blocked"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header>${files.length ? `${fileToolbar()}${canManageFolders ? assetBulkBar(folders) : ""}` : ""}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy, canManageFolders)).join("") : `<button class="workspace-empty-files" type="button" ${canUpload ? "data-project-drop" : "disabled"}><span>↑</span><h3>${canUpload ? "Add your first file" : "No files yet"}</h3><p>${canUpload ? "Drag and drop or browse" : ""}</p></button>`}</div></section>
+    <section class="workspace-browser" ${!rootFolders.length ? 'hidden' : ''}><div class="workspace-browser-head"><div class="workspace-browser-left"><span class="workspace-browser-label" data-browser-label>Folders</span><nav aria-label="Folder breadcrumb" data-browser-crumbs hidden><button type="button" data-folder-id="">${escapeHTML(project.name)}</button><span data-folder-crumbs></span></nav></div><div class="workspace-browser-actions">${canManageFolders ? `<button class="workspace-button subtle small" type="button" data-folder-settings-current hidden>Folder options</button><button class="workspace-button subtle small" type="button" data-create-folder>＋ New folder</button>` : ""}</div></div><div class="workspace-folder-grid">${rootFolders.map(folder => folderCard(folder)).join("")}</div></section>
+    <section class="workspace-files" title="Executables, archives, scripts, HTML and SVG are blocked"><header><div><h2>Assets</h2><span data-visible-folder-label>Project root</span></div></header>${files.length ? `${fileToolbar()}${canManageFolders ? assetBulkBar(folders) : ""}` : ""}<div class="workspace-file-grid" data-active-folder="">${files.length ? files.map(file => fileCard(file, canUpload, revisionPolicy, canManageFolders)).join("") : `<button class="workspace-empty-files" type="button" ${canUpload ? "data-project-drop" : "disabled"}><span>↑</span><h3>${canUpload ? "Add your first file" : "No files yet"}</h3><p>${canUpload ? "Drag and drop footage, audio, or images here" : ""}</p>${canUpload ? `<span class="workspace-button primary small" style="margin-top:14px;pointer-events:none;">Choose files</span>` : ""}</button>`}</div></section>
     ${files.length && isShared ? commentsPanel(comments, canManageComments, permissions.canComment !== false) : ""}
     <section class="workspace-queue" data-workspace-queue></section>`;
 }
@@ -552,6 +551,18 @@ function bindFolderBrowser(root, projectId, folders, actions) {
     root.querySelector("[data-folder-crumbs]").innerHTML = chain.map(folder => `<i>/</i><button type="button" data-folder-id="${escapeHTML(folder.id)}">${escapeHTML(folder.name)}</button>`).join("");
     const label = root.querySelector("[data-visible-folder-label]"); if (label) label.textContent = activeFolder ? byId.get(activeFolder)?.name || "Folder" : "Project root";
     const manage = root.querySelector("[data-folder-settings-current]"); if (manage) { manage.hidden = !activeFolder; manage.dataset.folderSettingsCurrent = activeFolder; }
+    const browser = root.querySelector(".workspace-browser");
+    const browserLabel = root.querySelector("[data-browser-label]");
+    const browserCrumbs = root.querySelector("[data-browser-crumbs]");
+    if (activeFolder) {
+      if (browser) browser.hidden = false;
+      if (browserLabel) browserLabel.hidden = true;
+      if (browserCrumbs) browserCrumbs.hidden = false;
+    } else {
+      if (browser) browser.hidden = children.length === 0;
+      if (browserLabel) browserLabel.hidden = false;
+      if (browserCrumbs) browserCrumbs.hidden = true;
+    }
     grid.dataset.activeFolder = activeFolder;
     grid.dataset.folderAssetCount = String(rootCount);
     bindFolderControls(); signalLibrary();
