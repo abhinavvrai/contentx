@@ -1204,7 +1204,6 @@ export async function renderScriptStudioSurface(container, {
                     <div class="linked-assets-empty">
                       <span class="linked-empty-icon">${ICONS.film}</span>
                       <p>No project footage linked</p>
-                      <small>Select text and click <b>Link Asset</b> or click below to attach footage to this script.</small>
                       <button type="button" class="scripts-empty-attach-btn" data-open-asset-linker>
                         <span class="studio-btn-icon">${ICONS.plus}</span>
                         <span>Attach asset</span>
@@ -1283,7 +1282,6 @@ export async function renderScriptStudioSurface(container, {
                   <span class="gen-sparkle-icon">${ICONS.sparkles}</span>
                   <div>
                     <strong>Instant Viral Hook Generator</strong>
-                    <small>Enter your video topic or niche to generate 3 tailored viral hook angles instantly.</small>
                   </div>
                 </div>
                 <div class="generator-card-inputs">
@@ -1413,9 +1411,7 @@ export async function renderScriptStudioSurface(container, {
         <div class="scripts-template-dialog" role="dialog" aria-labelledby="template-dialog-title">
           <header class="template-dialog-header">
             <div>
-              <span class="scripts-studio-tag">TEMPLATE SELECTOR</span>
               <h3 id="template-dialog-title">Create New Script</h3>
-              <small>Choose a proven short-form retention structure or start with a clean blank canvas.</small>
             </div>
             <button type="button" class="template-dialog-close" data-close-template-modal aria-label="Close">${ICONS.close}</button>
           </header>
@@ -1442,7 +1438,7 @@ export async function renderScriptStudioSurface(container, {
               <span class="linker-modal-icon">${ICONS.film}</span>
               <div>
                 <h3 class="asset-linker-title" id="asset-linker-heading">Link Project Footage &amp; Assets</h3>
-                <p class="asset-linker-subtitle" data-linker-target-context>Select footage from project folders to link directly to this script.</p>
+                <p class="asset-linker-subtitle" data-linker-target-context></p>
               </div>
             </div>
             <button type="button" class="asset-linker-modal-close" data-close-asset-linker aria-label="Close asset linker">×</button>
@@ -1911,9 +1907,9 @@ export async function renderScriptStudioSurface(container, {
       btn.addEventListener("click", () => {
         const link = (script.videoLinks || []).find(l => l.id === btn.dataset.playLink);
         if (!link) return;
-        const embed = getVideoEmbedUrl(link.url);
-        if (embed) {
-          playInSidePlayer(link.title || "Video Preview", embed, null);
+        const isDirect = /\.(mp4|webm|mov|m4v)($|\?)/i.test(link.url);
+        if (isDirect) {
+          playInSidePlayer(link.title || "Video Preview", null, link.url);
         } else {
           window.open(link.url, "_blank", "noopener,noreferrer");
         }
@@ -1926,10 +1922,10 @@ export async function renderScriptStudioSurface(container, {
     if (activePlayer) activePlayer.hidden = false;
     if (activeCutTitle) activeCutTitle.textContent = title;
 
-    if (embedUrl) {
-      activePlayerFrame.innerHTML = `<iframe src="${embedUrl}?autoplay=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-    } else if (directUrl) {
-      activePlayerFrame.innerHTML = `<video controls autoplay playsinline src="${escapeHTML(directUrl)}"></video>`;
+    if (directUrl) {
+      activePlayerFrame.innerHTML = `<video controls autoplay playsinline src="${escapeHTML(directUrl)}" style="width:100%;height:100%;object-fit:contain;background:#000;border-radius:10px;"></video>`;
+    } else if (embedUrl) {
+      activePlayerFrame.innerHTML = `<div class="cuts-external-fallback"><a href="${escapeHTML(embedUrl)}" target="_blank" rel="noopener noreferrer" class="workspace-button primary">Open Video ↗</a></div>`;
     }
   }
 
@@ -2840,7 +2836,6 @@ export async function renderScriptStudioSurface(container, {
       html += `
         <div class="asset-linker-section-title">
           <span>PROJECT FOLDERS (${projectFolders.length})</span>
-          <small>Select a folder to browse its uploaded footage</small>
         </div>
         <div class="asset-linker-folders-grid">
           ${projectFolders.map(folder => {
@@ -3016,7 +3011,6 @@ export async function renderScriptStudioSurface(container, {
         <div class="sidebar-assets-empty">
           <span class="empty-icon">${ICONS.film}</span>
           <p>No footage found</p>
-          <small>Upload footage in project folders to link them to script beats.</small>
         </div>
       `;
       return;
@@ -3223,7 +3217,6 @@ export async function renderScriptStudioSurface(container, {
         <div class="linked-assets-empty">
           <span class="linked-empty-icon">${ICONS.film}</span>
           <p>No project footage linked</p>
-          <small>Place your cursor anywhere in the script and click <b>Attach asset</b> to link footage directly.</small>
           <button type="button" class="scripts-empty-attach-btn" data-open-asset-linker>
             <span class="studio-btn-icon">${ICONS.plus}</span>
             <span>Attach asset</span>
