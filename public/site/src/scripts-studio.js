@@ -48,6 +48,7 @@ export function getStorageScripts(projectId) {
       if (Array.isArray(parsed) && parsed.length) {
         return parsed.map(s => ({
           ...s,
+          title: (s.title || "Untitled Script").replace(/\s*\(Linked\)$/i, ""),
           attachedAssets: Array.isArray(s.attachedAssets) ? s.attachedAssets : [],
           videoLinks: Array.isArray(s.videoLinks) ? s.videoLinks : [],
           comments: Array.isArray(s.comments) ? s.comments : [],
@@ -902,16 +903,13 @@ export async function renderScriptStudioSurface(container, {
         </div>
 
         <div class="scripts-breadcrumb-actions">
-          <!-- On-Screen Project Selector -->
-          <div class="scripts-topbar-select-wrap scripts-project-select-wrap" title="Current project">
-            <span class="studio-btn-icon">${ICONS.sidebar}</span>
-            <select class="scripts-topbar-select scripts-project-select" data-active-project-select aria-label="Select active project">
-              ${(projects && projects.length ? projects : [activeProject]).map(p => {
-                const pid = p.project_id || p.id;
-                return `<option value="${escapeHTML(pid)}" ${pid === projectId ? "selected" : ""}>${escapeHTML(p.name)}</option>`;
-              }).join("")}
-            </select>
-            <span class="scripts-select-chevron">${ICONS.chevronDown}</span>
+          <!-- On-Screen Project Selector / Linker -->
+          <div class="scripts-topbar-select-wrap scripts-project-select-wrap" title="Project for this script — Click to link or move">
+            <button type="button" class="scripts-project-btn" data-trigger-project-modal aria-label="Project linking options">
+              <span class="studio-btn-icon">${ICONS.folder}</span>
+              <span class="scripts-project-btn-label" data-topbar-proj-name>${escapeHTML(activeProject.name)}</span>
+              <span class="scripts-select-chevron">${ICONS.chevronDown}</span>
+            </button>
           </div>
 
           <!-- On-Screen Status Selector -->
@@ -1735,6 +1733,7 @@ export async function renderScriptStudioSurface(container, {
           <div class="script-card-head">
             <span class="script-status-pill status-${(s.status || "draft").toLowerCase()}">${escapeHTML(s.status || "Draft")}</span>
             <div class="script-card-actions">
+              <button type="button" class="script-action-icon-btn" data-link-script-btn="${escapeHTML(s.id)}" title="Link or move to another project">${ICONS.folder}</button>
               <button type="button" class="script-action-icon-btn" data-dup-script="${escapeHTML(s.id)}" title="Duplicate Script">${ICONS.copy}</button>
               <button type="button" class="script-action-icon-btn danger" data-del-script="${escapeHTML(s.id)}" title="Delete Script">${ICONS.trash}</button>
             </div>
@@ -1753,6 +1752,15 @@ export async function renderScriptStudioSurface(container, {
       item.addEventListener("click", e => {
         if (e.target.closest(".script-action-icon-btn")) return;
         loadScript(item.dataset.scriptId);
+      });
+    });
+
+    // Bind link to project from card
+    scriptsList.querySelectorAll("[data-link-script-btn]").forEach(btn => {
+      btn.addEventListener("click", e => {
+        e.stopPropagation();
+        const found = scripts.find(s => s.id === btn.dataset.linkScriptBtn);
+        if (found) openLinkProjectModal(found);
       });
     });
 
@@ -2434,32 +2442,11 @@ export async function renderScriptStudioSurface(container, {
   });
 
   // -------------------------------------------------------------
-  // SWITCH ACTIVE PROJECT
+  // PROJECT LINKING & SWITCHING
   // -------------------------------------------------------------
-  const projectSelect = container.querySelector("[data-active-project-select]");
-  projectSelect?.addEventListener("change", () => {
-    const newProjectId = projectSelect.value;
-    if (newProjectId === projectId) return;
-
-    const matched = projects.find(p => (p.project_id || p.id) === newProjectId);
-    if (!matched) return;
-
-    activeProject = {
-      id: matched.project_id || matched.id,
-      name: matched.name,
-      clientName: matched.clientName
-    };
-    projectId = activeProject.id;
-    if (projNameLabel) projNameLabel.textContent = activeProject.name;
-
-    scripts = getStorageScripts(projectId);
-    activeScriptId = scripts[0]?.id || null;
-    loadScript(activeScriptId);
-
-    // Update location hash silently so URL reflects project
-    if (history.replaceState) {
-      history.replaceState(null, "", `#workspace?project=${encodeURIComponent(projectId)}&panel=scripts`);
-    }
+  const projectTrigger = container.querySelector("[data-trigger-project-modal]");
+  projectTrigger?.addEventListener("click", () => {
+    openLinkProjectModal();
   });
 
   // -------------------------------------------------------------
@@ -3492,70 +3479,177 @@ export async function renderScriptStudioSurface(container, {
     });
   });
 
-  // Send Script to Project Modal & Action
-  function openSendToProjectModal(script) {
-    if (!script) return;
-    const otherProjects = (projects || []).filter(p => (p.project_id || p.id) !== projectId);
-    if (!otherProjects.length) {
-      notify("No other projects available in this account.");
+  // -------------------------------------------------------------
+  // LINK & ASSIGN SCRIPT TO PROJECT MODAL
+  // -------------------------------------------------------------
+  function updateProjectTopbarLabel() {
+    const label = container.querySelector("[data-topbar-proj-name]");
+    if (label) label.textContent = activeProject.name;
+    if (projNameLabel) projNameLabel.textContent = activeProject.name;
+  }
+
+  function openLinkProjectModal(scriptToLink = null) {
+    const active = scriptToLink || getActiveScript();
+    if (!active) {
+      notify("Select a script first.");
       return;
     }
+    const cleanTitle = (active.title || "Untitled Script").replace(/\s*\(Linked\)$/i, "");
+    const otherProjects = (projects || []).filter(p => (p.project_id || p.id) !== projectId);
 
     const modal = document.createElement("div");
     modal.className = "workspace-modal-backdrop send-project-layer";
     modal.innerHTML = `
       <div class="workspace-modal send-script-dialog">
         <header class="workspace-modal-head">
-          <h3>Send Script to Project</h3>
-          <button type="button" class="workspace-modal-close" data-close-send-modal aria-label="Close">${ICONS.close}</button>
+          <h3>Link Script to Project</h3>
+          <button type="button" class="workspace-modal-close" data-close-link-modal aria-label="Close">${ICONS.close}</button>
         </header>
         <div class="workspace-modal-body">
-          <p class="send-script-prompt">Copy and link <strong>"${escapeHTML(script.title || "Untitled Script")}"</strong> to another project:</p>
+          <div class="link-script-current-box">
+            <span class="link-script-sub">Active Script</span>
+            <strong class="link-script-name">${escapeHTML(cleanTitle)}</strong>
+            <span class="link-script-current-proj">Current project: <b>${escapeHTML(activeProject.name)}</b></span>
+          </div>
+
+          <p class="send-script-prompt">Choose a project to assign or link this script to:</p>
           <div class="send-project-list">
-            ${otherProjects.map(p => {
+            ${(projects && projects.length ? projects : [activeProject]).map(p => {
               const pid = p.project_id || p.id;
+              const isCurrent = pid === projectId;
               return `
-                <button type="button" class="send-project-row" data-target-pid="${escapeHTML(pid)}">
-                  <span class="send-project-icon">${ICONS.folder}</span>
-                  <div class="send-project-info">
-                    <strong>${escapeHTML(p.name)}</strong>
-                    <small>${escapeHTML(p.clientName || "Workspace project")}</small>
+                <div class="send-project-row ${isCurrent ? "is-current" : ""}">
+                  <div class="send-project-info-wrap">
+                    <span class="send-project-icon">${ICONS.folder}</span>
+                    <div class="send-project-info">
+                      <strong>${escapeHTML(p.name)}</strong>
+                      <small>${escapeHTML(p.clientName || "Workspace project")}</small>
+                    </div>
                   </div>
-                  <span class="send-project-arrow">Link &amp; Send →</span>
-                </button>
+                  <div class="send-project-actions">
+                    ${isCurrent ? `
+                      <span class="current-project-badge">Current Project</span>
+                    ` : `
+                      <button type="button" class="workspace-button primary small" data-move-to-pid="${escapeHTML(pid)}" title="Move this script to ${escapeHTML(p.name)}">Move Here</button>
+                      <button type="button" class="workspace-button subtle small" data-copy-to-pid="${escapeHTML(pid)}" title="Copy script to ${escapeHTML(p.name)}">Copy Here</button>
+                    `}
+                  </div>
+                </div>
               `;
             }).join("")}
           </div>
+
+          ${otherProjects.length ? `
+            <div class="link-project-switch-footer">
+              <small>Or switch workspace view without moving script:</small>
+              <div class="link-switch-chips">
+                ${otherProjects.map(p => {
+                  const pid = p.project_id || p.id;
+                  return `<button type="button" class="link-switch-chip" data-switch-view-pid="${escapeHTML(pid)}">Switch to ${escapeHTML(p.name)}</button>`;
+                }).join("")}
+              </div>
+            </div>
+          ` : ""}
         </div>
       </div>
     `;
     document.body.append(modal);
     const close = () => modal.remove();
-    modal.querySelector("[data-close-send-modal]").addEventListener("click", close);
+    modal.querySelector("[data-close-link-modal]").addEventListener("click", close);
     modal.addEventListener("click", ev => { if (ev.target === modal) close(); });
 
-    modal.querySelectorAll("[data-target-pid]").forEach(row => {
-      row.addEventListener("click", () => {
-        const targetPid = row.dataset.targetPid;
-        const targetProject = otherProjects.find(p => (p.project_id || p.id) === targetPid);
+    // Move script to target project
+    modal.querySelectorAll("[data-move-to-pid]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetPid = btn.dataset.moveToPid;
+        const targetProject = (projects || []).find(p => (p.project_id || p.id) === targetPid);
         if (!targetProject) return;
 
+        // Remove from current project scripts
+        scripts = scripts.filter(s => s.id !== active.id);
+        saveStorageScripts(projectId, scripts);
+
+        // Reassign script
+        active.projectId = targetPid;
+        active.title = cleanTitle;
+        active.updatedAt = Date.now();
+
+        // Add to target project scripts
         const targetScripts = getStorageScripts(targetPid);
-        const scriptClone = {
-          ...script,
-          id: `script_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          title: script.title ? `${script.title} (Linked)` : "Untitled Script",
+        targetScripts.unshift(active);
+        saveStorageScripts(targetPid, targetScripts);
+
+        // Switch active studio view to target project
+        activeProject = {
+          id: targetProject.project_id || targetProject.id,
+          name: targetProject.name,
+          clientName: targetProject.clientName
+        };
+        projectId = activeProject.id;
+        scripts = targetScripts;
+        activeScriptId = active.id;
+
+        updateProjectTopbarLabel();
+        loadScript(activeScriptId);
+        renderScriptsList();
+        close();
+        notify(`Script moved to "${targetProject.name}"`);
+
+        if (history.replaceState) {
+          history.replaceState(null, "", `#workspace?project=${encodeURIComponent(projectId)}&panel=scripts&script=${encodeURIComponent(active.id)}`);
+        }
+      });
+    });
+
+    // Copy script to target project
+    modal.querySelectorAll("[data-copy-to-pid]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetPid = btn.dataset.copyToPid;
+        const targetProject = (projects || []).find(p => (p.project_id || p.id) === targetPid);
+        if (!targetProject) return;
+
+        const copy = {
+          ...active,
+          id: `script_${targetPid}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          title: cleanTitle,
+          projectId: targetPid,
           linkedFromProjectId: projectId,
           linkedFromProjectName: activeProject.name,
           updatedAt: Date.now()
         };
-        targetScripts.unshift(scriptClone);
+        const targetScripts = getStorageScripts(targetPid);
+        targetScripts.unshift(copy);
         saveStorageScripts(targetPid, targetScripts);
         close();
-        notify(`Script linked to "${targetProject.name}"`);
-        setTimeout(() => {
-          location.hash = `#workspace?project=${encodeURIComponent(targetPid)}&panel=scripts&script=${encodeURIComponent(scriptClone.id)}`;
-        }, 150);
+        notify(`Script copied to "${targetProject.name}"`);
+      });
+    });
+
+    // Switch view only
+    modal.querySelectorAll("[data-switch-view-pid]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetPid = btn.dataset.switchViewPid;
+        const targetProject = (projects || []).find(p => (p.project_id || p.id) === targetPid);
+        if (!targetProject) return;
+
+        activeProject = {
+          id: targetProject.project_id || targetProject.id,
+          name: targetProject.name,
+          clientName: targetProject.clientName
+        };
+        projectId = activeProject.id;
+        scripts = getStorageScripts(projectId);
+        activeScriptId = scripts[0]?.id || null;
+
+        updateProjectTopbarLabel();
+        loadScript(activeScriptId);
+        renderScriptsList();
+        close();
+        notify(`Switched to "${targetProject.name}"`);
+
+        if (history.replaceState) {
+          history.replaceState(null, "", `#workspace?project=${encodeURIComponent(projectId)}&panel=scripts`);
+        }
       });
     });
   }
@@ -3563,8 +3657,7 @@ export async function renderScriptStudioSurface(container, {
   sendToProjectBtn?.addEventListener("click", e => {
     e.stopPropagation();
     if (overflowMenu) overflowMenu.hidden = true;
-    const active = getActiveScript();
-    if (active) openSendToProjectModal(active);
+    openLinkProjectModal();
   });
 
   // Highlight Dropdown Popover
@@ -4634,78 +4727,56 @@ export async function renderScriptShowcaseSurface(container, { project, projects
     return;
   }
 
+  const cleanTitle = (script.title || "Untitled Script").replace(/\s*\(Linked\)$/i, "");
   const metrics = calculateSpeechMetrics(script.content ? script.content.replace(/<[^>]*>/g, "") : "", script.targetWpm || 135);
   const primaryLink = (script.videoLinks || [])[0];
   const primaryAsset = (script.attachedAssets || [])[0];
   const primaryVideoUrl = primaryLink?.url || primaryAsset?.url || null;
   const isDirectVideo = primaryVideoUrl && /\.(mp4|mov|webm|m4v)($|\?)/i.test(primaryVideoUrl);
-  const embedUrl = primaryVideoUrl ? getVideoEmbedUrl(primaryVideoUrl) : null;
-  const showcaseLink = window.location.href;
 
   container.innerHTML = `
     <div class="workspace-showcase-container">
-      <header class="showcase-page-header">
-        <div class="showcase-header-left">
-          <a class="workspace-button subtle" href="#workspace?project=${encodeURIComponent(projectId)}&panel=scripts">← Back to Editor</a>
-          <span class="cx-showcase-pill">CONTENT X · SHARED SCRIPT</span>
-          <span class="cx-verified-pill">${ICONS.check} Clean View</span>
-        </div>
-        <div class="showcase-header-actions">
-          <button type="button" class="workspace-button subtle" data-copy-showcase-link>
-            <span class="studio-inline-svg">${ICONS.link}</span> Copy Share Link
-          </button>
-          <a class="workspace-button primary" href="#pricing">Get Video Editing →</a>
-        </div>
-      </header>
-
       <div class="showcase-surface-body">
         <div class="showcase-hero-banner">
           <div class="showcase-proj-tag">Project: ${escapeHTML(project?.name || "Content X Workspace")}</div>
-          <h1 class="showcase-main-title">${escapeHTML(script.title || "Untitled Script")}</h1>
+          <h1 class="showcase-main-title">${escapeHTML(cleanTitle)}</h1>
           <div class="showcase-meta-row">
             <span><b>${metrics.durationFormatted}</b> Speaking Duration</span>
             <span><b>${metrics.words}</b> Words (~${metrics.targetWpm} WPM)</span>
-            <span class="showcase-live-badge"><span class="cx-live-pulse-dot"></span> Shared Script · View Mode</span>
-            <span class="showcase-realtime-badge">Real-time sync</span>
+            <span class="showcase-verified-badge">${ICONS.check} Verified Script</span>
           </div>
         </div>
 
-        <div class="showcase-content-split ${primaryVideoUrl ? "has-video" : "no-video"}">
-          ${primaryVideoUrl ? `
-            <div class="showcase-media-column">
-                ${isDirectVideo ? `
-                  <video controls playsinline preload="metadata" src="${escapeHTML(primaryVideoUrl)}" style="width:100%;height:100%;object-fit:contain;border-radius:12px;background:#050608;"></video>
-                ` : `
-                  <div class="showcase-external-video-card">
-                    <span class="showcase-play-icon">${ICONS.play}</span>
-                    <div class="showcase-video-info">
-                      <strong>${escapeHTML(primaryLink?.title || primaryAsset?.name || "Attached Video Cut")}</strong>
-                      <small>${escapeHTML(primaryLink?.platform || "Web Video")}</small>
-                    </div>
-                    <a href="${escapeHTML(primaryVideoUrl)}" target="_blank" rel="noopener noreferrer" class="workspace-button primary">Watch Cut ↗</a>
-                  </div>
-                `}
+        ${primaryVideoUrl ? `
+          ${isDirectVideo ? `
+            <div class="showcase-media-frame">
+              <video controls playsinline preload="metadata" src="${escapeHTML(primaryVideoUrl)}" style="width:100%;height:100%;object-fit:contain;border-radius:12px;background:#050608;"></video>
             </div>
-          ` : ""}
+          ` : `
+            <div class="showcase-attached-cut-banner">
+              <div class="showcase-cut-left">
+                <span class="showcase-cut-icon">${ICONS.film}</span>
+                <div class="showcase-cut-text">
+                  <strong>${escapeHTML(primaryLink?.title || primaryAsset?.name || "Attached Video Cut")}</strong>
+                  <small>${escapeHTML(primaryLink?.platform || "External Video Cut")}</small>
+                </div>
+              </div>
+              <a href="${escapeHTML(primaryVideoUrl)}" target="_blank" rel="noopener noreferrer" class="workspace-button primary small">Watch Video Cut ↗</a>
+            </div>
+          `}
+        ` : ""}
 
-          <div class="showcase-script-column">
-            <div class="showcase-script-card">
-              <div class="showcase-script-head">
-                <strong>Hook Breakdown &amp; Production Cues</strong>
-                <button type="button" class="workspace-button subtle" data-copy-showcase-text>Copy Script</button>
-              </div>
-              <div class="showcase-script-content">
-                ${script.content || "<p><em>No script content yet.</em></p>"}
-              </div>
-            </div>
+        <div class="showcase-script-card">
+          <div class="showcase-script-head">
+            <strong>Hook Breakdown &amp; Production Cues</strong>
+            <button type="button" class="workspace-button subtle small" data-copy-showcase-text>Copy Script</button>
+          </div>
+          <div class="showcase-script-content">
+            ${script.content || "<p><em>No script content yet.</em></p>"}
           </div>
         </div>
 
         <div class="showcase-page-footer">
-          <div class="showcase-share-input-group">
-            <input type="text" readonly value="${escapeHTML(showcaseLink)}" data-showcase-page-url>
-            <button type="button" class="workspace-button primary" data-copy-page-url>Copy Share Link</button>
-          </div>
           <div class="showcase-cta-strip">
             <span>Want retention-led short-form videos edited like this?</span>
             <a href="#pricing" class="workspace-button primary">View Content X Plans →</a>
@@ -4714,26 +4785,6 @@ export async function renderScriptShowcaseSurface(container, { project, projects
       </div>
     </div>
   `;
-
-  container.querySelector("[data-copy-showcase-link]")?.addEventListener("click", async e => {
-    try {
-      await navigator.clipboard.writeText(showcaseLink);
-      const btn = e.currentTarget;
-      const old = btn.innerHTML;
-      btn.innerHTML = `${ICONS.check} Copied!`;
-      setTimeout(() => { if (btn.isConnected) btn.innerHTML = old; }, 1800);
-    } catch {}
-  });
-
-  container.querySelector("[data-copy-page-url]")?.addEventListener("click", async e => {
-    try {
-      await navigator.clipboard.writeText(showcaseLink);
-      const btn = e.currentTarget;
-      const old = btn.textContent;
-      btn.textContent = "Copied";
-      setTimeout(() => { if (btn.isConnected) btn.textContent = old; }, 1800);
-    } catch {}
-  });
 
   container.querySelector("[data-copy-showcase-text]")?.addEventListener("click", async e => {
     const text = container.querySelector(".showcase-script-content")?.innerText || "";
