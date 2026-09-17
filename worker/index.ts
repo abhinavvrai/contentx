@@ -68,14 +68,8 @@ function withSecurityHeaders(request: Request, response: Response): Response {
     url.pathname === "/site/index.html" ||
     url.pathname === "/site-v2/index.html" ||
     contentType.includes("text/html");
-  if (isHtml) {
+  if (isHtml || url.pathname.startsWith("/site/src/") || url.pathname.startsWith("/site-v2/src/")) {
     headers.set("Cache-Control", "no-store, must-revalidate");
-  } else if (url.pathname.startsWith("/site/src/") || url.pathname.startsWith("/site-v2/src/")) {
-    if (url.searchParams.has("v")) {
-      headers.set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
-    } else {
-      headers.set("Cache-Control", "no-store, must-revalidate");
-    }
   } else if (url.pathname.match(/\.(mp4|webm|webp|png|jpg|jpeg|svg|woff2|ico)$/i)) {
     headers.set("Cache-Control", "public, max-age=604800, immutable");
   }
