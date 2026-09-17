@@ -892,8 +892,10 @@ html.route-busy::after {
 #app .workspace-share-nav>p { padding:7px; color:#656773; font-size:8px; line-height:1.45; }
 
 #app .workspace-topbar { gap:14px; }
-#app .workspace-topbar>div:first-of-type { min-width:0; }
-#app .workspace-topbar>div:first-of-type :is(span,b) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#app .workspace-topbar>div:first-of-type { min-width:0; display:flex; align-items:center; gap:6px; }
+#app .workspace-topbar>div:first-of-type :is(span,b,a) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#app .workspace-topbar>div:first-of-type a { color:#8b8f9e; text-decoration:none; cursor:pointer; transition:color var(--fx-fast); }
+#app .workspace-topbar>div:first-of-type a:hover { color:#fff; text-decoration:underline; }
 #app .workspace-topbar>div:first-of-type i { color:#454751; font-style:normal; }
 #app .workspace-global-search { width:min(255px,26vw); height:32px; display:flex; align-items:center; gap:7px; margin-left:auto; padding:0 10px; border:1px solid #2e303a; border-radius:999px; background:#171821; color:#777a87; }
 #app .workspace-global-search:focus-within { border-color:#6657d9; box-shadow:0 0 0 2px #6352ff1c; }

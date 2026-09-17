@@ -219,7 +219,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       <header class="workspace-topbar">
         <button type="button" data-workspace-menu aria-label="Open project menu">${workspaceIcon("menu")}</button>
         <div>
-          <span>All projects</span>
+          <a class="workspace-breadcrumb-all" href="#workspace" title="View all projects">All projects</a>
           ${accountPanel ? `<b>/ Account</b>` : showcasePanel ? `${showcaseProject ? `<i>/</i><a href="#workspace?project=${encodeURIComponent(showcaseProject.project_id || showcaseProject.id)}">${escapeHTML(showcaseProject.name)}</a>` : ""}<b>/ Public Showcase</b>` : scriptsPanel ? `${selected ? `<i>/</i><a href="#workspace?project=${encodeURIComponent(selected.project_id || selected.id)}">${escapeHTML(selected.name)}</a>` : ""}<b>/ Scripts Studio</b>` : project ? `<i>/</i><b>${escapeHTML(project.name)}</b>` : ""}
         </div>
         ${!scriptsPanel && !showcasePanel && project && !accountPanel ? `<label class="workspace-global-search"><span>${workspaceIcon("search")}</span><input type="search" data-global-file-search placeholder="Search files" aria-label="Search this project"></label>` : `<button class="workspace-command-trigger" type="button" data-command-menu><span>${workspaceIcon("search")}</span> Search <kbd>⌘K</kbd></button>`}
@@ -255,7 +255,7 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
     </main>
   </div><nav class="workspace-mobile-nav" aria-label="Mobile workspace navigation"><a class="${!accountPanel && !scriptsPanel && !showcasePanel && !project ? "active" : ""}" href="#workspace"><span>CX</span><small>Home</small></a><a class="${!accountPanel && !scriptsPanel && !showcasePanel ? "active" : ""}" href="#workspace">${workspaceIcon("projects")}<small>Projects</small></a><a class="${scriptsPanel ? "active" : ""}" href="#workspace?panel=scripts">${workspaceIcon("script")}<small>Scripts</small></a><button type="button" data-command-menu>${workspaceIcon("search")}<small>Search</small></button><a href="#workspace?panel=account&view=notifications">${workspaceIcon("bell")}<small>Alerts</small></a><a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account">${workspaceIcon("account")}<small>Account</small></a></nav><input type="file" multiple hidden data-workspace-picker><div data-workspace-layer></div>`;
 
-  root.querySelectorAll(".workspace-rail-home, .workspace-brand").forEach(link => {
+  root.querySelectorAll(".workspace-rail-home, .workspace-brand, .workspace-breadcrumb-all").forEach(link => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
       if (location.hash !== "#workspace") {

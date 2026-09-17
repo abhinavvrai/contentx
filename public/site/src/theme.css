@@ -686,6 +686,7 @@ html[data-theme="light"] #app :is(.workspace-storage,.workspace-user,.workspace-
 html[data-theme="light"] #app .workspace-main { grid-column:3; background:#f4f5f7; color:#17191f; }
 html[data-theme="light"] #app .workspace-topbar { border-color:#dfe2e7; background:#fffffff2; color:#17191f; }
 html[data-theme="light"] #app .workspace-topbar :is(button,a) { color:#545a65; }
+html[data-theme="light"] #app .workspace-topbar>div:first-of-type a:hover { color:#111827; }
 html[data-theme="light"] #app .workspace-view-toggle { border-color:#dfe2e7; background:#fff; }
 html[data-theme="light"] #app .workspace-view-toggle button.active { background:#e9ebf0; color:#17191f; }
 html[data-theme="light"] #app .sx-pulse { border-color:#ebc7b5; background:radial-gradient(circle at 6% 0%,rgba(255,92,32,.14),transparent 38%),linear-gradient(110deg,#fff7f2,#fff 65%); color:#211b19; box-shadow:0 10px 30px rgba(255,92,32,.06); }
