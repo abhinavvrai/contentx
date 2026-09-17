@@ -1332,8 +1332,7 @@ export async function renderScriptStudioSurface(container, {
           <section class="scripts-panel-view scripts-cuts-view" data-panel-view="cuts" hidden>
             <div class="cuts-view-head">
               <div>
-                <h3>Attached Video Cuts &amp; Reference Footage</h3>
-                <p>Attach project cuts or paste external video links (YouTube, Vimeo, Loom, Google Drive) to review timeline edits directly alongside your script.</p>
+                <h3>Attached Footage &amp; Cuts</h3>
               </div>
               <div class="cuts-attach-inputs">
                 ${files && files.length ? `
@@ -1358,7 +1357,7 @@ export async function renderScriptStudioSurface(container, {
                 <div class="cuts-player-empty" data-player-empty>
                   <span class="studio-btn-icon">${ICONS.play}</span>
                   <strong>No video cut selected</strong>
-                  <small>Select an attached video cut or paste a video link on the left to preview it side-by-side with your script.</small>
+                  <small>Select an attachment to preview side-by-side.</small>
                 </div>
                 <div class="cuts-active-player" data-active-player hidden>
                   <div class="cuts-player-header">
@@ -1837,7 +1836,7 @@ export async function renderScriptStudioSurface(container, {
     if (cutsCountPill) cutsCountPill.textContent = total;
 
     if (!total) {
-      cutsItemsList.innerHTML = `<p class="cuts-empty-note">No video cut or asset attached to this script yet. Use the controls above to attach a project file or external video link.</p>`;
+      cutsItemsList.innerHTML = `<p class="cuts-empty-note">No cuts or assets attached yet.</p>`;
       if (playerEmpty) playerEmpty.hidden = false;
       if (activePlayer) activePlayer.hidden = true;
       return;

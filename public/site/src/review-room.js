@@ -149,6 +149,8 @@ export async function openReviewRoom({ layer, api, headers, projectId, assetId, 
       const summary = reviewSummary(versionComments);
       dialog.querySelector("[data-feedback-progress]").textContent = `${summary.complete} of ${summary.total} notes completed · ${summary.open} open`;
       dialog.querySelector("progress").value = summary.percent;
+      const progressContainer = dialog.querySelector(".sx-review-progress");
+      if (progressContainer) progressContainer.hidden = summary.total === 0;
       dialog.querySelectorAll("[data-open-note-prev],[data-open-note-next]").forEach(button => { button.disabled = summary.open === 0; });
       const bulk = dialog.querySelector("[data-bulk-comments]");
       if (bulk) {
