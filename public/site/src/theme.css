@@ -1176,7 +1176,8 @@ html[data-theme="light"] #app .workspace-member-remove:hover {
   color: #dc2626;
   background: rgba(220, 38, 38, 0.08);
 }
-html[data-theme="light"] #app .account-onboarding-grid select {
+html[data-theme="light"] #app .account-onboarding-grid select,
+html[data-theme="light"] #app .account-onboarding-grid input {
   background: #fff;
   border-color: #d1d5db;
   color: #17191f;

@@ -240,12 +240,17 @@ export function renderAccountAccess(root, actions) {
   const resetEmail = resetParams.get("email") || "";
 
   function renderPostRegisterOnboarding(user) {
+    const defaultName = (user?.name && user.name !== "Creator") ? user.name : "";
     panel.innerHTML = `
       <p class="eyebrow"><span></span>Welcome to Content X</p>
       <h2>Tell us a bit about you</h2>
       <p>Help us customize your workspace experience.</p>
       <form data-onboarding-form>
         <div class="account-onboarding-grid">
+          <label style="grid-column: 1 / -1;">
+            <span>Full name</span>
+            <input name="name" required placeholder="Your full name" autocomplete="name" value="${escapeHTML(defaultName)}">
+          </label>
           <label>
             <span>How did you find us?</span>
             <select name="referralSource">
@@ -269,13 +274,24 @@ export function renderAccountAccess(root, actions) {
             </select>
           </label>
         </div>
+        <p class="account-form-error" role="alert" hidden></p>
         <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px;">
           <button class="pill pill-hot" type="submit">Continue to workspace →</button>
           <button class="account-text-link" type="button" data-skip-onboarding style="text-align:center;">Skip for now</button>
         </div>
       </form>
     `;
-    const finish = (values = {}) => {
+    const finish = async (values = {}) => {
+      if (values.name && values.name.trim().length >= 2) {
+        try {
+          const res = await api(AUTH_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "update_profile", name: values.name.trim() })
+          });
+          if (res?.user) user = res.user;
+        } catch {}
+      }
       if (values.referralSource || values.useCase) {
         try {
           localStorage.setItem("cx_user_onboarding", JSON.stringify({
@@ -287,10 +303,14 @@ export function renderAccountAccess(root, actions) {
       }
       finishAccountAccess(user, returningTo);
     };
-    panel.querySelector("[data-onboarding-form]").addEventListener("submit", e => {
+    panel.querySelector("[data-onboarding-form]").addEventListener("submit", async e => {
       e.preventDefault();
-      const values = Object.fromEntries(new FormData(e.currentTarget));
-      finish(values);
+      const form = e.currentTarget;
+      const button = form.querySelector("button[type=submit]");
+      button.disabled = true;
+      button.textContent = "Saving…";
+      const values = Object.fromEntries(new FormData(form));
+      await finish(values);
     });
     panel.querySelector("[data-skip-onboarding]").addEventListener("click", () => finish());
   }
@@ -298,14 +318,15 @@ export function renderAccountAccess(root, actions) {
   function show(mode) {
     tabs.forEach(button => button.classList.toggle("active", button.dataset.accountTab === mode));
     const register = mode === "register";
-    panel.innerHTML = `<p class="eyebrow"><span></span>${register ? "New creator account" : "Welcome back"}</p><h2>${register ? "Create your account." : "Sign in to continue."}</h2><div class="account-provider-actions" aria-label="Sign-in options">${accountProviders.google?.available ? `<div class="account-google-option"><button type="button" class="account-google-pending" data-google-pending disabled>${googleIcon}<span>Continue with Google</span></button><div data-google-button hidden></div></div>` : ""}</div>${accountProviders.google?.available ? '<div class="account-divider"><span>or continue with password</span></div>' : ""}<form data-password-form>${register ? '<label>Full name<input name="name" autocomplete="name" required placeholder="Your full name"></label>' : ""}<label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><label>Password<input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="10" maxlength="128" required placeholder="10+ character passphrase"></label>${register ? "" : '<button class="account-text-link" type="button" data-forgot-password>Forgot password?</button>'}<p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Create account →" : "Sign in →"}</button></form>`;
+    panel.innerHTML = `<p class="eyebrow"><span></span>${register ? "New creator account" : "Welcome back"}</p><h2>${register ? "Create your account." : "Sign in to continue."}</h2><div class="account-provider-actions" aria-label="Sign-in options">${accountProviders.google?.available ? `<div class="account-google-option"><button type="button" class="account-google-pending" data-google-pending disabled>${googleIcon}<span>Continue with Google</span></button><div data-google-button hidden></div></div>` : ""}</div>${accountProviders.google?.available ? '<div class="account-divider"><span>or continue with password</span></div>' : ""}<form data-password-form><label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@company.com"></label><label>Password<input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="10" maxlength="128" required placeholder="10+ character passphrase"></label>${register ? "" : '<button class="account-text-link" type="button" data-forgot-password>Forgot password?</button>'}<p class="account-form-error" role="alert" hidden></p><button class="pill pill-hot" type="submit">${register ? "Create account →" : "Sign in →"}</button></form>`;
     panel.querySelector("[data-password-form]").addEventListener("submit", async event => {
       event.preventDefault();
-      const button = event.currentTarget.querySelector("button[type=submit]");
-      const error = event.currentTarget.querySelector(".account-form-error");
+      const form = event.currentTarget;
+      const button = form.querySelector("button[type=submit]");
+      const error = form.querySelector(".account-form-error");
       button.disabled = true; button.textContent = register ? "Creating account…" : "Signing in…"; error.hidden = true;
       try {
-        const values = Object.fromEntries(new FormData(event.currentTarget));
+        const values = Object.fromEntries(new FormData(form));
         const result = await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:register ? "register" : "login", ...values }) });
         if (register) {
           renderPostRegisterOnboarding(result.user);

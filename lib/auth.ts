@@ -408,10 +408,16 @@ export async function consumeRequestLimit(request:Request, scope:string, maximum
 export async function registerAccount(request: Request, input: Record<string, unknown>): Promise<{ user: AccountUser; token: string }> {
   requireSameOrigin(request);
   await ensureAccountSchema();
-  const name = cleanText(input.name, 100);
   const email = cleanEmail(input.email);
+  let name = cleanText(input.name, 100);
+  if (!name && email) {
+    const prefix = email.split("@")[0]?.trim();
+    name = prefix ? (prefix.charAt(0).toUpperCase() + prefix.slice(1)) : "Creator";
+  }
+  if (!name || name.length < 2) {
+    name = "Creator";
+  }
   const password = typeof input.password === "string" ? input.password : "";
-  if (name.length < 2) throw new AccountError("Enter your full name.");
   if (!email) throw new AccountError("Enter a valid email address.");
   validatePassword(password);
   const db = getAccountDatabase();

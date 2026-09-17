@@ -1658,7 +1658,8 @@ html[data-theme="dark"] #app.review-app .review-stage { padding:12px 16px 10px; 
   font-weight: 600;
   color: #b2b2bd;
 }
-#app .account-onboarding-grid select {
+#app .account-onboarding-grid select,
+#app .account-onboarding-grid input {
   width: 100%;
   padding: 10px 12px;
   border-radius: 10px;
@@ -1669,7 +1670,8 @@ html[data-theme="dark"] #app.review-app .review-stage { padding:12px 16px 10px; 
   outline: none;
   transition: border-color var(--fx-fast);
 }
-#app .account-onboarding-grid select:focus {
+#app .account-onboarding-grid select:focus,
+#app .account-onboarding-grid input:focus {
   border-color: #ff7828;
 }
 
