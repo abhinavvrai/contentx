@@ -22,7 +22,8 @@
     "run_worker_first": ["/site/*", "/site-v2/*"]
   },
   "vars": {
-    "CONTENTX_EMAIL_FROM": "Content X <notifications@contentx.co.in>"
+    "CONTENTX_EMAIL_FROM": "Content X <notifications@contentx.co.in>",
+    "WISE_PAYMENT_URL": "https://wise.com/pay/business/abhinavrai"
   },
   "d1_databases": [
     {
