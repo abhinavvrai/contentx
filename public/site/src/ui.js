@@ -181,7 +181,7 @@ export function renderMarketing(root, data, actions) {
   root.innerHTML = `
     <header class="site-nav">
       <a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a>
-      <nav aria-label="Main navigation"><a href="#workflow">How it works</a><a href="#scripts">Scripts &amp; Hooks</a><a href="#pricing">Pricing</a><a href="#work">Selected work</a><a href="#faq">FAQ</a></nav>
+      <nav aria-label="Main navigation"><a href="#work">Portfolio</a><a href="#workflow">How it works</a><a href="#scripts">Scripts &amp; Hooks</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
       <div class="nav-actions"><button class="text-button" data-action="workspace">Workspace</button><button class="text-button" data-action="login">Login</button><a class="pill pill-hot" href="#pricing">See plans <span>↓</span></a></div>
     </header>
     <main id="top">
@@ -208,9 +208,47 @@ export function renderMarketing(root, data, actions) {
         </div>
       </section>
       <section class="stat-strip section-shell">${data.stats.map(s => `<div><strong>${s.value}</strong><span>${s.label}</span></div>`).join("")}<p>Trusted by creators, coaches<br>and growing brands.</p></section>
-      <section id="work" class="section-shell block-section">
-        <div class="section-heading"><p class="eyebrow"><span></span>Selected work</p><h2>Edits designed to <em>hold attention.</em></h2><p>Every cut has a job: earn the next second, make the message clear, and leave the brand looking premium.</p></div>
-        <div class="work-grid">${data.cases.map((item, i) => `<article class="work-card"><div class="work-media"><video src="${item.src}" muted loop playsinline preload="auto" data-preview-autoplay data-highlight-time="${item.posterTime || 2.5}"></video><span>0${i + 1}</span></div><div><p>${item.label}</p><h3>${item.title}</h3><small>${item.copy}</small></div></article>`).join("")}</div>
+      <section id="work" class="section-shell block-section portfolio-showcase-section">
+        <div class="section-heading split">
+          <div>
+            <p class="eyebrow"><span></span>Client Portfolio &amp; Edits</p>
+            <h2>Edits designed to <em>stop the scroll.</em></h2>
+          </div>
+          <p>Explore real production edits delivered for creators, founders, and brands. Hover or tap to preview any video with audio controls, or filter by edit complexity.</p>
+        </div>
+        <div class="portfolio-filter-bar" role="tablist" aria-label="Portfolio category filter">
+          <button type="button" class="portfolio-filter-pill active" data-portfolio-filter="all">All Edits (${data.cases.length})</button>
+          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="premium">✦ Premium (${data.cases.filter(c => c.category === "premium").length})</button>
+          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="standard">★ Standard (${data.cases.filter(c => c.category === "standard").length})</button>
+          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="quick">⚡ Social Fast (${data.cases.filter(c => c.category === "quick").length})</button>
+          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="landscape">▱ 16:9 Landscape (${data.cases.filter(c => c.category === "landscape").length})</button>
+        </div>
+        <div class="work-grid portfolio-grid" data-portfolio-grid>
+          ${data.cases.map((item, i) => `
+            <article class="work-card portfolio-card ${item.category === "landscape" ? "is-landscape" : ""}" data-portfolio-cat="${item.category}" data-portfolio-index="${i}">
+              <div class="work-media portfolio-media">
+                <video src="${item.src}" muted loop playsinline preload="metadata" data-preview-autoplay data-highlight-time="${item.posterTime || 2.5}"></video>
+                <span class="portfolio-tier-tag tier-${item.category}">${item.tier || item.label}</span>
+                <span class="portfolio-index-tag">0${i + 1}</span>
+                <button type="button" class="portfolio-sound-btn" aria-label="Toggle sound" data-portfolio-mute title="Click to hear audio">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                </button>
+              </div>
+              <div class="portfolio-card-info">
+                <p>${item.label}</p>
+                <h3>${item.title}</h3>
+                <small>${item.copy}</small>
+              </div>
+            </article>
+          `).join("")}
+        </div>
+        <div class="portfolio-cta-strip">
+          <div>
+            <strong>Need edits like these for your brand or podcast?</strong>
+            <p>Get your raw footage turned into high-retention videos with 48h turnaround.</p>
+          </div>
+          <a class="pill pill-hot pill-large" href="#pricing">See Packages &amp; Pricing ↓</a>
+        </div>
       </section>
       <section id="workflow" class="workflow-section block-section"><div class="section-shell"><div class="section-heading split"><div><p class="eyebrow"><span></span>Your workflow</p><h2>From raw footage to <em>approved.</em></h2></div><p>Everything your project needs lives in one place—so feedback stays clear and delivery keeps moving.</p></div><div class="workflow-grid">${data.workflow.map(w => `<article class="workflow-step workflow-step-${w.step}"><span class="workflow-step-number">${w.step}</span><div class="step-icon">${["↑","✦","◌","✓"][Number(w.step)-1]}</div><h3>${w.title}</h3><p>${w.copy}</p></article>`).join("")}</div><div class="feature-banner"><div><span class="live-dot"></span><small>THE CONTENT X WORKSPACE</small><h3>Review video without the back-and-forth.</h3><p>Click any moment to add a timestamped note. Compare versions, resolve feedback and approve the final cut—all in your browser.</p><button class="pill pill-hot" data-action="workspace">Open interactive demo →</button></div><div class="review-mini"><div class="review-video"><video src="videos/video3.mp4" muted loop playsinline preload="metadata" data-preview-autoplay></video><span>00:12</span></div><div class="review-note"><b>MK</b><p><strong>00:12</strong> Can we make this transition faster?</p><button>Reply</button></div></div></div></div></section>
       <section id="scripts" class="section-shell block-section scripts-showcase-section">
@@ -310,7 +348,7 @@ export function renderMarketing(root, data, actions) {
     </main>
     <button class="support-fab" type="button" data-support-open>?</button>
     <aside class="support-panel" data-support-panel hidden><button type="button" data-support-close>×</button><p class="eyebrow"><span></span>Content X support</p><h3>Ask first, then start properly.</h3><p>Use the website for packages, payment, brief and uploads. WhatsApp stays available only when you need quick human help.</p><div><button class="pill pill-hot" type="button" data-support-pricing>Choose package</button><a class="pill pill-dark" href="${data.whatsapp}" target="_blank" rel="noreferrer">WhatsApp help ↗</a><a class="pill pill-outline" href="mailto:${data.email}">Email team</a></div></aside>
-    <footer class="site-footer"><div class="section-shell"><div><a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a><p>Premium video editing and a better way to review it.</p></div><div><strong>Explore</strong><a href="#workflow">How it works</a><a href="#scripts">Scripts &amp; Hooks</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></div><div><strong>Connect</strong><button data-support-open>Support</button><a href="mailto:${data.email}">Email</a><button data-action="login">Login</button></div></div><p class="copyright">© 2026 Content X. Built for better content.</p></footer>
+    <footer class="site-footer"><div class="section-shell"><div><a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a><p>Premium video editing and a better way to review it.</p></div><div><strong>Explore</strong><a href="#work">Portfolio</a><a href="#workflow">How it works</a><a href="#scripts">Scripts &amp; Hooks</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></div><div><strong>Connect</strong><button data-support-open>Support</button><a href="mailto:${data.email}">Email</a><button data-action="login">Login</button></div></div><p class="copyright">© 2026 Content X. Built for better content.</p></footer>
   `;
 
   const pricingFallback = root.querySelector("#pricing");
@@ -325,6 +363,44 @@ export function renderMarketing(root, data, actions) {
     const plan = checkoutPlans[button.dataset.servicePlan];
     if (plan) actions.openCheckout({ id: button.dataset.servicePlan, ...plan, unit: "project", badge: "Secure one-time payment" });
   }));
+  // Portfolio filtering & sound controls
+  const filterPills = root.querySelectorAll("[data-portfolio-filter]");
+  const portfolioCards = root.querySelectorAll("[data-portfolio-cat]");
+  filterPills.forEach(pill => {
+    pill.addEventListener("click", () => {
+      filterPills.forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      const targetCat = pill.dataset.portfolioFilter;
+      portfolioCards.forEach(card => {
+        if (targetCat === "all" || card.dataset.portfolioCat === targetCat) {
+          card.style.display = "";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    });
+  });
+
+  root.querySelectorAll("[data-portfolio-mute]").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const card = btn.closest(".portfolio-card");
+      const v = card?.querySelector("video");
+      if (!v) return;
+      v.muted = !v.muted;
+      if (!v.muted) {
+        v.play().catch(() => {});
+        btn.classList.add("is-unmuted");
+        btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+        btn.title = "Audio playing (click to mute)";
+      } else {
+        btn.classList.remove("is-unmuted");
+        btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`;
+        btn.title = "Click to hear audio";
+      }
+    });
+  });
+
   startMutedPreviewVideos(root);
 }
 
