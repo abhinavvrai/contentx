@@ -214,14 +214,14 @@ export function renderMarketing(root, data, actions) {
             <p class="eyebrow"><span></span>Client Portfolio &amp; Edits</p>
             <h2>Edits designed to <em>stop the scroll.</em></h2>
           </div>
-          <p>Explore real production edits delivered for creators, founders, and brands. Hover or tap to preview any video with audio controls, or filter by edit complexity.</p>
+          <p>Browse by style: Premium Motion, Creator Talking-Head, or Fast Social Cuts. Click any tab to view that specific collection, or watch with audio.</p>
         </div>
-        <div class="portfolio-filter-bar" role="tablist" aria-label="Portfolio category filter">
-          <button type="button" class="portfolio-filter-pill active" data-portfolio-filter="all">All Edits (${data.cases.length})</button>
-          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="premium">✦ Premium (${data.cases.filter(c => c.category === "premium").length})</button>
-          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="standard">★ Standard (${data.cases.filter(c => c.category === "standard").length})</button>
+        <div class="portfolio-filter-bar" role="tablist" aria-label="Portfolio category tabs">
+          <button type="button" class="portfolio-filter-pill active" data-portfolio-filter="premium">✦ Premium Reels (${data.cases.filter(c => c.category === "premium").length})</button>
+          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="standard">★ Standard &amp; Creator (${data.cases.filter(c => c.category === "standard").length})</button>
           <button type="button" class="portfolio-filter-pill" data-portfolio-filter="quick">⚡ Social Fast (${data.cases.filter(c => c.category === "quick").length})</button>
           <button type="button" class="portfolio-filter-pill" data-portfolio-filter="landscape">▱ 16:9 Landscape (${data.cases.filter(c => c.category === "landscape").length})</button>
+          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="all">All Edits (${data.cases.length})</button>
         </div>
         <div class="work-grid portfolio-grid" data-portfolio-grid>
           ${data.cases.map((item, i) => `
@@ -241,6 +241,9 @@ export function renderMarketing(root, data, actions) {
               </div>
             </article>
           `).join("")}
+        </div>
+        <div class="portfolio-pagination-row">
+          <button type="button" class="pill pill-outline" data-portfolio-show-more style="display:none">Show more videos ↓</button>
         </div>
         <div class="portfolio-cta-strip">
           <div>
@@ -363,23 +366,49 @@ export function renderMarketing(root, data, actions) {
     const plan = checkoutPlans[button.dataset.servicePlan];
     if (plan) actions.openCheckout({ id: button.dataset.servicePlan, ...plan, unit: "project", badge: "Secure one-time payment" });
   }));
-  // Portfolio filtering & sound controls
+  // Portfolio filtering & separate views (does not dump all videos at once)
   const filterPills = root.querySelectorAll("[data-portfolio-filter]");
-  const portfolioCards = root.querySelectorAll("[data-portfolio-cat]");
+  const portfolioCards = [...root.querySelectorAll("[data-portfolio-cat]")];
+  const showMoreBtn = root.querySelector("[data-portfolio-show-more]");
+  let activeCat = "premium";
+  let showAllInCat = false;
+  const PAGE_SIZE = 4;
+
+  const updatePortfolioDisplay = () => {
+    const matchingCards = portfolioCards.filter(card => activeCat === "all" || card.dataset.portfolioCat === activeCat);
+    portfolioCards.forEach(card => card.style.display = "none");
+    const visibleCards = showAllInCat ? matchingCards : matchingCards.slice(0, PAGE_SIZE);
+    visibleCards.forEach(card => card.style.display = "");
+    if (showMoreBtn) {
+      if (matchingCards.length > PAGE_SIZE && !showAllInCat) {
+        showMoreBtn.style.display = "inline-flex";
+        showMoreBtn.textContent = `View all ${matchingCards.length} in this category ↓`;
+      } else if (matchingCards.length > PAGE_SIZE && showAllInCat) {
+        showMoreBtn.style.display = "inline-flex";
+        showMoreBtn.textContent = "Show fewer ↑";
+      } else {
+        showMoreBtn.style.display = "none";
+      }
+    }
+  };
+
   filterPills.forEach(pill => {
     pill.addEventListener("click", () => {
       filterPills.forEach(p => p.classList.remove("active"));
       pill.classList.add("active");
-      const targetCat = pill.dataset.portfolioFilter;
-      portfolioCards.forEach(card => {
-        if (targetCat === "all" || card.dataset.portfolioCat === targetCat) {
-          card.style.display = "";
-        } else {
-          card.style.display = "none";
-        }
-      });
+      activeCat = pill.dataset.portfolioFilter;
+      showAllInCat = false;
+      updatePortfolioDisplay();
     });
   });
+
+  if (showMoreBtn) {
+    showMoreBtn.addEventListener("click", () => {
+      showAllInCat = !showAllInCat;
+      updatePortfolioDisplay();
+    });
+  }
+  updatePortfolioDisplay();
 
   root.querySelectorAll("[data-portfolio-mute]").forEach(btn => {
     btn.addEventListener("click", e => {

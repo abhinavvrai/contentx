@@ -166,6 +166,9 @@ html[data-theme="dark"] .theme-toggle,html[data-theme="dark"] .icon-button{borde
 .portfolio-card-info p{color:var(--orange,#ff7828);font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin:0}
 .portfolio-card-info h3{margin:5px 0 6px;font-size:16px;font-weight:750;letter-spacing:-.02em;line-height:1.3;color:#fff}
 .portfolio-card-info small{color:#8f93a4;font-size:11.5px;line-height:1.45;display:block}
+.portfolio-pagination-row{display:flex;justify-content:center;margin-top:28px}
+.portfolio-pagination-row .pill{min-height:42px;padding:0 24px;font-size:12px;font-weight:700;border-color:rgba(255,255,255,.18);color:#d0d4e4;transition:all .2s}
+.portfolio-pagination-row .pill:hover{border-color:var(--orange,#ff7828);color:#fff;background:rgba(255,120,40,.1)}
 .portfolio-cta-strip{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:38px;padding:24px 30px;background:#14161f;border:1px solid rgba(255,255,255,.08);border-radius:18px}
 .portfolio-cta-strip strong{display:block;font-size:17px;color:#fff}
 .portfolio-cta-strip p{margin:4px 0 0;color:#8f93a4;font-size:13px}
