@@ -1079,9 +1079,16 @@ export function renderAccess(root, actions) {
 
 export function renderCheckout(root, actions) {
   const plan = store.get("cx_checkout", monthlyPlans[1]);
-  let checkoutCurrency = plan.currency === "INR" ? "INR" : activeCurrency;
+  const getUsdAmount = (price = plan.price) => {
+    return plan.canonicalUsdAmount || (plan.currency === "USD" ? price : (price ? roundedUsdFromInr(price) : price));
+  };
+  let selectedMethod = (plan.currency === "USD" || activeCurrency === "USD") ? "wise" : "razorpay";
+  let checkoutCurrency = selectedMethod === "wise" ? "USD" : (plan.currency === "INR" ? "INR" : activeCurrency);
   const formatCheckoutPrice = price => {
-    const usd = plan.canonicalUsdAmount || (plan.currency === "USD" ? price : (price ? roundedUsdFromInr(price) : price));
+    if (selectedMethod === "wise") {
+      return formatRegionalUsd(getUsdAmount(price), "USD");
+    }
+    const usd = getUsdAmount(price);
     return formatRegionalUsd(usd, checkoutCurrency);
   };
   const checkoutCopy = plan.revisionPurchase
@@ -1092,7 +1099,7 @@ export function renderCheckout(root, actions) {
       ? { back: "Back to review", eyebrow: "Hands-off review add-on", secure: "Content X managed review", note: "Your paid request goes directly to the review desk for brief checks, consolidated feedback, revision follow-up and final quality approval.", success: "Your managed review is paid and queued with the Content X review desk." }
       : { back: "Back to pricing", eyebrow: "Activate your workspace", secure: "Payment-gated access", note: "Your client workspace opens only after a successful payment record is created.", success: "Your Content X workspace is active." };
   root.className = "checkout-app";
-  root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span>Secure Razorpay checkout</span></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="secure-payment-banner"><div class="secure-banner-icon">🛡️</div><div class="secure-banner-text"><strong>Direct Razorpay Checkout</strong><span>UPI, cards, netbanking and wallets open securely in Razorpay.</span></div></div><form class="checkout-form-inner"><h3>Contact details</h3><div class="field-pair"><label>Full name<input name="name" required autocomplete="name" placeholder="Your name"></label><label>WhatsApp / Phone<input name="phone" required autocomplete="tel" placeholder="+91 98765 43210"></label></div><label>Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label><div class="checkout-coupon"><label><span class="coupon-label">Coupon code <span class="workspace-optional">optional</span></span><div class="coupon-field-row"><input name="couponCode" maxlength="32" autocomplete="off" placeholder="Enter coupon code"><button type="button" class="coupon-apply-btn" data-apply-coupon>Apply</button></div></label><small data-coupon-feedback>Discounts are checked securely before Razorpay opens.</small></div><label class="terms"><input type="checkbox" required><span>I agree to the selected package scope, add-ons and revision allowance shown in this order.</span></label><p role="status" class="checkout-status-alert" data-checkout-status hidden></p><button class="pill pill-hot pay-button" type="submit">Pay securely with Razorpay · ${formatCheckoutPrice(plan.price)}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge || "Verified")}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-breakdown"><div class="breakdown-row"><span>Package price</span><strong data-breakdown-pkg>${formatCheckoutPrice(plan.price)}</strong></div>${(plan.addOns || []).map(a => `<div class="breakdown-row"><span>${escapeHTML(a.name)}</span><strong>${formatCheckoutPrice(a.price)}</strong></div>`).join("")}<div class="breakdown-row coupon-discount" data-breakdown-coupon hidden><span>Coupon discount</span><strong class="discount-amount" data-breakdown-discount>-</strong></div></div><div class="order-total"><span>Total amount<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><div class="total-price-wrap"><strong data-order-total>${formatCheckoutPrice(plan.price)}</strong><span class="currency-tag" data-currency-tag>${checkoutCurrency}</span></div></div><small class="currency-note">Charged in ${checkoutCurrency}. Final currency is confirmed by Razorpay for your region.</small><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">${plan.revisionPurchase ? "Return to this video →" : "Add project brief →"}</button></div></div>`;
+  root.innerHTML = `<header class="checkout-head"><a class="brand" href="#"><span class="brand-mark">CX</span><span>Content X</span></a><span class="checkout-security-label">${selectedMethod === "wise" ? "Secure Wise checkout" : "Secure Razorpay checkout"}</span></header><main class="checkout-shell"><section class="checkout-form"><button class="back-link">← ${checkoutCopy.back}</button><p class="eyebrow"><span></span>${checkoutCopy.eyebrow}</p><h1>Complete your order.</h1><div class="checkout-method-selector" role="tablist" aria-label="Payment method"><button type="button" class="checkout-method-tab ${selectedMethod === "razorpay" ? "active" : ""}" data-method-btn="razorpay" role="tab" aria-selected="${selectedMethod === "razorpay"}"><div class="method-radio-dot"></div><div class="method-meta"><div class="method-top"><strong>Razorpay</strong><span class="method-currency-badge inr-badge">India · INR</span></div><span class="method-sub">UPI, Netbanking, Cards & Wallets</span></div></button><button type="button" class="checkout-method-tab ${selectedMethod === "wise" ? "active" : ""}" data-method-btn="wise" role="tab" aria-selected="${selectedMethod === "wise"}"><div class="method-radio-dot"></div><div class="method-meta"><div class="method-top"><strong>Wise (International)</strong><span class="method-currency-badge wise-badge">Global · USD</span></div><span class="method-sub">Cards, Apple Pay, Bank Transfer</span></div></button></div><div class="secure-payment-banner" data-method-banner="razorpay" ${selectedMethod !== "razorpay" ? "hidden" : ""}><div class="secure-banner-icon">🛡️</div><div class="secure-banner-text"><strong>Direct Razorpay Checkout</strong><span>UPI, cards, netbanking and wallets open securely in Razorpay.</span></div></div><div class="secure-payment-banner wise-banner" data-method-banner="wise" ${selectedMethod !== "wise" ? "hidden" : ""}><div class="secure-banner-icon">🌐</div><div class="secure-banner-text"><strong>Wise International Checkout</strong><span>Zero international card blocks. Pay securely in USD via Wise with any credit/debit card, Apple Pay or bank transfer.</span></div></div><form class="checkout-form-inner"><h3>Contact details</h3><div class="field-pair"><label>Full name<input name="name" required autocomplete="name" placeholder="Your name"></label><label>WhatsApp / Phone<input name="phone" required autocomplete="tel" placeholder="+91 98765 43210"></label></div><label>Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label><div class="checkout-coupon"><label><span class="coupon-label">Coupon code <span class="workspace-optional">optional</span></span><div class="coupon-field-row"><input name="couponCode" maxlength="32" autocomplete="off" placeholder="Enter coupon code"><button type="button" class="coupon-apply-btn" data-apply-coupon>Apply</button></div></label><small data-coupon-feedback>Discounts are checked securely before payment.</small></div><div class="wise-checkout-guide" data-wise-guide ${selectedMethod !== "wise" ? "hidden" : ""}><div class="wise-guide-card"><div class="wise-step-indicator"><span class="wise-step-number">1</span><div class="wise-step-info"><h4>Pay via Wise Business</h4><p>Click below to open Abhinav Rai's Wise pay page. Wise supports international debit/credit cards, Apple Pay, Google Pay, and bank transfer with 0 foreign card rejection.</p><a href="https://wise.com/pay/business/abhinavrai" target="_blank" rel="noopener noreferrer" class="pill pill-hot wise-pay-cta" data-wise-open>Open Wise Pay (<span data-wise-pay-amount>${formatRegionalUsd(getUsdAmount(), "USD")}</span>) ↗</a><small class="wise-step-caption">Opens official Wise checkout. Enter the total amount shown above.</small></div></div></div><div class="wise-guide-card"><div class="wise-step-indicator"><span class="wise-step-number">2</span><div class="wise-step-info"><h4>Transfer reference / Sender name</h4><label class="wise-ref-input-label"><span>Wise Transfer ID or Sender Name <span class="workspace-optional">optional</span></span><input name="wiseReference" maxlength="80" autocomplete="off" placeholder="e.g. #TRANSFER-12345 or your name"></label><small>After completing your payment on Wise, enter your transfer reference or name to match your record and unlock your workspace immediately.</small></div></div></div></div><label class="terms"><input type="checkbox" required><span>I agree to the selected package scope, add-ons and revision allowance shown in this order.</span></label><p role="status" class="checkout-status-alert" data-checkout-status hidden></p><button class="pill pill-hot pay-button" type="submit">${selectedMethod === "wise" ? `Confirm Wise Payment & Activate Workspace · ${formatRegionalUsd(getUsdAmount(), "USD")} →` : `Pay securely with Razorpay · ${formatCheckoutPrice(plan.price)}`}</button></form></section><aside class="order-summary"><p>Your package</p><h2>${escapeHTML(plan.name)}</h2>${plan.marketplace ? `<div class="marketplace-checkout-provider"><span>✓</span><p><strong>${escapeHTML(plan.providerName)}</strong><small>${escapeHTML(plan.providerRole)} · Content X verified</small></p></div>` : ""}<span class="summary-badge">${escapeHTML(plan.badge || "Verified")}</span><ul>${plan.features.map(f => `<li><span>✓</span>${escapeHTML(f)}</li>`).join("")}</ul><div class="order-breakdown"><div class="breakdown-row"><span>Package price</span><strong data-breakdown-pkg>${formatCheckoutPrice(plan.price)}</strong></div>${(plan.addOns || []).map(a => `<div class="breakdown-row"><span>${escapeHTML(a.name)}</span><strong>${formatCheckoutPrice(a.price)}</strong></div>`).join("")}<div class="breakdown-row coupon-discount" data-breakdown-coupon hidden><span>Coupon discount</span><strong class="discount-amount" data-breakdown-discount>-</strong></div></div><div class="order-total"><span>Total amount<small>${plan.unit === "month" ? "Renews monthly after approval" : "One-time project"}</small></span><div class="total-price-wrap"><strong data-order-total>${formatCheckoutPrice(plan.price)}</strong><span class="currency-tag" data-currency-tag>${checkoutCurrency}</span></div></div><small class="currency-note">${selectedMethod === "wise" ? "Charged in USD via Wise Business. All international cards supported." : `Charged in ${checkoutCurrency}. Final currency is confirmed by Razorpay for your region.`}</small><div class="secure-note"><span>⌾</span><p><strong>${checkoutCopy.secure}</strong><small>${checkoutCopy.note}</small></p></div></aside></main><div class="payment-success"><div><span>✓</span><h2>Payment complete</h2><p>${checkoutCopy.success}</p><strong class="access-code"></strong><button class="pill pill-hot">${plan.revisionPurchase ? "Return to this video →" : "Add project brief →"}</button></div></div>`;
 
   const paymentForm = root.querySelector("form");
   const payButton = paymentForm.querySelector(".pay-button");
@@ -1114,7 +1121,50 @@ export function renderCheckout(root, actions) {
   root.querySelector(".brand").addEventListener("click", e => { e.preventDefault(); actions.openMarketing(); });
   root.querySelector(".back-link").addEventListener("click", plan.revisionPurchase ? () => { location.hash = plan.returnTo || "workspace"; } : plan.marketplace ? actions.openTalentProfile : plan.managedReview ? actions.openReview : actions.openMarketing);
 
+  const updateMethodUI = () => {
+    const isWise = selectedMethod === "wise";
+    checkoutCurrency = isWise ? "USD" : (plan.currency === "INR" ? "INR" : activeCurrency);
+    root.querySelectorAll("[data-method-btn]").forEach(btn => {
+      const match = btn.dataset.methodBtn === selectedMethod;
+      btn.classList.toggle("active", match);
+      btn.setAttribute("aria-selected", match ? "true" : "false");
+    });
+    const rzpBanner = root.querySelector('[data-method-banner="razorpay"]');
+    const wiseBanner = root.querySelector('[data-method-banner="wise"]');
+    const wiseGuide = root.querySelector("[data-wise-guide]");
+    const securityLabel = root.querySelector(".checkout-security-label");
+    if (rzpBanner) rzpBanner.hidden = isWise;
+    if (wiseBanner) wiseBanner.hidden = !isWise;
+    if (wiseGuide) wiseGuide.hidden = !isWise;
+    if (securityLabel) securityLabel.textContent = isWise ? "Secure Wise checkout" : "Secure Razorpay checkout";
+
+    const displayPrice = formatCheckoutPrice(plan.price);
+    if (orderTotalEl) orderTotalEl.textContent = displayPrice;
+    const pkgRowEl = root.querySelector("[data-breakdown-pkg]");
+    if (pkgRowEl) pkgRowEl.textContent = displayPrice;
+    if (currencyTag) currencyTag.textContent = checkoutCurrency;
+    if (currencyNote) {
+      currencyNote.textContent = isWise
+        ? "Charged in USD via Wise Business (https://wise.com/pay/business/abhinavrai). All international cards supported."
+        : `Charged in ${checkoutCurrency}. Final currency is confirmed by Razorpay for your region.`;
+    }
+    const wisePayAmount = root.querySelector("[data-wise-pay-amount]");
+    if (wisePayAmount) wisePayAmount.textContent = formatRegionalUsd(getUsdAmount(), "USD");
+
+    payButton.textContent = isWise
+      ? `Confirm Wise Payment & Activate Workspace · ${formatRegionalUsd(getUsdAmount(), "USD")} →`
+      : `Pay securely with Razorpay · ${displayPrice}`;
+  };
+
+  root.querySelectorAll("[data-method-btn]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedMethod = btn.dataset.methodBtn;
+      updateMethodUI();
+    });
+  });
+
   const applyCheckoutCurrency = currency => {
+    if (selectedMethod === "wise") return;
     checkoutCurrency = currency === "INR" ? "INR" : "USD";
     payButton.textContent = `Pay securely with Razorpay · ${formatCheckoutPrice(plan.price)}`;
     if (orderTotalEl) orderTotalEl.textContent = formatCheckoutPrice(plan.price);
@@ -1135,7 +1185,7 @@ export function renderCheckout(root, actions) {
       couponFeedback.className = "error";
       return;
     }
-    couponFeedback.textContent = `Code “${code.toUpperCase()}” will be verified when opening Razorpay.`;
+    couponFeedback.textContent = `Code “${code.toUpperCase()}” will be verified when opening checkout.`;
     couponFeedback.className = "is-applied";
   });
 
@@ -1143,6 +1193,82 @@ export function renderCheckout(root, actions) {
   paymentForm.addEventListener("submit", async event => {
     event.preventDefault();
     if (isPreparing) return;
+
+    if (selectedMethod === "wise") {
+      if (!paymentForm.checkValidity()) {
+        paymentForm.reportValidity();
+        return;
+      }
+      isPreparing = true;
+      payButton.disabled = true;
+      payButton.textContent = "Activating your workspace…";
+      showStatus("Recording your Wise payment and setting up your workspace…", "loading");
+
+      const contact = Object.fromEntries(new FormData(paymentForm));
+      const usdPrice = getUsdAmount();
+      const createdAt = Date.now();
+      const code = `CX-${String(createdAt).slice(-6)}`;
+      const wiseRef = (contact.wiseReference || "").trim() || "Wise Hosted Checkout";
+      const orderId = `wise_${createdAt}`;
+
+      const payment = {
+        id: orderId,
+        orderId,
+        name: contact.name,
+        phone: contact.phone,
+        email: contact.email,
+        code,
+        plan: plan.name,
+        amount: usdPrice,
+        amount_paise: Math.round(Number(usdPrice) * 100),
+        currency: "USD",
+        status: "Verified",
+        type: "Wise",
+        transferRef: wiseRef,
+        created: new Date().toLocaleString()
+      };
+      store.set("cx_payments", [payment, ...store.get("cx_payments", [])]);
+
+      if (plan.marketplace) {
+        const commissionRate = Number(plan.commissionRate || store.get("cx_commission_rate", 20));
+        const commissionAmount = Math.round(Number(usdPrice) * commissionRate / 100);
+        const orders = store.get("cx_market_orders", []);
+        orders.unshift({ id: createdAt, paymentId: createdAt, code, clientName: contact.name, clientEmail: contact.email, providerId: plan.providerId, providerName: plan.providerName, providerRole: plan.providerRole, packageName: plan.packageName, amount: Number(usdPrice), commissionRate, commissionAmount, providerPayout: Number(usdPrice) - commissionAmount, status: "Paid · Brief needed", created: new Date().toLocaleString() });
+        store.set("cx_market_orders", orders);
+      }
+      if (plan.managedReview) {
+        const requests = store.get("cx_managed_review_requests", []);
+        requests.unshift({ id: createdAt, paymentId: createdAt, code, clientId: plan.clientId || "apex", clientName: contact.name, clientEmail: contact.email, project: plan.project || "Apex Fitness Launch", version: plan.version || "V3", price: Number(usdPrice), reviewer: "Content X review desk", turnaround: plan.turnaround || "Within 1 business day", status: "Paid · Review queued", created: new Date().toLocaleString() });
+        store.set("cx_managed_review_requests", requests);
+        recordNotification("managedReview", "Managed review is queued", `${plan.project || "Your project"} ${plan.version || "V3"} has been assigned to the Content X review desk.`, { email: contact.email, project: plan.project });
+      }
+      store.set("cx_access", { email: contact.email, plan: plan.name, paid: true, code, clientId: plan.clientId || "apex" });
+
+      fetch("/api/payments/wise/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          orderId,
+          name: contact.name,
+          email: contact.email,
+          phone: contact.phone,
+          planName: plan.name,
+          planId: razorpayPlanId(plan),
+          amount: usdPrice,
+          currency: "USD",
+          reference: wiseRef,
+          code
+        })
+      }).catch(() => undefined);
+
+      root.querySelector(".access-code").textContent = plan.revisionPurchase ? "Payment verified · One more revision round is ready." : "Payment verified · Next, add the project brief and files.";
+      root.querySelector(".payment-success .pill").dataset.orderId = orderId;
+      root.querySelector(".payment-success").classList.add("show");
+      isPreparing = false;
+      return;
+    }
+
     isPreparing = true;
     showStatus("");
 

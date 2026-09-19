@@ -621,3 +621,33 @@ test("supports canonical USD short-form pricing system with 4, 8 and 12 video ti
   assert.match(commerceCss, /\.unified-turnaround-policy/);
   assert.match(commerceCss, /\.pricing-editor-banner/);
 });
+
+test("supports international checkout via Wise alongside Razorpay", async () => {
+  const [features, themeCss, wiseRoute] = await Promise.all([
+    load("public/site/src/features.js"),
+    load("public/site/src/theme.css"),
+    load("app/api/payments/wise/confirm/route.ts"),
+  ]);
+
+  // Method switcher & Wise branding
+  assert.match(features, /data-method-btn="wise"/);
+  assert.match(features, /data-method-btn="razorpay"/);
+  assert.match(features, /https:\/\/wise\.com\/pay\/business\/abhinavrai/);
+  assert.match(features, /name="wiseReference"/);
+  assert.match(features, /type:\s*"Wise"/);
+  assert.match(features, /Secure Wise checkout/);
+  assert.match(features, /\/api\/payments\/wise\/confirm/);
+
+  // Styles
+  assert.match(themeCss, /\.checkout-method-selector/);
+  assert.match(themeCss, /\.checkout-method-tab/);
+  assert.match(themeCss, /\.wise-checkout-guide/);
+  assert.match(themeCss, /\.wise-pay-cta/);
+
+  // API endpoint
+  assert.match(wiseRoute, /POST\(request:\s*Request\)/);
+  assert.match(wiseRoute, /ensurePaymentSchema/);
+  assert.match(wiseRoute, /paymentOrders/);
+  assert.match(wiseRoute, /https:\/\/wise\.com\/pay\/business\/abhinavrai/);
+});
+

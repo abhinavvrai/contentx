@@ -2311,6 +2311,214 @@ html[data-theme="light"] #app .folder-picker-count {
   color: var(--theme-muted, #a5a2ac);
   margin-top: 2px;
 }
+.secure-payment-banner.wise-banner {
+  border-color: rgba(0, 185, 255, 0.35);
+  background: linear-gradient(135deg, rgba(0, 185, 255, 0.1), rgba(0, 212, 170, 0.06));
+}
+.checkout-method-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 18px 0 20px;
+}
+@media (max-width: 640px) {
+  .checkout-method-selector {
+    grid-template-columns: 1fr;
+  }
+}
+.checkout-method-tab {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--theme-line, #34353f);
+  background: var(--theme-raised, #1d1e25);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--fx-fast, 0.2s ease);
+}
+.checkout-method-tab:hover {
+  border-color: rgba(255, 92, 32, 0.5);
+  transform: translateY(-1px);
+}
+.checkout-method-tab.active {
+  border-color: #ff5c20;
+  background: rgba(255, 92, 32, 0.08);
+  box-shadow: 0 0 0 1px #ff5c20, 0 4px 18px rgba(255, 92, 32, 0.12);
+}
+.method-radio-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--theme-line, #555);
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+}
+.checkout-method-tab.active .method-radio-dot {
+  border-color: #ff5c20;
+}
+.checkout-method-tab.active .method-radio-dot::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff5c20;
+}
+.method-meta {
+  flex: 1;
+}
+.method-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+.method-top strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: inherit;
+}
+.method-currency-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.method-currency-badge.inr-badge {
+  background: rgba(255, 122, 69, 0.15);
+  color: #ff8548;
+}
+.method-currency-badge.wise-badge {
+  background: rgba(0, 185, 255, 0.15);
+  color: #00b9ff;
+  border: 1px solid rgba(0, 185, 255, 0.35);
+}
+.method-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--theme-muted, #a5a2ac);
+  line-height: 1.35;
+}
+.wise-checkout-guide {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 20px;
+}
+.wise-guide-card {
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--theme-line, #34353f);
+  background: var(--theme-raised, #1d1e25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+.wise-step-indicator {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.wise-step-number {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #00b9ff;
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.wise-step-info {
+  flex: 1;
+}
+.wise-step-info h4 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 5px;
+  color: inherit;
+}
+.wise-step-info p {
+  font-size: 12px;
+  color: var(--theme-muted, #a5a2ac);
+  line-height: 1.45;
+  margin: 0 0 12px;
+}
+.wise-pay-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  background: linear-gradient(135deg, #00b9ff, #0090d0);
+  border: none;
+  color: #fff !important;
+  border-radius: 9px;
+  box-shadow: 0 6px 18px rgba(0, 185, 255, 0.28);
+  transition: all var(--fx-fast, 0.2s ease);
+}
+.wise-pay-cta:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0, 185, 255, 0.38);
+}
+.wise-step-caption {
+  display: block;
+  font-size: 11px;
+  color: var(--theme-muted, #8c8f98);
+  margin-top: 8px;
+}
+.wise-ref-input-label {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+.wise-ref-input-label span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--theme-muted, #a5a2ac);
+}
+.wise-ref-input-label input {
+  padding: 11px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--theme-line, #34353f);
+  background: var(--theme-bg, #111216);
+  color: inherit;
+  font-size: 13px;
+}
+.wise-guide-card small {
+  display: block;
+  font-size: 11px;
+  color: var(--theme-muted, #8c8f98);
+  margin-top: 8px;
+  line-height: 1.4;
+}
+html[data-theme="light"] .checkout-method-tab {
+  background: #f7f8fa;
+  border-color: #d9dce2;
+}
+html[data-theme="light"] .checkout-method-tab.active {
+  background: #fff6f2;
+  border-color: #ff5c20;
+}
+html[data-theme="light"] .wise-guide-card {
+  background: #f9fafd;
+  border-color: #dfe3eb;
+}
+html[data-theme="light"] .wise-ref-input-label input {
+  background: #fff;
+  border-color: #d9dce2;
+}
 .coupon-field-row {
   display: flex;
   gap: 8px;
