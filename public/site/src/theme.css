@@ -2452,6 +2452,51 @@ html[data-theme="light"] #app .folder-picker-count {
   line-height: 1.45;
   margin: 0 0 12px;
 }
+.wise-pay-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin: 12px 0 16px;
+}
+@media (max-width: 580px) {
+  .wise-pay-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+.wise-qr-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1.5px solid rgba(0, 185, 255, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+.wise-qr-img {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  display: block;
+}
+.wise-qr-sub {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #17181d;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+.wise-cta-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+}
 .wise-pay-cta {
   display: inline-flex;
   align-items: center;
