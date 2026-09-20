@@ -1020,6 +1020,20 @@ export async function renderScriptStudioSurface(container, {
 
         <div class="format-group">
           <div class="scripts-select-styled-wrap">
+            <select class="scripts-ribbon-select scripts-font-select" data-format-font-select aria-label="Font Family" title="Font family">
+              <option value="inherit">Default (Geist)</option>
+              <option value="'Satoshi', sans-serif">Satoshi</option>
+              <option value="'Instrument Serif', Georgia, serif">Instrument Serif</option>
+              <option value="ui-sans-serif, system-ui, -apple-system, sans-serif">System Sans</option>
+              <option value="Georgia, Cambria, 'Times New Roman', serif">Editorial Serif</option>
+              <option value="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Monospace</option>
+            </select>
+            <span class="scripts-select-chevron">${ICONS.chevronDown}</span>
+          </div>
+        </div>
+
+        <div class="format-group">
+          <div class="scripts-select-styled-wrap">
             <select class="scripts-ribbon-select scripts-tone-select" data-format-tone-select aria-label="Tone & Pacing" title="Pacing profile">
               <option value="default">Default</option>
               <option value="fast">Fast Paced</option>
@@ -2484,7 +2498,11 @@ export async function renderScriptStudioSurface(container, {
         const block = node.closest("h1, h2, h3, h4, p, div, blockquote");
         if (block && editorSurface.contains(block)) {
           block.style.fontFamily = chosenFont === "inherit" ? "" : chosenFont;
+        } else {
+          editorSurface.style.fontFamily = chosenFont === "inherit" ? "" : chosenFont;
         }
+      } else {
+        editorSurface.style.fontFamily = chosenFont === "inherit" ? "" : chosenFont;
       }
     }
     editorSurface.focus();
@@ -4351,6 +4369,19 @@ export function openFullscreenTeleprompter(script, onWpmChange = () => {}) {
           <input type="range" id="prompter-font-slider" min="26" max="72" step="2" value="${fontSize}" data-font-slider>
         </div>
 
+        <!-- Font Family Selector -->
+        <div class="prompter-font-family-control">
+          <label for="prompter-font-select">Font:</label>
+          <select id="prompter-font-select" class="prompter-font-select" data-prompter-font-family aria-label="Teleprompter Font">
+            <option value="inherit">Geist (Default)</option>
+            <option value="'Satoshi', sans-serif">Satoshi</option>
+            <option value="'Instrument Serif', Georgia, serif">Instrument Serif</option>
+            <option value="ui-sans-serif, system-ui, -apple-system, sans-serif">System Sans</option>
+            <option value="Georgia, Cambria, 'Times New Roman', serif">Editorial Serif</option>
+            <option value="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Monospace</option>
+          </select>
+        </div>
+
         <!-- Mirror / Glass Mode Toggle -->
         <button type="button" class="prompter-bar-btn toggle-btn" data-toggle-mirror title="Flip text horizontally for teleprompter glass hardware">
           Mirror Mode
@@ -4457,6 +4488,13 @@ export function openFullscreenTeleprompter(script, onWpmChange = () => {}) {
     fontSize = Number(fontSlider.value);
     fontVal.textContent = `${fontSize}px`;
     track.style.fontSize = `${fontSize}px`;
+  });
+
+  // Font Family Selector
+  const prompterFontSelect = prompter.querySelector("[data-prompter-font-family]");
+  prompterFontSelect?.addEventListener("change", () => {
+    const chosenFont = prompterFontSelect.value;
+    track.style.fontFamily = chosenFont === "inherit" ? "" : chosenFont;
   });
 
   // Mirror Mode Toggle
