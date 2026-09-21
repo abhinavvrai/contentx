@@ -9305,3 +9305,335 @@ html[data-theme="light"] .profile-theme-pill.active {
   font-size: 11px;
   outline: none;
 }
+
+/* Dashboard Workspace Alignments */
+#app .workspace-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#app .workspace-sidebar nav > small {
+  display: block;
+  padding: 10px 9px 4px;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  color: #747681;
+  text-transform: uppercase;
+}
+
+#app .workspace-sidebar nav :is(a, button) {
+  min-height: 34px;
+  height: 34px;
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #8f919b;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all var(--fx-fast);
+}
+
+#app .workspace-sidebar nav :is(a, button) span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+#app .workspace-sidebar nav :is(a, button) span .workspace-icon {
+  width: 15px;
+  height: 15px;
+}
+
+#app .workspace-sidebar nav :is(a, button) b {
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: #28282e;
+  color: #aaa;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+#app .workspace-sidebar nav :is(a, button):hover {
+  background: #20222b;
+  color: #fff;
+}
+
+#app .workspace-sidebar nav :is(a, button).active {
+  background: #252834;
+  color: #fff;
+  font-weight: 700;
+}
+
+#app .workspace-sidebar nav :is(a, button).active span {
+  color: var(--brand-accent, #ff5c20);
+}
+
+#app .workspace-sidebar nav :is(a, button).active span svg {
+  stroke: var(--brand-accent, #ff5c20);
+}
+
+#app .workspace-sidebar nav :is(a, button).active b {
+  background: rgba(255, 92, 32, 0.18);
+  color: #ff8c5d;
+}
+
+/* Sidebar dash-workspace brand header */
+#app .workspace-sidebar .dash-workspace {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 14px;
+  border-bottom: 1px solid var(--fx-line);
+}
+
+#app .workspace-sidebar .dash-workspace .workspace-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  min-height: 0;
+  padding: 0;
+}
+
+#app .workspace-sidebar .dash-workspace .workspace-brand > span {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ff5c20, #7b3cff);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 4px 14px rgba(255, 92, 32, 0.25);
+  flex-shrink: 0;
+}
+
+#app .workspace-sidebar .dash-workspace .workspace-brand > div {
+  display: flex;
+  flex-direction: column;
+}
+
+#app .workspace-sidebar .dash-workspace .workspace-brand strong {
+  font-size: 11px;
+  color: #fff;
+  line-height: 1.2;
+}
+
+#app .workspace-sidebar .dash-workspace .workspace-brand small {
+  font-size: 8px;
+  color: #747681;
+  margin-top: 2px;
+}
+
+#app .workspace-sidebar .dash-workspace button {
+  border: 0;
+  background: transparent;
+  color: #676873;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+}
+
+#app .workspace-sidebar .dash-workspace button:hover {
+  color: #fff;
+}
+
+/* Sidebar dash-user footer */
+#app .workspace-sidebar .workspace-user>button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--fx-fast);
+}
+
+#app .workspace-sidebar .workspace-user>button:hover {
+  background: #1c1d25;
+}
+
+#app .workspace-sidebar .workspace-user .workspace-user-avatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffede6;
+  color: #ff5c20;
+  font-size: 11px;
+  font-weight: 700;
+  overflow: hidden;
+}
+
+#app .workspace-sidebar .workspace-user>button>div {
+  overflow: hidden;
+}
+
+#app .workspace-sidebar .workspace-user>button>div b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: #fff;
+}
+
+#app .workspace-sidebar .workspace-user>button>div small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 8px;
+  color: #747681;
+}
+
+#app .workspace-sidebar .workspace-user>button>em {
+  font-style: normal;
+  color: #676873;
+  font-size: 12px;
+}
+
+/* Overview Section Head and Search Wrap */
+#app .workspace-overview-tools {
+  border: 0 !important;
+  padding: 0 !important;
+  margin-top: 24px !important;
+}
+
+#app .workspace-overview-search-wrap {
+  width: min(200px, 28vw);
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid #30323b;
+  border-radius: 7px;
+  background: #17181f;
+  color: #8f919b;
+  box-sizing: border-box;
+}
+
+#app .workspace-overview-search-wrap span {
+  font-size: 11px;
+  line-height: 1;
+  color: #8f919b;
+}
+
+#app .workspace-overview-search-wrap input {
+  width: 100%;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  color: #fff !important;
+  font: 500 10px/1 inherit;
+}
+
+/* Light Mode Overrides for Workspace Dashboard */
+html[data-theme="light"] #app .workspace-sidebar nav > small {
+  color: var(--text-dim) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar nav :is(a, button) {
+  color: var(--text-dim) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar nav :is(a, button):hover {
+  background: var(--bg-subtle) !important;
+  color: var(--text-main) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar nav :is(a, button).active {
+  background: var(--bg-chip) !important;
+  color: var(--brand-primary) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar nav :is(a, button).active span {
+  color: var(--brand-primary) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar nav :is(a, button).active span svg {
+  stroke: var(--brand-primary) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar nav :is(a, button) b {
+  background: var(--bg-subtle) !important;
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar nav :is(a, button).active b {
+  background: var(--bg-chip) !important;
+  color: var(--brand-primary) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar .dash-workspace .workspace-brand strong {
+  color: var(--text-main) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar .dash-workspace .workspace-brand small {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar .dash-workspace button {
+  color: var(--text-dim) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar .dash-workspace button:hover {
+  color: var(--text-main) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar .workspace-user>button:hover {
+  background: var(--bg-subtle) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar .workspace-user>button>div b {
+  color: var(--text-main) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar .workspace-user>button>div small {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="light"] #app .workspace-sidebar .workspace-user>button>em {
+  color: var(--text-dim) !important;
+}
+
+html[data-theme="light"] #app .workspace-overview-search-wrap {
+  background: var(--bg-surface) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-dim) !important;
+}
+
+html[data-theme="light"] #app .workspace-overview-search-wrap span {
+  color: var(--text-dim) !important;
+}
+
+html[data-theme="light"] #app .workspace-overview-search-wrap input {
+  color: var(--text-main) !important;
+}
+

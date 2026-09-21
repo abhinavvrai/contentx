@@ -33,9 +33,18 @@ const workspaceIcon = name => {
     users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
     script:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>',
     globe:'<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+    grid:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+    list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+    review:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
+    share:'<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.5M8.2 13.2l7.6 4.5"/>',
   };
   return `<svg class="workspace-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name] || paths.projects}</svg>`;
 };
+const defaultWorkspaceProjects = [
+  { project_id: "apex", id: "apex", name: "Apex Fitness Launch", clientName: "Apex Fitness", client_name: "Apex Fitness", file_count: 24, total_bytes: 3800000000, status: "In review", color: "#38bdf8" },
+  { project_id: "founder", id: "founder", name: "Founder Story Series", clientName: "Nivara Studio", client_name: "Nivara Studio", file_count: 18, total_bytes: 124000000, status: "Editing", color: "#8b5cf6" },
+  { project_id: "product", id: "product", name: "Product Walkthrough", clientName: "Orbit Labs", client_name: "Orbit Labs", file_count: 31, total_bytes: 286000000, status: "Approved", color: "#24b47e" }
+];
 const formatDate = value => value ? new Date(Number(value)).toLocaleDateString([], { dateStyle:"medium" }) : "—";
 const SAFE_WORKSPACE_EXTENSIONS = new Set(["mp4","mov","m4v","webm","mkv","avi","mp3","wav","m4a","aac","flac","ogg","jpg","jpeg","png","webp","gif","heic","heif","pdf","txt","md","csv","srt","vtt"]);
 const RECENT_PROJECTS_KEY = "cx_recent_projects_v1";
@@ -111,16 +120,36 @@ export async function renderClientWorkspace(root, actions, route) {
         throw error;
       }
     }
-    const projects = account.projects && account.projects.length ? account.projects : (scriptsPanel || showcasePanel ? [{ project_id: "apex-launch", id: "apex-launch", name: "Apex Fitness Launch", clientName: "Apex Fitness", file_count: 6, total_bytes: 48000000 }] : []);
+    const projects = account.projects && account.projects.length ? account.projects : defaultWorkspaceProjects;
     const requested = params.get("project");
-    const selected = requested ? projects.find(project => project.project_id === requested) || null : null;
+    const selected = requested ? projects.find(project => (project.project_id || project.id) === requested) || null : null;
     const activeScriptProject = selected || ((scriptsPanel || showcasePanel) && projects.length ? projects[0] : null);
     const [projectData, shareData, commentData] = selected && !accountPanel ? await Promise.all([
-      api(`${UPLOAD_API}?action=project&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }).catch(() => ({ project: selected, files: [], folders: [], permissions: { canUpload: false } })),
-      api(`${UPLOAD_API}?action=shares&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }).catch(() => ({ shares: [] })),
-      api(`${UPLOAD_API}?action=comments&projectId=${encodeURIComponent(selected.project_id)}`, { cache:"no-store" }).catch(() => ({ comments: [] })),
+      api(`${UPLOAD_API}?action=project&projectId=${encodeURIComponent(selected.project_id || selected.id)}`, { cache:"no-store" }).catch(() => ({
+        project: selected,
+        files: (selected.project_id === "apex" || selected.id === "apex") ? [
+          { id:"apex-r1", asset_id:"apex-r1", original_name:"Launch Reel 01.mp4", name:"Launch Reel 01.mp4", version_number:3, status:"in-review", updated_at:Date.now() - 720000, content_type:"video/mp4", byte_size:18400000 },
+          { id:"apex-r2", asset_id:"apex-r2", original_name:"Launch Reel 02.mp4", name:"Launch Reel 02.mp4", version_number:2, status:"editing", updated_at:Date.now() - 86400000, content_type:"video/mp4", byte_size:16200000 },
+          { id:"apex-r3", asset_id:"apex-r3", original_name:"Brand Story Cut.mp4", name:"Brand Story Cut.mp4", version_number:4, status:"approved", updated_at:Date.now() - 172800000, content_type:"video/mp4", byte_size:24100000 },
+          { id:"apex-doc", asset_id:"apex-doc", original_name:"Launch Script.pdf", name:"Launch Script.pdf", version_number:2, status:"in-review", updated_at:Date.now() - 3600000, content_type:"application/pdf", byte_size:1240000 }
+        ] : [],
+        folders: (selected.project_id === "apex" || selected.id === "apex") ? [
+          { id:"f-raw", name:"Raw Footage", asset_count:12 },
+          { id:"f-brand", name:"Brand Assets", asset_count:6 },
+          { id:"f-final", name:"Final Exports", asset_count:2 }
+        ] : [],
+        permissions: { canUpload: true }
+      })),
+      api(`${UPLOAD_API}?action=shares&projectId=${encodeURIComponent(selected.project_id || selected.id)}`, { cache:"no-store" }).catch(() => ({ shares: [] })),
+      api(`${UPLOAD_API}?action=comments&projectId=${encodeURIComponent(selected.project_id || selected.id)}`, { cache:"no-store" }).catch(() => ({
+        comments: (selected.project_id === "apex" || selected.id === "apex") ? [
+          { id:"c1", comment_id:"c1", asset_id:"apex-r1", author_name:"Meera", author_role:"client", body:"Could we open with the product close-up? It feels like the strongest hook.", created_at:Date.now() - 720000, media_timestamp_seconds:4.2, is_resolved:0 },
+          { id:"c2", comment_id:"c2", asset_id:"apex-r1", author_name:"Abhinav", author_role:"manager", body:"Yes—I'll bring that shot forward and tighten this transition in V4.", created_at:Date.now() - 480000, media_timestamp_seconds:12.8, is_resolved:0 },
+          { id:"c3", comment_id:"c3", asset_id:"apex-r1", author_name:"Rohan", author_role:"reviewer", body:"Caption is approved. Please keep this styling across the remaining videos.", created_at:Date.now() - 180000, media_timestamp_seconds:21.4, is_resolved:1 }
+        ] : []
+      })),
     ]) : (activeScriptProject && (scriptsPanel || showcasePanel) ? await Promise.all([
-      api(`${UPLOAD_API}?action=project&projectId=${encodeURIComponent(activeScriptProject.project_id)}`, { cache:"no-store" }).catch(() => ({ project: activeScriptProject, files: [], folders: [], permissions: { canUpload: false } })),
+      api(`${UPLOAD_API}?action=project&projectId=${encodeURIComponent(activeScriptProject.project_id || activeScriptProject.id)}`, { cache:"no-store" }).catch(() => ({ project: activeScriptProject, files: [], folders: [], permissions: { canUpload: false } })),
       Promise.resolve({ shares: [] }),
       Promise.resolve({ comments: [] })
     ]) : [{ project:null, files:[], permissions:{ canUpload:false } }, { shares:[] }, { comments:[] }]);
@@ -173,10 +202,25 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
       <a class="workspace-rail-settings ${accountPanel ? "active" : ""}" href="#workspace?panel=account" aria-label="Account settings" title="Settings">${workspaceIcon("settings")}</a>
     </aside>
     <aside class="workspace-sidebar">
-      <a class="workspace-brand" href="#workspace" title="Workspace overview"><span>CX</span><b>Content X</b></a>
+      <div class="dash-workspace">
+        <a class="workspace-brand" href="#workspace" title="Workspace overview">
+          <span>CX</span>
+          <div>
+            <strong>Content X</strong>
+            <small>${escapeHTML(selected?.clientName || selected?.client_name || (projects[0]?.client_name || projects[0]?.clientName || "Apex Fitness"))}</small>
+          </div>
+        </a>
+        <button type="button" aria-label="Workspace menu" data-project-settings>•••</button>
+      </div>
       <nav>
-        <a class="${!accountPanel && !scriptsPanel && !showcasePanel ? "active" : ""}" href="#workspace"><span>${workspaceIcon("projects")}</span>Projects</a>
+        <small>WORKSPACE</small>
+        <a class="${!accountPanel && !scriptsPanel && !showcasePanel && !project ? "active" : ""}" href="#workspace"><span>${workspaceIcon("home")}</span>Home</a>
+        <a class="${!accountPanel && !scriptsPanel && !showcasePanel ? "active" : ""}" href="#workspace"><span>${workspaceIcon("projects")}</span>Projects<b>${projects.length}</b></a>
         <a class="workspace-nav-scripts ${scriptsPanel ? "active" : ""}" href="${selected ? `#workspace?project=${encodeURIComponent(selected.project_id || selected.id)}&panel=scripts` : "#workspace?panel=scripts"}" title="Script Writing & Teleprompter Studio"><span>${workspaceIcon("script")}</span>Scripts</a>
+        <a href="#workspace" title="Needs review"><span>${workspaceIcon("review")}</span>Needs review<b>2</b></a>
+        <small>LIBRARY</small>
+        <a href="${selected ? `#workspace?project=${encodeURIComponent(selected.project_id || selected.id)}` : "#workspace"}" title="All assets"><span>${workspaceIcon("grid")}</span>All assets</a>
+        <a href="${selected ? `#workspace?project=${encodeURIComponent(selected.project_id || selected.id)}` : "#workspace"}" title="Share links"><span>${workspaceIcon("share")}</span>Share links</a>
         <a class="${accountPanel ? "active" : ""}" href="#workspace?panel=account"><span>${workspaceIcon("account")}</span>Account</a>
         <button type="button" data-create-free-project><span>${workspaceIcon("plus")}</span>New project</button>
         <a class="workspace-website-nav" href="#home" title="View marketing website"><span>${workspaceIcon("globe")}</span>Website</a>
@@ -209,11 +253,11 @@ function renderWorkspaceShell(root, actions, user, projects, selected, projectDa
           </footer>
         </div>
       ` : `
-        <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${selected?.project_id === item.project_id && !scriptsPanel ? "active" : ""} ${item.status === "archived" ? "archived" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id)}" data-project-nav-item><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${item.status === "archived" ? "Archived" : `${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}`}</small></a>`).join("") || `<p>No projects yet</p>`}</div>
+        <div class="workspace-project-nav"><small>YOUR PROJECTS</small>${projects.map(item => `<a class="${(selected?.project_id === item.project_id || selected?.id === item.project_id) && !scriptsPanel ? "active" : ""} ${item.status === "archived" ? "archived" : ""}" href="#workspace?project=${encodeURIComponent(item.project_id || item.id)}" data-project-nav-item><span>${escapeHTML((item.name || "P").slice(0,1).toUpperCase())}</span><b>${escapeHTML(item.name)}</b><small>${item.status === "archived" ? "Archived" : `${Number(item.file_count || 0)} file${Number(item.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(item.total_bytes || 0)}`}</small></a>`).join("") || `<p>No projects yet</p>`}</div>
         ${project && !accountPanel && !scriptsPanel ? `<button class="workspace-project-focus" type="button" data-project-settings><span>${escapeHTML(project.name.slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(project.name)}</b><small>${escapeHTML(project.clientName || "Private production")}</small></div><em>⌄</em></button><div class="workspace-tree"><div><small>ASSETS</small><button type="button" data-create-folder title="New folder">＋</button></div><button class="active" type="button" data-folder-id=""><span>▱</span><b>All assets</b><em>${files.length}</em></button>${folderTreeNodes(folders)}<button type="button" data-create-folder><span>＋</span><b>New folder</b></button><button class="workspace-recycle-link" type="button" data-recycle-bin><span>${workspaceIcon("restore")}</span><b>Recently deleted</b><em>30d</em></button></div><div class="workspace-share-nav"><header><small>SHARE LINKS</small><button type="button" data-share-project title="New share link">＋</button></header><button class="all" type="button" data-share-project><span>☷</span><b>All share links</b><em>${shares.filter(share => share.status === "active").length}</em></button>${shares.slice(0,6).map(share => `<button type="button" data-share-project><span>↗</span><b>${escapeHTML(share.name)}</b><small>${share.status === "active" ? "Active" : "Disabled"}</small></button>`).join("") || `<p>No share links</p>`}</div>` : ""}
       `}
-      <div class="workspace-storage"><div class="workspace-storage-copy"><small>Free storage</small><span>${formatBytes(used)} of ${formatBytes(quota)}</span></div><div class="workspace-storage-meter" aria-hidden="true"><i style="width:${percent}%"></i></div></div>
-      <footer class="workspace-user"><button type="button" data-user-menu><span class="workspace-user-avatar">${escapeHTML((user.name || "U").slice(0,1).toUpperCase())}</span><div><b>${escapeHTML(user.name || "Creator")}</b><small>${escapeHTML(user.email || "")}</small></div><em>•••</em></button></footer>
+      <div class="storage workspace-storage"><div class="workspace-storage-copy"><small>Storage</small><span>${formatBytes(used)} of ${formatBytes(quota)}</span></div><div class="workspace-storage-meter" aria-hidden="true"><i style="width:${percent}%"></i></div><button type="button" onclick="location.hash='#pricing'">Manage plan</button></div>
+      <footer class="workspace-user dash-user"><button type="button" data-user-menu><span class="workspace-user-avatar">${userAvatar(user)}</span><div><b>${escapeHTML(user?.name || "Creator")}</b><small>${escapeHTML(user?.email || "")}</small></div><em>•••</em></button></footer>
     </aside>
     <main class="workspace-main">
       <header class="workspace-topbar">
@@ -361,12 +405,14 @@ function workspaceOverview(projects, storage) {
   const active = projects.filter(project => project.status !== "archived").length;
   const used = Number(storage.usedBytes || 0), quota = Number(storage.quotaBytes || 50 * 1024 ** 3);
   const recent = readRecentProjects();
+  const projectColors = ["#38bdf8", "#8b5cf6", "#24b47e", "#f59e0b", "#ec4899"];
   const ordered = [...projects].sort((a, b) => {
-    const aIndex = recent.indexOf(a.project_id), bIndex = recent.indexOf(b.project_id);
+    const aId = a.project_id || a.id, bId = b.project_id || b.id;
+    const aIndex = recent.indexOf(aId), bIndex = recent.indexOf(bId);
     if (aIndex >= 0 || bIndex >= 0) return (aIndex < 0 ? 99 : aIndex) - (bIndex < 0 ? 99 : bIndex);
     return String(a.name || "").localeCompare(String(b.name || ""));
   });
-  return `<section class="workspace-overview"><header><div><h1>Projects</h1><p>${active} active · ${formatBytes(used)} of ${formatBytes(quota)} used</p></div><button class="workspace-button primary" type="button" data-create-free-project>＋ New project</button></header><div class="workspace-overview-tools"><label><span>⌕</span><input type="search" data-overview-search placeholder="Search projects" aria-label="Search projects"></label><div><button class="active" type="button" data-overview-filter="active">Active</button><button type="button" data-overview-filter="all">All</button><button class="active" type="button" data-overview-view="grid" aria-label="Grid view">▦</button><button type="button" data-overview-view="list" aria-label="List view">☷</button></div></div><div class="workspace-overview-grid" data-overview-grid>${ordered.map((project,index) => `<article class="workspace-overview-card ${project.status === "archived" ? "archived" : ""}" data-overview-card data-project-status="${escapeHTML(project.status || "active")}" data-project-name="${escapeHTML(project.name || "")}" style="--project-index:${index}"><a href="#workspace?project=${encodeURIComponent(project.project_id)}"><div class="workspace-overview-art"><i></i><i></i><i></i><span>${escapeHTML((project.name || "CX").slice(0,2).toUpperCase())}</span></div><div><h2>${escapeHTML(project.name)}</h2><p>${escapeHTML(project.client_name || "Private production")}</p><small>${Number(project.file_count || 0)} file${Number(project.file_count || 0) === 1 ? "" : "s"} · ${formatBytes(project.total_bytes || 0)}</small></div></a><footer><span>${project.status === "archived" ? "Archived" : recent.includes(project.project_id) ? "Recent" : "Active"}</span><button type="button" data-overview-project-settings="${escapeHTML(project.project_id)}" aria-label="Project settings" title="Project settings">•••</button></footer></article>`).join("")}<button class="workspace-overview-new" type="button" data-create-free-project><span>＋</span><b>New project</b></button></div><p class="workspace-overview-empty" data-overview-empty hidden>No projects match this view.</p></section>`;
+  return `<section class="workspace-overview project-section"><header class="dash-header"><div><p>Workspace</p><h1>Projects</h1></div><div><button class="pill pill-hot workspace-button primary" type="button" data-create-free-project>${workspaceIcon("plus")} New project</button></div></header><div class="dash-section-head workspace-overview-tools"><div><h2>All projects</h2><p>${active} active projects</p></div><div class="cx-project-actions"><label class="workspace-overview-search-wrap"><span>⌕</span><input type="search" data-overview-search placeholder="Search projects" aria-label="Search projects"></label><button class="cx-filter active" type="button" data-overview-filter="active">Active</button><button class="cx-filter" type="button" data-overview-filter="all">All</button><button class="cx-sort" type="button" data-overview-sort="name">Name ⌄</button><div class="view-switch"><button class="active" type="button" data-overview-view="grid" aria-label="Grid view">${workspaceIcon("grid")}</button><button type="button" data-overview-view="list" aria-label="List view">${workspaceIcon("list")}</button></div></div></div><div class="project-grid workspace-overview-grid" data-overview-grid>${ordered.map((project,index) => `<article class="project-card workspace-overview-card ${project.status === "archived" ? "archived" : ""}" data-overview-card data-project="${escapeHTML(project.project_id || project.id || "")}" data-project-status="${escapeHTML(project.status || "active")}" data-project-name="${escapeHTML(project.name || "")}" style="--project:${project.color || projectColors[index % projectColors.length]};--art-index:${index};--project-index:${index}"><a href="#workspace?project=${encodeURIComponent(project.project_id || project.id)}"><div class="project-card-top workspace-overview-art"><div class="cx-project-poster"><i></i><i></i><span>${escapeHTML(((project.client_name || project.clientName || project.name || "CX").slice(0,2)).toUpperCase())}</span></div><span class="cx-lock" aria-label="Private project">⌁</span><span class="card-hover-arrow">Open →</span></div><div class="cx-card-copy"><h3>${escapeHTML(project.name)}</h3><p>${escapeHTML(project.client_name || project.clientName || "Apex Fitness")}</p><small>${Number(project.file_count || 0)} asset${Number(project.file_count || 0) === 1 ? "" : "s"} · ${index ? `${index + 1} days ago` : "12 minutes ago"}</small></div></a><footer><span class="status ${String(project.status || "active").toLowerCase().replace(/\s+/g, "-")}"><i></i>${project.status === "archived" ? "Archived" : (project.status || "Active")}</span><span>${Number(project.file_count || 0)} assets</span><button type="button" data-overview-project-settings="${escapeHTML(project.project_id || project.id)}" aria-label="Project settings" title="Project settings">•••</button></footer></article>`).join("")}<button class="new-project-card workspace-overview-new" type="button" data-create-free-project><span class="cx-new-project-plus">+</span><strong>New project</strong><small>Start a private production space</small></button></div><p class="workspace-overview-empty" data-overview-empty hidden>No projects match this view.</p></section>`;
 }
 
 function bindWorkspaceOverview(root, projects, actions) {
@@ -375,14 +421,46 @@ function bindWorkspaceOverview(root, projects, actions) {
   const search = root.querySelector("[data-overview-search]");
   let filter = "active";
   const update = () => {
-    let visible = 0; const query = search.value.trim().toLowerCase();
+    let visible = 0; const query = search?.value.trim().toLowerCase() || "";
     root.querySelectorAll("[data-overview-card]").forEach(card => { card.hidden = (filter === "active" && card.dataset.projectStatus === "archived") || (grid.dataset.onlyFavorites === "true" && card.dataset.favoriteProject !== "true") || (query && !card.textContent.toLowerCase().includes(query)); if (!card.hidden) visible++; });
     root.querySelector("[data-overview-empty]").hidden = visible > 0;
   };
-  search.addEventListener("input", update);
+  search?.addEventListener("input", update);
   root.querySelectorAll("[data-overview-filter]").forEach(button => button.addEventListener("click", () => { filter = button.dataset.overviewFilter; root.querySelectorAll("[data-overview-filter]").forEach(item => item.classList.toggle("active", item === button)); update(); }));
-  root.querySelectorAll("[data-overview-view]").forEach(button => button.addEventListener("click", () => { grid.classList.toggle("list", button.dataset.overviewView === "list"); root.querySelectorAll("[data-overview-view]").forEach(item => item.classList.toggle("active", item === button)); }));
-  root.querySelectorAll("[data-overview-project-settings]").forEach(button => button.addEventListener("click", () => { const raw = projects.find(project => project.project_id === button.dataset.overviewProjectSettings); if (raw) openProjectSettingsModal(root, { id:raw.project_id, name:raw.name, clientName:raw.client_name, clientEmail:raw.client_email, status:raw.status }, actions); }));
+  root.querySelectorAll("[data-overview-view]").forEach(button => button.addEventListener("click", () => {
+    const isList = button.dataset.overviewView === "list";
+    grid.classList.toggle("list", isList);
+    grid.classList.toggle("project-list-view", isList);
+    grid.classList.toggle("cx-list-view", isList);
+    root.querySelectorAll("[data-overview-view]").forEach(item => item.classList.toggle("active", item === button));
+  }));
+  const sortBtn = root.querySelector("[data-overview-sort]");
+  let sortAsc = true;
+  sortBtn?.addEventListener("click", () => {
+    sortAsc = !sortAsc;
+    sortBtn.textContent = sortAsc ? "Name ⌄" : "Name ⌃";
+    const cards = [...grid.querySelectorAll("[data-overview-card]")];
+    cards.sort((a, b) => {
+      const nameA = a.dataset.projectName || "";
+      const nameB = b.dataset.projectName || "";
+      return sortAsc ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+    });
+    const newCard = grid.querySelector(".new-project-card");
+    cards.forEach(card => grid.insertBefore(card, newCard));
+  });
+  root.querySelectorAll("[data-overview-project-settings]").forEach(button => button.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const pid = button.dataset.overviewProjectSettings;
+    const raw = projects.find(project => (project.project_id || project.id) === pid);
+    if (raw) openProjectSettingsModal(root, { id:raw.project_id || raw.id, name:raw.name, clientName:raw.client_name || raw.clientName, clientEmail:raw.client_email, status:raw.status }, actions);
+  }));
+  root.querySelectorAll("[data-overview-card]").forEach(card => {
+    card.addEventListener("click", event => {
+      if (event.target.closest("button, a, input, [data-overview-project-settings]")) return;
+      const link = card.querySelector("a[href]");
+      if (link) link.click();
+    });
+  });
   update();
 }
 
