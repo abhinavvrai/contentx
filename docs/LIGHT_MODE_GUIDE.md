@@ -183,7 +183,26 @@ Content X supports both Dark and Light themes, driven by the root `<html>` attri
 
 ---
 
-## 7. Golden Rules for Future Modifications
+---
+
+## 7. Default Light Mode & Settings Theme Switcher
+
+- **Default Theme Behavior**:
+  - `public/site/index.html` initializes `localStorage.getItem("cx_theme") || "light"` and sets `document.documentElement.dataset.theme = "light"` when no preference is saved.
+  - `public/site/src/features.js` defaults `getAppTheme()` to `"light"`.
+  - When visitors load Content X for the first time, Light Mode is rendered automatically.
+  - Test suites (`tests/noir.test.mjs`, etc.) remain 100% green.
+
+- **Settings Option to Change Theme**:
+  - Located in the workspace settings rail (`#workspace?panel=account`) or direct route `#account`.
+  - **Tabs Available**:
+    1. **Profile**: Includes the quick "Interface Theme" toggle with Dark Mode (`☾`) and Light Mode (`☀`) pills.
+    2. **Appearance & Theme** (`data-account-view="appearance"`): Dedicated full-feature appearance panel with rich interactive preview cards for Dark Mode and Light Mode, and accent selection between Obsidian & Ice Cyan (Default) and Sunset Orange (Saved Backup).
+  - Theme switches apply in real-time across the app using `setAppTheme()` and `setAppAccent()` with seamless CSS transitions and persistence in `localStorage`.
+
+---
+
+## 8. Golden Rules for Future Modifications
 
 1. **Always Test Light Mode First**: Before pushing any CSS or HTML changes, verify appearance with `data-theme="light"` at:
    - `?route=review` (Review Room)
@@ -196,3 +215,4 @@ Content X supports both Dark and Light themes, driven by the root `<html>` attri
    - Unless `data-accent="orange"` is explicitly present, always style active indicators, gauges, buttons, and highlights with `#2563eb` / `#38bdf8` / `#eff6ff`.
 4. **Preserve DOM Element Unwrapping**:
    - Whenever removing chips or inline tags from contenteditable surfaces, always unwrap any `<mark>` wrappers so user text is never permanently marked.
+
