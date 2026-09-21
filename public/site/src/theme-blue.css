@@ -273,6 +273,14 @@ html:not([data-accent="orange"]) #app :is(.eyebrow span, .progress-row em, .work
   box-shadow: none !important;
 }
 
+html[data-theme="light"] .preloader {
+  background: #f8fafc !important;
+}
+
+.preloader.is-done {
+  pointer-events: none !important;
+}
+
 /* ==========================================================================
    4. BUTTONS & ACTIONS
    ========================================================================== */
