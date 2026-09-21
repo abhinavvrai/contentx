@@ -1,0 +1,199 @@
+/* Content X - Preserved Orange Ember Theme Backup
+ * Standalone stylesheet for the original vivid sunset orange / copper palette.
+ * Activated when html[data-accent="orange"].
+ */
+
+html[data-accent="orange"] {
+  --brand-primary: #ff5c20;
+  --brand-primary-hover: #ff702c;
+  --brand-accent: #ff883f;
+  --brand-accent-light: #ffb58e;
+  --brand-accent-glow: #ffd4b8;
+  --brand-deep: #c84010;
+  --orange: #ff5c20;
+  --orange2: #ff9b35;
+  --fx-orange: #ff6a2a;
+  --fx-amber: #ff9b43;
+  --fx-line-hot: #6f4938;
+  --sx-accent: #ffc397;
+  --bg-chip: rgba(255, 92, 32, 0.12);
+  --bg-chip-active: rgba(255, 92, 32, 0.25);
+  --border-accent: rgba(255, 120, 40, 0.35);
+  --border-accent-strong: rgba(255, 120, 40, 0.6);
+  --glow-accent: 0 0 16px rgba(255, 92, 32, 0.35);
+  --em-start: #ff5c20;
+  --em-end: #ff9b35;
+  --em-ink: #241109;
+  --em-gradient: linear-gradient(115deg, var(--em-start), #ff7828 55%, var(--em-end));
+  --em-hover: linear-gradient(115deg, #ff702c, #ffae4c);
+  --em-glow: rgba(255, 92, 32, 0.4);
+  --brand-gradient: linear-gradient(115deg, var(--em-start), #ff7828 55%, var(--em-end));
+  --brand-gradient-hover: linear-gradient(115deg, #ff702c, #ffae4c);
+}
+
+html[data-accent="orange"] body :is(.pill-hot,.pay-button,.brand-mark,.workspace-brand>span),
+html[data-accent="orange"] #app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary),
+html[data-accent="orange"] #app [data-feedback-demo] {
+  background: var(--em-gradient);
+  color: var(--em-ink);
+  border-color: #ff883f;
+  box-shadow: 0 7px 26px #ff5c202e;
+}
+
+html[data-accent="orange"] body :is(.brand-mark,.workspace-brand>span,.preloader__mark),
+html[data-accent="orange"] body :is(.brand-mark,.workspace-brand>span,.preloader__mark) * {
+  color: var(--em-ink) !important;
+  text-shadow: none !important;
+}
+
+html[data-accent="orange"] body :is(.pill-hot,.pay-button,.support-fab),
+html[data-accent="orange"] body :is(.pill-hot,.pay-button,.support-fab) *,
+html[data-accent="orange"] #app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary,[data-feedback-demo]),
+html[data-accent="orange"] #app :is(.workspace-button.primary,.send-comment,.sx-note-form .workspace-button.primary,[data-feedback-demo]) * {
+  color: #fff !important;
+  text-shadow: 0 1px 2px #6b2100 !important;
+}
+
+html[data-accent="orange"] body :is(.pill-hot,.pay-button):hover,
+html[data-accent="orange"] #app :is(.workspace-button.primary,[data-feedback-demo]):hover {
+  background: var(--em-hover);
+  color: var(--em-ink);
+  border-color: #ffb35e;
+  box-shadow: 0 9px 32px #ff5c2045;
+}
+
+html[data-accent="orange"] #app :is(.feature-banner,.market-hero,.cta-section,.market-teaser-grid,.support-panel,.dash-header,.project-header,.review-header) :is(.pill-light,.pill-dark,.pill-outline) {
+  background: var(--em-gradient);
+  color: #fff !important;
+  border-color: #ff883f;
+  text-shadow: 0 1px 2px #6b2100 !important;
+  box-shadow: 0 9px 30px #ff5c2038;
+}
+
+html[data-accent="orange"] #app :is(.hero .accent,.section-heading em,.creator-suite-copy h2 em,.faq-section h2 em,.contact-grid h2 em,.market-hero h1 em,.provider-intro h1 em,.dash-header h1 em,.sx-pulse h2 em) {
+  color: #ff7828;
+  background: linear-gradient(105deg, #ff6425 8%, #ff973b 60%, #ffbd69);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+html[data-accent="orange"] #app :is(.eyebrow span,.progress-row em,.workspace-storage em,.preloader__line span) {
+  background: var(--em-gradient);
+}
+
+html[data-accent="orange"] #app .hero {
+  background: radial-gradient(ellipse at 90% 32%, #a039152f, transparent 52%), radial-gradient(ellipse at 76% 70%, #ff6c171c, transparent 60%), #101014;
+}
+
+html[data-accent="orange"] #app .cx-orbit i {
+  border-color: #ff823e99;
+  background: radial-gradient(ellipse at 35% 8%, #ffad5140, #ff651d1a 30%, #14141b18 65%);
+  box-shadow: inset 0 3px 7px #ffc77fa0, inset 0 -28px 50px #0008, 0 -5px 25px #ff651d38;
+}
+
+html[data-accent="orange"] #app .cx-satellite {
+  background: radial-gradient(circle at 28% 22%, #ffe7ae, #ff8d27 22%, #b53e18 49%, #19131a 78%);
+}
+
+html[data-accent="orange"] #app .cx-story-halo {
+  background: radial-gradient(ellipse, #ff631b35, #d3531a16 46%, transparent 70%);
+}
+
+html[data-accent="orange"] #app :is(.feature-banner,.sx-focus-card) {
+  border-color: #a5492a;
+  background: radial-gradient(ellipse at 0 0, #b843204d, transparent 70%), linear-gradient(115deg, #30201c, #17181f);
+}
+
+html[data-accent="orange"] #app :is(.market-hero,.provider-intro,.account-story) {
+  background: radial-gradient(ellipse at 90% 15%, #b73d183b, transparent 60%), linear-gradient(135deg, #211819, #111217 70%);
+}
+
+html[data-accent="orange"] #app .sx-pulse {
+  border-color: #9b4a2a;
+  background: radial-gradient(ellipse at 0 0, #a93e1c50, transparent 70%), linear-gradient(130deg, #231c1d, #17191f);
+}
+
+html[data-accent="orange"] #app .sx-art-0 {
+  background: radial-gradient(ellipse at 10% 0, #d85a24, transparent 80%), linear-gradient(135deg, #81341f, #23131b);
+}
+
+html[data-accent="orange"] #app .sx-art-2 {
+  background: radial-gradient(ellipse at 0 0, #a86129, transparent 85%), #2c1a21;
+}
+
+html[data-accent="orange"] #app .cx-link-core {
+  background: var(--em-gradient);
+  color: #241109;
+  box-shadow: 0 20px 55px #ff641b40;
+}
+
+html[data-accent="orange"] #app .cta-section {
+  background: radial-gradient(ellipse at 50% 110%, #bb41173d, transparent 65%), #111217;
+}
+
+/* Workflow step cards */
+html[data-accent="orange"] #app .workflow-grid .workflow-step {
+  border: 1px solid #7b402c;
+  background: radial-gradient(circle at 82% 10%, #ff8b3d22, transparent 36%), linear-gradient(145deg, #241a1b, #15161d 68%);
+  box-shadow: inset 0 1px #ffd2ac1c, 0 20px 55px #0004;
+}
+
+html[data-accent="orange"] #app .workflow-grid .workflow-step:nth-child(even) {
+  background: radial-gradient(circle at 18% 90%, #ff65201c, transparent 40%), linear-gradient(145deg, #1d1920, #14151b 70%);
+}
+
+html[data-accent="orange"] #app .workflow-grid .workflow-step::after {
+  background: linear-gradient(90deg, transparent, var(--em-start), var(--em-end), transparent);
+  box-shadow: 0 0 22px #ff6d2a73;
+}
+
+html[data-accent="orange"] #app .workflow-grid .workflow-step:hover {
+  border-color: #ff8a4e;
+  box-shadow: inset 0 1px #ffe0bf35, 0 26px 70px #0008, 0 0 34px #ff5c2019;
+}
+
+html[data-accent="orange"] #app .workflow-grid .workflow-step-number {
+  border: 1px solid #ff965667;
+  background: #2e1c19;
+  color: #ffc198;
+}
+
+html[data-accent="orange"] #app .workflow-grid .step-icon {
+  border: 1px solid #ff96566e;
+  background: var(--em-gradient);
+  color: #fff;
+  box-shadow: 0 12px 34px #ff5c203d;
+}
+
+/* Creator suite cards */
+html[data-accent="orange"] #app .creator-suite-grid .creator-card {
+  border-color: #7b402c;
+  background: radial-gradient(circle at 95% 0, #ff783020, transparent 34%), linear-gradient(145deg, #221a1d, #171820 72%);
+  box-shadow: inset 0 1px #ffd3b31a, 0 18px 48px #0003;
+}
+
+html[data-accent="orange"] #app .creator-suite-grid .creator-card::before {
+  background: linear-gradient(90deg, transparent, var(--em-start), var(--em-end), transparent);
+  box-shadow: 0 0 20px #ff6d2a52;
+}
+
+html[data-accent="orange"] #app .creator-suite-grid .creator-card:nth-child(even) {
+  background: radial-gradient(circle at 100% 100%, #ff5f1d1a, transparent 38%), linear-gradient(145deg, #1d1a21, #15171e 72%);
+}
+
+html[data-accent="orange"] #app .creator-suite-grid .creator-card:hover {
+  border-color: #ff8548;
+  box-shadow: inset 0 1px #ffe0bf30, 0 24px 58px #0007, 0 0 32px #ff5c2016;
+}
+
+html[data-accent="orange"] #app .creator-suite-grid .creator-card > span:not(.creator-card-status) {
+  border-color: #ff9d63;
+  background: var(--em-gradient);
+  color: #fff;
+  box-shadow: 0 8px 24px #ff5c2038;
+}
+
+html[data-accent="orange"] #app .creator-suite-grid .creator-card :is(button,a,.creator-card-status) {
+  color: #ffab70;
+}

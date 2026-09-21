@@ -1,0 +1,193 @@
+/* ==========================================================================
+   CONTENT X - CENTRALIZED MASTER COLOR THEME CONTROLLER
+   ==========================================================================
+   HOW TO CHANGE THE ENTIRE WEBSITE COLOR PALETTE IN 30 SECONDS:
+   
+   1. Open THIS file: public/site/src/theme-colors.css
+   2. Edit the variables below in SECTION 1 (Brand Accents) or SECTION 2 (Theme Palettes).
+   3. Save the file.
+   
+   All sections across the entire website automatically update:
+   Homepage, Dashboard, Workspace, Review Room, Media & Files,
+   Talent Marketplace, Pricing / Commerce, Modals, and Settings!
+   ========================================================================== */
+
+:root,
+html {
+  /* ==========================================================================
+     SECTION 1: CORE BRAND ACCENT PALETTE
+     (Change these 4 colors to update all brand buttons, rings, and badges)
+     ========================================================================== */
+  --theme-brand-primary: #2563eb;          /* Vibrant Electric Sapphire Blue */
+  --theme-brand-dark: #1e3a8a;             /* Deep Royal Cobalt Blue */
+  --theme-brand-glow: #0284c7;             /* Deep Azure Glow */
+  --theme-brand-rim: #38bdf8;              /* Radiant Neon Azure */
+
+  /* Brand Aliases */
+  --brand-primary: var(--theme-brand-primary);
+  --brand-primary-hover: var(--theme-brand-dark);
+  --brand-secondary: #3b82f6;
+  --brand-accent: var(--theme-brand-rim);
+  --brand-accent-light: #93c5fd;
+  --brand-accent-glow: #bfdbfe;
+  --brand-deep: #0f172a;
+
+  /* Backward Compatibility Aliases */
+  --color-blue: var(--theme-brand-primary);
+  --color-blue-soft: #60a5fa;
+  --color-blue-chip: rgba(37, 99, 235, 0.12);
+  --color-blue-border: rgba(37, 99, 235, 0.4);
+  --color-purple: #3b82f6;
+  --color-purple-soft: var(--theme-brand-rim);
+  --color-purple-chip: rgba(59, 130, 246, 0.15);
+  --color-purple-border: rgba(59, 130, 246, 0.4);
+
+  --orange: var(--brand-primary);
+  --orange2: var(--brand-accent);
+  --em-start: var(--brand-primary);
+  --em-end: var(--brand-accent);
+  --em-ink: #ffffff;
+  --cyan-bright: var(--brand-accent);
+  --cyan-frost: var(--brand-accent-light);
+  --cyan-glow: var(--brand-accent-glow);
+  --blue-royal: var(--brand-primary);
+  --blue-deep: var(--brand-primary-hover);
+  --fx-orange: var(--brand-primary);
+  --fx-amber: var(--brand-accent);
+  --fx-line-hot: var(--brand-accent);
+  --sx-accent: var(--brand-accent);
+  --client: var(--brand-primary);
+  --project: var(--brand-primary);
+}
+
+/* ==========================================================================
+   SECTION 2: LIGHT MODE (DEFAULT APPEARANCE)
+   Crisp paper canvas, white surfaces, dark high-contrast typography & darker gradient
+   ========================================================================== */
+:root,
+html,
+html[data-theme="light"],
+html:not([data-theme="dark"]) {
+  color-scheme: light;
+
+  /* Surfaces & Canvases - Pure White & Light Surfaces */
+  --theme-canvas-bg: #ffffff;
+  --theme-surface-bg: #ffffff;
+  --theme-surface-card: #ffffff;
+  --theme-surface-raised: #ffffff;
+  --theme-surface-subtle: #f8fafc;
+
+  --bg-canvas: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-card-raised: #ffffff;
+  --bg-subtle: #f8fafc;
+  --bg-rail: #ffffff;
+  --bg-sidebar: #ffffff;
+  --bg-topbar: #ffffff;
+  --bg-poster: #ffffff;
+
+  --bg-chip: rgba(37, 99, 235, 0.08);
+  --bg-chip-active: rgba(37, 99, 235, 0.16);
+  --bg-dark: #ffffff;
+
+  /* Global light backgrounds & system fallbacks */
+  --paper: #ffffff;
+  --theme-bg: #ffffff;
+  --fx-bg: #ffffff;
+  --navy: #ffffff;
+  --client: var(--brand-primary);
+  --project: var(--brand-primary);
+  --ink: #000000;
+  --muted: #475569;
+  --line: #e2e8f0;
+
+  /* Borders & Dividers - Clean Subtle Dividers */
+  --border-subtle: #e2e8f0;
+  --border-muted: #cbd5e1;
+  --border-accent: rgba(37, 99, 235, 0.3);
+  --border-accent-strong: rgba(37, 99, 235, 0.6);
+
+  /* Typography - Pure Black & Deep Slate */
+  --text-main: #000000;              /* Pure Black headings, titles, primary text */
+  --text-muted: #1e293b;             /* Crisp dark slate body copy & descriptions */
+  --text-dim: #475569;               /* Dim helper text, timestamps, captions */
+
+  /* Darker High-Contrast Gradient (Bold & Sharp on White Backgrounds) */
+  --brand-gradient: linear-gradient(135deg, #1e3a8a 0%, #2563eb 55%, #0284c7 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #172554 0%, #1e40af 55%, #0369a1 100%);
+  --brand-gradient-text: linear-gradient(135deg, #1e3a8a 0%, #2563eb 55%, #0284c7 100%);
+  --em-gradient: var(--brand-gradient);
+  --em-hover: var(--brand-gradient-hover);
+
+  /* Clean Shadows - NO BLACK SHADOWS */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(37, 99, 235, 0.04);
+  --shadow-button: 0 2px 8px rgba(37, 99, 235, 0.25);
+  --shadow-button-hover: 0 4px 14px rgba(37, 99, 235, 0.35);
+  --glow-accent: none;
+  --glow-rim: none;
+
+  --sx-panel: var(--bg-card);
+  --sx-muted: var(--text-muted);
+  --sx-border: var(--border-accent);
+}
+
+/* ==========================================================================
+   SECTION 3: DARK MODE (LOW-LIGHT OBSIDIAN)
+   Activated when Dark Mode is selected in settings
+   ========================================================================== */
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces & Canvases */
+  --theme-canvas-bg: #000000;
+  --theme-surface-bg: #04060c;
+  --theme-surface-card: #060913;
+  --theme-surface-raised: #0d1428;
+  --theme-surface-subtle: #090e1a;
+
+  --bg-canvas: #000000;
+  --bg-surface: #04060c;
+  --bg-card: #060913;
+  --bg-card-hover: #0a0f20;
+  --bg-card-raised: #0d1428;
+  --bg-subtle: #090e1a;
+  --bg-rail: #080c18;
+  --bg-sidebar: #090e1a;
+  --bg-topbar: rgba(8, 12, 24, 0.92);
+  --bg-poster: radial-gradient(circle at 68% 22%, color-mix(in srgb, var(--project) 85%, white) 0 3%, transparent 4%), linear-gradient(145deg, color-mix(in srgb, var(--project) 42%, #171820), #14151b 70%);
+
+  --bg-chip: rgba(37, 99, 235, 0.14);
+  --bg-chip-active: rgba(59, 130, 246, 0.24);
+  --bg-dark: var(--bg-canvas);
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-muted: rgba(255, 255, 255, 0.14);
+  --border-accent: rgba(37, 99, 235, 0.35);
+  --border-accent-strong: rgba(59, 130, 246, 0.65);
+
+  /* Typography */
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  /* Dark Gradients */
+  --brand-gradient: linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #38bdf8 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #1e40af 0%, #1d4ed8 55%, #38bdf8 100%);
+  --brand-gradient-text: linear-gradient(135deg, #dbeafe 0%, #60a5fa 40%, #2563eb 100%);
+  --em-gradient: var(--brand-gradient);
+  --em-hover: var(--brand-gradient-hover);
+
+  /* Glowing Shadows for Dark Mode */
+  --shadow-card: 0 20px 50px rgba(0, 0, 0, 0.95), 0 0 14px -4px rgba(37, 99, 235, 0.18);
+  --shadow-button: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 0 12px rgba(37, 99, 235, 0.3), 0 4px 14px -2px rgba(29, 78, 216, 0.4);
+  --shadow-button-hover: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 18px rgba(59, 130, 246, 0.4), 0 6px 18px -2px rgba(37, 99, 235, 0.5);
+  --glow-accent: 0 0 14px rgba(37, 99, 235, 0.35);
+  --glow-rim: inset 0 1px 1px rgba(147, 197, 253, 0.35), inset 0 0 10px rgba(37, 99, 235, 0.15);
+
+  --sx-panel: var(--bg-card);
+  --sx-muted: var(--text-muted);
+  --sx-border: var(--border-accent);
+}

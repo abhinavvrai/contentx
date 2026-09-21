@@ -91,7 +91,7 @@ function openHookPlanner() {
 function addShortFormBento(root) {
   const grid = root.querySelector(".creator-suite-grid"); if (!grid || grid.querySelector(".creator-card--planner")) return;
   const orb = grid.querySelector(".creator-card--orb");
-  orb.insertAdjacentHTML("beforebegin", `<article class="creator-card creator-card--planner"><span>01</span><h3>Hook planner</h3><p>Plan a fast opening, clear promise, and visual proof before editing starts.</p><div class="bento-meter"><i style="width:88%"></i><small>First 3 sec mapped</small></div><button data-open-hook>Build a hook →</button></article><article class="creator-card creator-card--planner creator-card--batch"><span>04</span><h3>Batch view</h3><p>Keep a single short-form batch moving from raw footage to final post.</p><div class="bento-batch"><b>Hook</b><b>Cut</b><b>Caption</b><b>Approve</b></div><span class="creator-card-status">4 reels in motion</span></article>`);
+  orb.insertAdjacentHTML("beforebegin", `<article class="creator-card creator-card--planner"><span>01</span><h3>Hook planner</h3><p>Plan a fast opening, clear promise, and visual proof before editing starts.</p><button data-open-hook>Build a hook →</button><div class="bento-meter"><i style="width:88%"></i><small>First 3 sec mapped</small></div></article><article class="creator-card creator-card--planner creator-card--batch"><span>04</span><h3>Batch view</h3><p>Keep a single short-form batch moving from raw footage to final post.</p><div class="bento-batch"><b>Hook</b><b>Cut</b><b>Caption</b><b>Approve</b></div><span class="creator-card-status">4 reels in motion</span></article>`);
   grid.querySelector("[data-open-hook]").addEventListener("click", openHookPlanner);
 }
 

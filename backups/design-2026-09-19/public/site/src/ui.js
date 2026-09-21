@@ -1,4 +1,5 @@
 import { demoComments, demoProjects } from "./data.js";
+import { VIRAL_HOOK_LIBRARY } from "./scripts-studio.js";
 
 const esc = str => String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const NOTIFICATION_API = "/api/notifications";
@@ -178,30 +179,27 @@ function serviceCard(id, title, price, copy, featured = false) {
 export function renderMarketing(root, data, actions) {
   root.className = "marketing-app";
   root.innerHTML = `
-    <header class="site-nav editorial-site-nav">
+    <header class="site-nav">
       <a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a>
-      <nav aria-label="Main navigation"><a href="#work">Portfolio</a><a href="#workflow">Process</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
-      <div class="nav-actions"><button type="button" class="nav-cmd-trigger" data-action="command-palette" aria-label="Quick Actions (Cmd+K)" title="Quick Actions (Cmd+K)"><span class="cmd-icon">⌘K</span></button><button class="text-button" data-action="workspace">Workspace</button><button class="text-button" data-action="login">Login</button><a class="pill pill-hot nav-book-btn" href="#pricing">Book a call</a></div>
+      <nav aria-label="Main navigation"><a href="#work">Portfolio</a><a href="#workflow">How it works</a><a href="#scripts">Scripts &amp; Hooks</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
+      <div class="nav-actions"><button class="text-button" data-action="workspace">Workspace</button><button class="text-button" data-action="login">Login</button><a class="pill pill-hot" href="#pricing">See plans <span>↓</span></a></div>
     </header>
     <main id="top">
-      <section class="hero section-shell editorial-hero">
+      <section class="hero section-shell">
         <div class="hero-glow"></div>
-        <div class="hero-content editorial-hero-content">
-          <p class="eyebrow"><span class="eyebrow-dot"></span>• 10,000+ Videos Delivered</p>
-          <h1 class="hero-editorial-title">We <em>edit</em> really cool<br>videos in 24-48<em>hrs</em>.</h1>
-          <p class="hero-copy">Affordable, fast and human powered video edits for creators, brands and agencies.</p>
-          <div class="hero-actions"><a class="pill pill-hot pill-large" href="#pricing">Book a call</a><button class="pill pill-dark pill-large" data-action="workspace">See plans</button></div>
-          <div class="trust-row editorial-trust-row"><span class="faces"><b>AR</b><b>MK</b><b>RS</b></span><span><strong>Trusted by 100+ Brands</strong><small>Creators, agency teams &amp; founders</small></span></div>
-        </div>
-        <div class="editorial-brand-marquee" aria-label="Brands strip">
-          <span>ASAP ROCKY</span><span>ONE/SIZE</span><span>ADIDAS</span><span>ALO</span><span>SHERATON</span><span>HILTON</span><span>BTG</span><span>PIZZASLIME</span>
+        <div class="hero-content">
+          <p class="eyebrow"><span></span>${data.hero.eyebrow}</p>
+          <h1>${data.hero.title.map((line, i) => `<span class="${i === 1 ? "accent" : ""}">${line}</span>`).join("")}</h1>
+          <p class="hero-copy">${data.hero.copy}</p>
+          <div class="hero-actions"><a class="pill pill-hot pill-large" href="#pricing">${data.hero.primary} ↓</a><button class="pill pill-dark pill-large" data-action="workspace">${data.hero.secondary} →</button></div>
+          <div class="trust-row"><span class="faces"><b>AR</b><b>MK</b><b>RS</b></span><span><strong>Built for fast feedback</strong><small>No scattered links. No lost revisions.</small></span></div>
         </div>
         <div class="hero-product" aria-label="Content X client workspace preview">
           <div class="product-window">
             <div class="window-bar"><span class="brand-mark mini">CX</span><span>Apex Fitness Launch</span><div><i></i><i></i><i></i></div></div>
             <div class="product-body">
               <aside><span>⌂</span><span class="active">▱</span><span>◌</span><span>✓</span></aside>
-              <div class="video-preview"><video src="videos/standard1.mp4" muted loop playsinline autoplay preload="auto" fetchpriority="high" data-preview-autoplay></video><span class="version-chip">V3 · Ready for review</span></div>
+              <div class="video-preview"><video src="videos/landscape1.mp4" muted loop playsinline autoplay preload="auto" fetchpriority="high" data-preview-autoplay></video><span class="version-chip">V3 · Ready for review</span></div>
               <div class="comment-preview"><strong>Comments <span>3</span></strong><article><b>MK</b><p><span>00:04</span> Could we start with this shot?</p></article><article><b>AR</b><p><span>00:12</span> Updated in the next version.</p></article><div class="fake-input">Add feedback at 00:18…</div></div>
             </div>
           </div>
@@ -210,23 +208,27 @@ export function renderMarketing(root, data, actions) {
         </div>
       </section>
       <section class="stat-strip section-shell">${data.stats.map(s => `<div><strong>${s.value}</strong><span>${s.label}</span></div>`).join("")}<p>Trusted by creators, coaches<br>and growing brands.</p></section>
-      <section id="work" class="section-shell block-section portfolio-showcase-section editorial-work-section">
-        <div class="section-heading centered editorial-heading">
-          <div class="editorial-badge">Our Work</div>
-          <h2>Edits designed to <em>stop the scroll.</em></h2>
-          <p>Browse our curated portfolio of short-form reels and podcasts, or click any video to listen with sound.</p>
+      <section id="work" class="section-shell block-section portfolio-showcase-section">
+        <div class="section-heading split">
+          <div>
+            <p class="eyebrow"><span></span>Client Portfolio &amp; Edits</p>
+            <h2>Edits designed to <em>stop the scroll.</em></h2>
+          </div>
+          <p>Browse by style: Premium Motion, Creator Talking-Head, or Fast Social Cuts. Click any tab to view that specific collection, or watch with audio.</p>
         </div>
         <div class="portfolio-filter-bar" role="tablist" aria-label="Portfolio category tabs">
-          <button type="button" class="portfolio-filter-pill active" data-portfolio-filter="all">All Work (${data.cases.length})</button>
-          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="reels">⚡ Short-Form Reels (${data.cases.filter(c => c.category !== "podcast").length})</button>
-          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="podcast">🎙 Podcasts (${data.cases.filter(c => c.category === "podcast").length})</button>
+          <button type="button" class="portfolio-filter-pill active" data-portfolio-filter="premium">✦ Premium Reels (${data.cases.filter(c => c.category === "premium").length})</button>
+          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="standard">★ Standard &amp; Creator (${data.cases.filter(c => c.category === "standard").length})</button>
+          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="quick">⚡ Social Fast (${data.cases.filter(c => c.category === "quick").length})</button>
+          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="landscape">▱ 16:9 Landscape (${data.cases.filter(c => c.category === "landscape").length})</button>
+          <button type="button" class="portfolio-filter-pill" data-portfolio-filter="all">All Edits (${data.cases.length})</button>
         </div>
         <div class="work-grid portfolio-grid" data-portfolio-grid>
           ${data.cases.map((item, i) => `
             <article class="work-card portfolio-card ${item.category === "landscape" ? "is-landscape" : ""}" data-portfolio-cat="${item.category}" data-portfolio-index="${i}">
               <div class="work-media portfolio-media">
                 <video src="${item.src}" muted loop playsinline preload="metadata" data-preview-autoplay data-highlight-time="${item.posterTime || 2.5}"></video>
-                <span class="portfolio-tier-tag tier-${(item.complexity || "complex").toLowerCase()}">${item.complexity || "COMPLEX"}</span>
+                <span class="portfolio-tier-tag tier-${item.category}">${item.tier || item.label}</span>
                 <span class="portfolio-index-tag">0${i + 1}</span>
                 <button type="button" class="portfolio-sound-btn" aria-label="Toggle sound" data-portfolio-mute title="Click to hear audio">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
@@ -243,115 +245,113 @@ export function renderMarketing(root, data, actions) {
         <div class="portfolio-pagination-row">
           <button type="button" class="pill pill-outline" data-portfolio-show-more style="display:none">Show more videos ↓</button>
         </div>
-        <div class="portfolio-cta-strip editorial-work-cta">
+        <div class="portfolio-cta-strip">
           <div>
             <strong>Need edits like these for your brand or podcast?</strong>
-            <p>Get your raw footage turned into high-retention videos with 24-48h turnaround.</p>
+            <p>Get your raw footage turned into high-retention videos with 48h turnaround.</p>
           </div>
-          <a class="pill pill-hot pill-large" href="#pricing">Book a call</a>
+          <a class="pill pill-hot pill-large" href="#pricing">See Packages &amp; Pricing ↓</a>
         </div>
       </section>
-      <section id="workflow" class="workflow-section block-section editorial-process-section">
-        <div class="section-shell">
-          <div class="editorial-process-card">
-            <div class="editorial-badge">Process</div>
-            <h2 class="editorial-process-title">Your videos, <em>effortlessly.</em></h2>
-            <p class="editorial-process-sub">Begin your editing journey in three effortless steps.</p>
-            <div class="workflow-grid editorial-process-grid">
-              ${data.workflow.map((w, idx) => `
-                <article class="workflow-step workflow-step-${w.step}">
-                  <span class="workflow-step-number">${w.step}</span>
-                  <div class="step-icon">${["↻","⚡","★","✓"][idx] || w.step}</div>
-                  <h3>${w.title}</h3>
-                  <p>${w.copy}</p>
+      <section id="workflow" class="workflow-section block-section"><div class="section-shell"><div class="section-heading split"><div><p class="eyebrow"><span></span>Your workflow</p><h2>From raw footage to <em>approved.</em></h2></div><p>Everything your project needs lives in one place—so feedback stays clear and delivery keeps moving.</p></div><div class="workflow-grid">${data.workflow.map(w => `<article class="workflow-step workflow-step-${w.step}"><span class="workflow-step-number">${w.step}</span><div class="step-icon">${["↑","✦","◌","✓"][Number(w.step)-1]}</div><h3>${w.title}</h3><p>${w.copy}</p></article>`).join("")}</div><div class="feature-banner"><div><span class="live-dot"></span><small>THE CONTENT X WORKSPACE</small><h3>Review video without the back-and-forth.</h3><p>Click any moment to add a timestamped note. Compare versions, resolve feedback and approve the final cut—all in your browser.</p><button class="pill pill-hot" data-action="workspace">Open interactive demo →</button></div><div class="review-mini"><div class="review-video"><video src="videos/video3.mp4" muted loop playsinline preload="metadata" data-preview-autoplay></video><span>00:12</span></div><div class="review-note"><b>MK</b><p><strong>00:12</strong> Can we make this transition faster?</p><button>Reply</button></div></div></div></div></section>
+      <section id="scripts" class="section-shell block-section scripts-showcase-section">
+        <div class="section-heading split">
+          <div>
+            <p class="eyebrow"><span></span>Viral hooks &amp; Script studio</p>
+            <h2>Hook viewers in <em>3 seconds.</em><br>The rest follows.</h2>
+          </div>
+          <p>Great video editing cannot rescue a weak opening. Explore 48+ battle-tested hook formulas, retention cues, and our built-in teleprompter—or have Content X write your entire reel.</p>
+        </div>
+        <div class="site-scripts-workbench">
+          <div class="site-hooks-column">
+            <div class="site-hooks-header">
+              <div class="site-hooks-title-row">
+                <span class="site-hooks-badge">48+ VIRAL HOOK FORMULAS</span>
+                <span class="site-hooks-hint">Click card to copy formula</span>
+              </div>
+              <div class="site-hooks-search-row">
+                <input type="search" class="site-hooks-search" data-site-hooks-search placeholder="Search 48+ viral hooks (e.g. mistake, setting, algorithm, proof)..." aria-label="Search viral hooks">
+              </div>
+              <div class="site-hook-filter-pills" role="tablist" aria-label="Hook categories">
+                <button type="button" class="site-filter-pill active" data-site-hook-filter="all">All (48)</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Contrarian &amp; Pattern Disrupt">Contrarian</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Curiosity &amp; Value Gap">Curiosity</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="High Stakes &amp; Warning">High Stakes</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Data &amp; Proof-Led">Data &amp; Proof</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Speed &amp; Actionable How-To">Speed / How-To</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Story &amp; Vulnerability">Story</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Audience Callout &amp; Niche">Audience Callout</button>
+                <button type="button" class="site-filter-pill" data-site-hook-filter="Transformation &amp; Teardown">Transformation</button>
+              </div>
+            </div>
+            <div class="site-hooks-cards-viewport" data-site-hooks-viewport>
+              ${VIRAL_HOOK_LIBRARY.map((hook, idx) => `
+                <article class="site-hook-card" data-site-hook-category="${esc(hook.category)}" data-site-hook-index="${idx}">
+                  <div class="site-hook-card-head">
+                    <span class="site-hook-cat-tag">${esc(hook.category)}</span>
+                    <button type="button" class="site-hook-copy-btn" data-site-copy-hook="${idx}" title="Copy formula">
+                      <span>📋</span> Copy
+                    </button>
+                  </div>
+                  <strong class="site-hook-card-title">${esc(hook.title)}</strong>
+                  <div class="site-hook-structure">
+                    <small>FORMULA</small>
+                    <p>${esc(hook.formula)}</p>
+                  </div>
+                  <div class="site-hook-example">
+                    <small>PROVEN EXAMPLE</small>
+                    <p>“${esc(hook.example)}”</p>
+                  </div>
                 </article>
               `).join("")}
             </div>
-            <div class="editorial-process-cta">
-              <button class="pill pill-hot pill-large" data-action="workspace">Edit now!</button>
-            </div>
           </div>
-          <div class="feature-banner editorial-studio-banner">
-            <div class="editorial-banner-content">
-              <span class="live-dot"></span>
-              <small>THE CONTENT X STUDIO</small>
-              <h3 class="editorial-banner-title"><em>Upload. Review . Enjoy</em></h3>
-              <p>New ContentX Studio Dashboard — Click any moment to add timestamped notes, compare cuts side-by-side, and approve your revisions in one seamless window.</p>
-              <div class="editorial-banner-actions">
-                <button class="pill pill-hot" data-action="workspace">Open interactive demo →</button>
-                <button class="pill pill-dark" data-action="login">Login to Studio</button>
+          <aside class="site-studio-preview-card">
+            <div class="studio-preview-window">
+              <div class="studio-preview-bar">
+                <span class="brand-mark mini">CX</span>
+                <span>Script Studio · Full Surface</span>
+                <div class="studio-preview-dots"><i></i><i></i><i></i></div>
+              </div>
+              <div class="studio-preview-body">
+                <div class="studio-script-meta-bar">
+                  <span class="studio-script-tag">Reel 01 · 60s Optimal</span>
+                  <span class="studio-wpm-badge">135 WPM · 00:44</span>
+                  <span class="studio-cue-count">6 Cues</span>
+                </div>
+                <div class="studio-script-lines">
+                  <div class="studio-scene-head">Scene 1 · Scroll-Stopping Hook</div>
+                  <p><span class="cx-cue cue-hook">[HOOK]</span> <mark class="cx-hl-orange">Stop doing 15-second intros if you want to grow on Reels.</mark></p>
+                  <p><span class="cx-cue cue-sfx">[SFX]</span> Sub-bass impact + record stop</p>
+                  <div class="studio-scene-head">Scene 2 · The Retention Agitation</div>
+                  <p><span class="cx-cue cue-broll">[B-ROLL]</span> Fast mobile scroll feed showing 70% immediate drop-off</p>
+                  <p><span class="cx-cue cue-talent">[TALENT]</span> If you don't disrupt the pattern in frame one, viewers swipe away.</p>
+                  <div class="studio-scene-head">Scene 3 · The High-Value Solution</div>
+                  <p><span class="cx-cue cue-vo">[VO]</span> Flip the timeline: reveal the outcome in second 2, then teach the method.</p>
+                  <p><span class="cx-cue cue-cta">[CTA]</span> Save this formula and let Content X edit your next cut.</p>
+                </div>
+                <div class="studio-feature-perks">
+                  <div><span>✓</span> 48+ Viral Hook Matrix</div>
+                  <div><span>✓</span> Full-Screen Teleprompter (Mirror &amp; WPM)</div>
+                  <div><span>✓</span> Production Cues ([HOOK], [B-ROLL], [SFX], [CTA])</div>
+                  <div><span>✓</span> Attached Video Cuts &amp; Side-by-Side Review</div>
+                </div>
               </div>
             </div>
-            <div class="review-mini">
-              <div class="review-video">
-                <video src="videos/video3.mp4" muted loop playsinline preload="metadata" data-preview-autoplay></video>
-                <span>00:12</span>
-              </div>
-              <div class="review-note">
-                <b>MK</b>
-                <p><strong>00:12</strong> Can we make this transition faster?</p>
-                <button>Reply</button>
-              </div>
+            <div class="studio-preview-actions">
+              <a class="pill pill-hot" href="#workspace?panel=scripts">Open Script Studio Free →</a>
+              <a class="pill pill-dark" href="#pricing">See Script Packages ↓</a>
             </div>
-          </div>
+          </aside>
         </div>
       </section>
-
       <section id="pricing" class="section-shell block-section service-pricing"><div class="section-heading centered"><p class="eyebrow"><span></span>Clear pricing</p><h2>Choose one service. Add only what you <em>need.</em></h2><p>Revision rounds follow the selected package. One-off reel pricing includes a 20% flexibility rate. Need ongoing support? Ask us for a monthly proposal.</p></div><div class="service-groups"><section class="service-group"><div class="service-group-head"><span>01</span><div><p>Short-form editing</p><h3>Reels that feel sharp, clear and native to the feed.</h3></div></div><div class="service-card-grid">${serviceCard("basic_reel", "Basic Reel", 1500, "Clean edits, captions and a polished social-ready finish.")}${serviceCard("growth_reel", "Growth Reel", 2500, "More B-roll, stronger pacing and richer sound design.", true)}${serviceCard("premium_motion", "Premium Motion Reel", 3500, "Motion-led editing for premium brand content.")}${serviceCard("advanced_reel", "Advanced Reel", 5000, "A high-concept reel with custom graphics and advanced motion.")}</div></section><section class="service-group"><div class="service-group-head"><span>02</span><div><p>Scriptwriting</p><h3>Start with a clearer idea, hook and story flow.</h3></div></div><div class="service-card-grid three-up">${serviceCard("script_hook", "Hook & Idea", 1000, "A focused content angle and opening hook.")}${serviceCard("script_full", "Full Reel Script", 1500, "A complete script from hook to CTA.", true)}${serviceCard("script_research", "Research-led Script", 2000, "Research, structure and brand voice refinement.")}</div></section><section class="service-group"><div class="service-group-head"><span>03</span><div><p>Podcast editing</p><h3>Long-form conversations, professionally cleaned and structured.</h3></div></div><div class="service-card-grid three-up">${serviceCard("podcast_30", "30 minutes", 5000, "Clean edit, audio cleanup and branded delivery.")}${serviceCard("podcast_45", "45 minutes", 7500, "A polished episode with chapter-ready structure.", true)}${serviceCard("podcast_60", "60 minutes", 10000, "Full episode edit and final branded master.")}</div></section></div><aside class="service-addons"><div><p class="eyebrow"><span></span>Optional support</p><h3>Social media management</h3><p>Content planning, posting, scheduling, comment management and monthly reporting—built around your publishing rhythm.</p></div><button class="pill pill-hot" type="button" data-support-open>Ask for a monthly plan →</button></aside><p class="pricing-note">Need a cover, extra revision, rush delivery, posting or another add-on? Choose a package first, then add it inside the website checkout flow.</p></section>
       <section id="faq" class="section-shell faq-section block-section"><div><p class="eyebrow"><span></span>Questions</p><h2>Before we<br><em>get started.</em></h2><p>Still unsure? Ask on the website first and we’ll recommend the right package before moving to WhatsApp.</p><button class="pill pill-dark" type="button" data-support-open>Ask a question →</button></div><div class="faq-list">${data.faqs.map((f,i) => `<details ${i===0?"open":""}><summary>${f[0]}<span>+</span></summary><p>${f[1]}</p></details>`).join("")}</div></section>
-      <section class="cta-section editorial-cta-section">
-        <div class="section-shell editorial-cta-shell">
-          <div class="editorial-badge">Get Started</div>
-          <h2 class="editorial-cta-heading">High-Quality Video Edits,<br>Delivered in <em>24 - 48 Hours.</em></h2>
-          <p class="editorial-cta-sub">Skip the hiring headaches and unpredictable freelancers. Start scaling your short-form content today.</p>
-          <div class="editorial-cta-actions">
-            <a class="pill pill-hot pill-large" href="#pricing">Book a call</a>
-            <a class="pill pill-dark pill-large" href="#pricing">See plans</a>
-          </div>
-        </div>
-      </section>
+      <section class="cta-section"><div class="section-shell"><p class="eyebrow light"><span></span>Ready when you are</p><h2>Let’s make your next reel <em>impossible to skip.</em></h2><p>Choose a package on the website, pay securely, then share the brief and files inside your workspace.</p><div><a class="pill pill-light pill-large" href="#pricing">Start on website ↓</a><button class="pill pill-outline pill-large" type="button" data-support-open>Talk to support</button></div></div></section>
     </main>
     <button class="support-fab" type="button" data-support-open>?</button>
     <aside class="support-panel" data-support-panel hidden><button type="button" data-support-close>×</button><p class="eyebrow"><span></span>Content X support</p><h3>Ask first, then start properly.</h3><p>Use the website for packages, payment, brief and uploads. WhatsApp stays available only when you need quick human help.</p><div><button class="pill pill-hot" type="button" data-support-pricing>Choose package</button><a class="pill pill-dark" href="${data.whatsapp}" target="_blank" rel="noreferrer">WhatsApp help ↗</a><a class="pill pill-outline" href="mailto:${data.email}">Email team</a></div></aside>
-    <footer class="site-footer editorial-footer">
-      <div class="section-shell footer-shell">
-        <div class="footer-col">
-          <strong>Navigate</strong>
-          <a href="#work">Work</a>
-          <a href="#workflow">Process</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#faq">FAQ</a>
-        </div>
-        <div class="footer-col">
-          <strong>Get in touch</strong>
-          <a href="mailto:${data.email}">${data.email}</a>
-          <a href="#pricing">Book a 15-min Call</a>
-          <a href="${data.whatsapp}" target="_blank" rel="noreferrer">Chat on WhatsApp</a>
-        </div>
-        <div class="footer-col">
-          <strong>Useful Links</strong>
-          <button type="button" class="footer-link-btn" data-action="workspace">Client Workspace</button>
-          <button type="button" class="footer-link-btn" data-action="login">Creator Login</button>
-          <a href="#privacy">Privacy Policy</a>
-          <a href="#terms">Terms of Service</a>
-        </div>
-        <div class="footer-col footer-col-editor">
-          <div class="footer-editor-card">
-            <h4>Are you an editor?</h4>
-            <p>We are always looking for talented video editors and motion designers to join our team.</p>
-            <button class="pill pill-light" type="button" data-apply="Video Editor">Join the team!</button>
-          </div>
-        </div>
-      </div>
-      <div class="footer-bottom-shell section-shell">
-        <p class="copyright">© 2026 Content X. All rights reserved.</p>
-        <div class="footer-bottom-links">
-          <span>Premium Video Editing</span>
-          <span class="cx-dot">·</span>
-          <span>24-48h Turnaround</span>
-        </div>
-      </div>
-    </footer>
+    <footer class="site-footer"><div class="section-shell"><div><a class="brand" href="#top"><span class="brand-mark">CX</span><span>${data.brand}</span></a><p>Premium video editing and a better way to review it.</p></div><div><strong>Explore</strong><a href="#work">Portfolio</a><a href="#workflow">How it works</a><a href="#scripts">Scripts &amp; Hooks</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></div><div><strong>Connect</strong><button data-support-open>Support</button><a href="mailto:${data.email}">Email</a><button data-action="login">Login</button></div></div><p class="copyright">© 2026 Content X. Built for better content.</p></footer>
   `;
 
   const pricingFallback = root.querySelector("#pricing");
@@ -370,23 +370,19 @@ export function renderMarketing(root, data, actions) {
   const filterPills = root.querySelectorAll("[data-portfolio-filter]");
   const portfolioCards = [...root.querySelectorAll("[data-portfolio-cat]")];
   const showMoreBtn = root.querySelector("[data-portfolio-show-more]");
-  let activeCat = "all";
+  let activeCat = "premium";
   let showAllInCat = false;
-  const PAGE_SIZE = 6;
+  const PAGE_SIZE = 4;
 
   const updatePortfolioDisplay = () => {
-    const matchingCards = portfolioCards.filter(card => {
-      if (activeCat === "all") return true;
-      if (activeCat === "reels") return card.dataset.portfolioCat !== "podcast";
-      return card.dataset.portfolioCat === activeCat;
-    });
+    const matchingCards = portfolioCards.filter(card => activeCat === "all" || card.dataset.portfolioCat === activeCat);
     portfolioCards.forEach(card => card.style.display = "none");
     const visibleCards = showAllInCat ? matchingCards : matchingCards.slice(0, PAGE_SIZE);
     visibleCards.forEach(card => card.style.display = "");
     if (showMoreBtn) {
       if (matchingCards.length > PAGE_SIZE && !showAllInCat) {
         showMoreBtn.style.display = "inline-flex";
-        showMoreBtn.textContent = `View all ${matchingCards.length} videos ↓`;
+        showMoreBtn.textContent = `View all ${matchingCards.length} in this category ↓`;
       } else if (matchingCards.length > PAGE_SIZE && showAllInCat) {
         showMoreBtn.style.display = "inline-flex";
         showMoreBtn.textContent = "Show fewer ↑";
@@ -470,9 +466,8 @@ function dashboardShell(content, active = "projects") {
 
 export function renderDashboard(root, actions, options = {}) {
   root.className = "dashboard-app";
-  const rawProjects = JSON.parse(localStorage.getItem("cx_projects") || "null") || demoProjects;
-  const projects = rawProjects.map(p => (p.color && /#ff|#ea|#f9|#e6/i.test(p.color) ? { ...p, color: "#38bdf8" } : p));
-  const projectCards = projects.map((p,index) => `<article class="project-card" data-project="${p.id}" style="--project:${p.color || "#38bdf8"};--art-index:${index}"><div class="project-card-top"><div class="cx-project-poster"><i></i><i></i><span>${p.client.slice(0,2).toUpperCase()}</span></div><span class="cx-lock" aria-label="Private project">⌁</span><span class="card-hover-arrow">Open →</span></div><div class="cx-card-copy"><h3>${p.name}</h3><p>${p.client}</p><small>Updated ${index ? `${index + 1} days ago` : "12 minutes ago"}</small></div><footer><span class="status ${p.status.toLowerCase().replace(" ", "-")}"><i></i>${p.status}</span><span>${p.files} assets</span><button aria-label="Project options">•••</button></footer></article>`).join("");
+  const projects = JSON.parse(localStorage.getItem("cx_projects") || "null") || demoProjects;
+  const projectCards = projects.map((p,index) => `<article class="project-card" data-project="${p.id}" style="--project:${p.color};--art-index:${index}"><div class="project-card-top"><div class="cx-project-poster"><i></i><i></i><span>${p.client.slice(0,2).toUpperCase()}</span></div><span class="cx-lock" aria-label="Private project">⌁</span><span class="card-hover-arrow">Open →</span></div><div class="cx-card-copy"><h3>${p.name}</h3><p>${p.client}</p><small>Updated ${index ? `${index + 1} days ago` : "12 minutes ago"}</small></div><footer><span class="status ${p.status.toLowerCase().replace(" ", "-")}"><i></i>${p.status}</span><span>${p.files} assets</span><button aria-label="Project options">•••</button></footer></article>`).join("");
   const demoChip = options.demo ? `<button class="cx-demo-chip" type="button" data-demo-login>Demo workspace · Sign in</button>` : "";
   root.innerHTML = dashboardShell(`<header class="dash-header"><div><p>Workspace</p><h1>Projects</h1></div><div>${demoChip}<button class="pill pill-hot" data-action="new-project">${cxIcon("plus")} New project</button></div></header><section class="project-section"><div class="dash-section-head"><div><h2>All projects</h2><p>${projects.length} active projects</p></div><div class="cx-project-actions"><button class="cx-filter active">Active</button><button class="cx-filter">All</button><button class="cx-sort">Name ⌄</button><div class="view-switch"><button class="active" aria-label="Grid view">${cxIcon("grid")}</button><button aria-label="List view">${cxIcon("list")}</button></div></div></div><div class="project-grid">${projectCards}<button class="new-project-card" data-action="new-project">${cxIcon("plus")}<strong>New project</strong><small>Start a private production space</small></button></div></section>`, "projects");
   root.querySelectorAll("[data-demo-login]").forEach(button => button.addEventListener("click", actions.openAccess));
@@ -527,7 +522,7 @@ export function renderProject(root, actions) {
   root.innerHTML = dashboardShell(`<header class="project-header"><button class="back-button" data-action="back" aria-label="Back to projects">${cxIcon("back")}</button><div><p>Apex Fitness</p><h1>Apex Fitness Launch</h1></div><span class="status in-review"><i></i>In review</span><div class="project-header-actions"><button class="pill pill-dark">${cxIcon("share")} Share</button><button class="pill pill-hot" data-action="upload">${cxIcon("upload")} Upload files</button></div></header>
     <nav class="project-tabs"><button class="active">Videos <b>6</b></button><button>Assets <b>18</b></button><button>Documents <b>3</b></button><button>Brief</button><button>Activity</button></nav>
     <section class="project-content"><div class="project-toolbar"><div><button class="pill pill-dark">${cxIcon("folder")} New folder</button><button class="pill pill-dark" data-action="upload">${cxIcon("upload")} Upload</button></div><label>${cxIcon("search")}<input placeholder="Search files, scripts and PDFs"></label></div>
-    <div class="folder-row"><article><span class="folder-icon" style="--project:#38bdf8">${cxIcon("folder")}</span><div><strong>Raw Footage</strong><small>12 files · 3.8 GB</small></div></article><article><span class="folder-icon" style="--project:#8b5cf6">${cxIcon("folder")}</span><div><strong>Brand Assets</strong><small>6 files · 124 MB</small></div></article><article><span class="folder-icon" style="--project:#24b47e">${cxIcon("folder")}</span><div><strong>Final Exports</strong><small>2 files · 286 MB</small></div></article></div>
+    <div class="folder-row"><article><span class="folder-icon" style="--project:#ff6b35">${cxIcon("folder")}</span><div><strong>Raw Footage</strong><small>12 files · 3.8 GB</small></div></article><article><span class="folder-icon" style="--project:#8b5cf6">${cxIcon("folder")}</span><div><strong>Brand Assets</strong><small>6 files · 124 MB</small></div></article><article><span class="folder-icon" style="--project:#24b47e">${cxIcon("folder")}</span><div><strong>Final Exports</strong><small>2 files · 286 MB</small></div></article></div>
     <div class="dash-section-head"><div><h2>Review files</h2><p>Preview video, audio, images, scripts and PDFs. Open a file for comments, highlights or approval.</p></div><span>Last updated 12 min ago</span></div>
     <div class="file-table"><div class="file-row head"><span>Name</span><span>Version</span><span>Status</span><span>Updated</span><span>Details</span></div><button class="file-row" data-action="review"><span class="file-name"><i><video src="videos/premium1.mp4" muted loop playsinline preload="metadata" data-preview-autoplay controlsList="nodownload noplaybackrate noremoteplayback"></video></i><strong>Launch Reel 01<small>1080 × 1920 · 32 sec · 24 FPS</small></strong></span><span>V3</span><span class="status in-review"><i></i>In review</span><span>12 min ago</span><span data-file-detail="Launch Reel 01">Details</span></button><button class="file-row"><span class="file-name"><i><video src="videos/premium2.mp4" muted loop playsinline preload="metadata" data-preview-autoplay controlsList="nodownload noplaybackrate noremoteplayback"></video></i><strong>Launch Reel 02<small>1080 × 1920 · 28 sec · 30 FPS</small></strong></span><span>V2</span><span class="status editing"><i></i>Changes requested</span><span>Yesterday</span><span data-file-detail="Launch Reel 02">Details</span></button><button class="file-row"><span class="file-name"><i><video src="videos/standard3.mp4" muted loop playsinline preload="metadata" data-preview-autoplay controlsList="nodownload noplaybackrate noremoteplayback"></video></i><strong>Brand Story Cut<small>1080 × 1920 · 41 sec · 24 FPS</small></strong></span><span>V4</span><span class="status approved"><i></i>Approved</span><span>Aug 1</span><span data-file-detail="Brand Story Cut">Details</span></button><button class="file-row document-row"><span class="file-name"><i class="document-thumb">PDF</i><strong>Launch Script.pdf<small>12 pages · Script review</small></strong></span><span>V2</span><span class="status in-review"><i></i>In review</span><span>Today</span><span>Review text</span></button></div></section><input class="hidden-upload" type="file" accept="video/*,audio/*,image/*,.pdf,.txt,.md,.csv,.doc,.docx" multiple>`);
   startMutedPreviewVideos(root);

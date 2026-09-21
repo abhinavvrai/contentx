@@ -35,7 +35,6 @@ const ICONS = {
   messageSquare: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
   chart: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
   sparkles: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>`,
-  sections: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
   rotateCcw: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`,
   dot: `<svg class="studio-svg-icon studio-svg-dot" viewBox="0 0 12 12" width="7" height="7" fill="currentColor"><circle cx="6" cy="6" r="4"/></svg>`,
   globe: `<svg class="studio-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`
@@ -991,17 +990,6 @@ export async function renderScriptStudioSurface(container, {
               </button>
 
               <div class="scripts-overflow-divider"></div>
-              <div class="scripts-overflow-section-label">SCRIPT STRUCTURE</div>
-              <button type="button" class="scripts-overflow-item" data-toggle-sections title="Toggle script section divisions">
-                <span class="studio-btn-icon">${ICONS.sections}</span>
-                <span data-sections-overflow-label>Sections: Continuous Flow</span>
-              </button>
-              <button type="button" class="scripts-overflow-item" data-insert-divider title="Insert Section Break at Cursor">
-                <span class="studio-btn-icon">${ICONS.plus}</span>
-                <span>Insert Section Break</span>
-              </button>
-
-              <div class="scripts-overflow-divider"></div>
               <div class="scripts-overflow-section-label">WORKSPACE ACTIONS</div>
               <button type="button" class="scripts-overflow-item" data-toggle-focus title="Toggle Distraction-Free Focus Mode">
                 <span data-focus-icon class="studio-btn-icon">${ICONS.focusExpand}</span>
@@ -1025,20 +1013,6 @@ export async function renderScriptStudioSurface(container, {
               <option value="H1">H1 Scene Heading</option>
               <option value="H3">H3 Sub-shot</option>
               <option value="P">Body Text</option>
-            </select>
-            <span class="scripts-select-chevron">${ICONS.chevronDown}</span>
-          </div>
-        </div>
-
-        <div class="format-group">
-          <div class="scripts-select-styled-wrap">
-            <select class="scripts-ribbon-select scripts-font-select" data-format-font-select aria-label="Font Family" title="Font family">
-              <option value="inherit">Default (Geist)</option>
-              <option value="'Satoshi', sans-serif">Satoshi</option>
-              <option value="'Instrument Serif', Georgia, serif">Instrument Serif</option>
-              <option value="ui-sans-serif, system-ui, -apple-system, sans-serif">System Sans</option>
-              <option value="Georgia, Cambria, 'Times New Roman', serif">Editorial Serif</option>
-              <option value="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Monospace</option>
             </select>
             <span class="scripts-select-chevron">${ICONS.chevronDown}</span>
           </div>
@@ -1097,16 +1071,6 @@ export async function renderScriptStudioSurface(container, {
           </div>
         </div>
 
-        <div class="format-sep"></div>
-
-        <!-- Section Division Toggle -->
-        <div class="format-group">
-          <button type="button" class="scripts-ribbon-btn scripts-sections-toggle-btn" data-toggle-sections title="Toggle script sections division vs continuous flow">
-            <span class="studio-btn-icon">${ICONS.sections}</span>
-            <span data-sections-toggle-label>Sections: Continuous</span>
-          </button>
-        </div>
-
         <div class="scripts-ribbon-spacer"></div>
 
         <!-- Far Right: Footage Panel Toggle -->
@@ -1162,12 +1126,12 @@ export async function renderScriptStudioSurface(container, {
                         <span class="cx-comment-resolved-tag" data-comment-resolved-tag hidden>Resolved</span>
                       </div>
                       <p class="cx-comment-view-text" data-comment-view-text></p>
-                      <div class="cx-comment-actions-row">
-                        <button type="button" class="cx-comment-action-pill" data-resolve-comment>
+                      <div class="cx-comment-view-actions">
+                        <button type="button" class="cx-comment-resolve-btn" data-toggle-resolve-comment>
                           <span class="studio-btn-icon">${ICONS.check}</span>
                           <span data-resolve-btn-text>Resolve</span>
                         </button>
-                        <button type="button" class="cx-comment-action-pill danger" data-delete-comment title="Delete comment">
+                        <button type="button" class="cx-comment-delete-btn" data-delete-comment title="Delete comment">
                           <span class="studio-btn-icon">${ICONS.trash}</span>
                         </button>
                       </div>
@@ -1181,30 +1145,6 @@ export async function renderScriptStudioSurface(container, {
                       <div class="cx-comment-form-actions">
                         <button type="button" class="cx-comment-save-btn" data-save-comment>Save Comment</button>
                         <button type="button" class="cx-comment-cancel-btn" data-cancel-comment>Cancel</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Floating Asset Hover Preview Popover -->
-                <div class="cx-asset-hover-popover" data-asset-hover-popover hidden>
-                  <div class="cx-asset-hover-card">
-                    <div class="cx-asset-hover-media" data-asset-hover-media></div>
-                    <div class="cx-asset-hover-body">
-                      <div class="cx-asset-hover-header">
-                        <span class="cx-asset-hover-badge"><span class="studio-btn-icon">${ICONS.film}</span> Project Footage</span>
-                        <button type="button" class="cx-asset-hover-close-btn" data-close-asset-hover aria-label="Close hover preview">×</button>
-                      </div>
-                      <strong class="cx-asset-hover-name" data-asset-hover-name>Footage.mp4</strong>
-                      <div class="cx-asset-hover-details" data-asset-hover-details></div>
-                      <div class="cx-asset-hover-actions">
-                        <button type="button" class="cx-asset-hover-play-btn" data-asset-hover-play>
-                          <span class="studio-btn-icon">${ICONS.play}</span>
-                          <span>Preview Video</span>
-                        </button>
-                        <button type="button" class="cx-asset-hover-unlink-btn" data-asset-hover-unlink title="De-link this asset from script">
-                          <span>Unlink</span>
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -2544,11 +2484,7 @@ export async function renderScriptStudioSurface(container, {
         const block = node.closest("h1, h2, h3, h4, p, div, blockquote");
         if (block && editorSurface.contains(block)) {
           block.style.fontFamily = chosenFont === "inherit" ? "" : chosenFont;
-        } else {
-          editorSurface.style.fontFamily = chosenFont === "inherit" ? "" : chosenFont;
         }
-      } else {
-        editorSurface.style.fontFamily = chosenFont === "inherit" ? "" : chosenFont;
       }
     }
     editorSurface.focus();
@@ -2682,7 +2618,6 @@ export async function renderScriptStudioSurface(container, {
       mark.dataset.assetId = fileId;
       mark.dataset.assetName = fileName;
       mark.dataset.assetUrl = fileUrl;
-      mark.dataset.assetSize = String(fileSize || 0);
       mark.title = `Linked to footage: ${fileName}`;
 
       try {
@@ -3417,46 +3352,14 @@ export async function renderScriptStudioSurface(container, {
     }
   }
 
-  function unwrapElement(el) {
-    if (!el || !el.parentNode) return;
-    const parent = el.parentNode;
-    while (el.firstChild) {
-      parent.insertBefore(el.firstChild, el);
-    }
-    parent.removeChild(el);
-  }
-
   function unlinkAssetFromScript(assetId) {
-    if (!assetId) return;
-
-    // 1. Remove all chips for this asset and unwrap enclosing marks
     editorSurface.querySelectorAll(`.cx-script-asset-chip[data-asset-id="${assetId}"]`).forEach(chip => {
-      const parentMark = chip.closest(".cx-linked-asset-phrase");
       chip.remove();
-      if (parentMark) {
-        unwrapElement(parentMark);
-      }
-    });
-
-    // 2. Unwrap all marks associated with this assetId
-    editorSurface.querySelectorAll(`.cx-linked-asset-phrase[data-asset-id="${assetId}"]`).forEach(mark => {
-      unwrapElement(mark);
-    });
-
-    // 3. Clean up any leftover marks that no longer have an asset chip
-    editorSurface.querySelectorAll(".cx-linked-asset-phrase").forEach(mark => {
-      if (!mark.querySelector(".cx-script-asset-chip") && (!mark.dataset.assetId || mark.dataset.assetId === assetId)) {
-        unwrapElement(mark);
-      }
     });
 
     const active = getActiveScript();
     if (active && Array.isArray(active.attachedAssets)) {
       active.attachedAssets = active.attachedAssets.filter(a => a.id !== assetId);
-    }
-
-    if (typeof hideAssetHoverPreview === "function") {
-      hideAssetHoverPreview();
     }
 
     triggerAutoSave();
@@ -3838,18 +3741,12 @@ export async function renderScriptStudioSurface(container, {
     });
   });
 
-  container.querySelectorAll("[data-insert-divider]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      if (moreMenu) moreMenu.hidden = true;
-      if (typeof sectionsMode !== "undefined" && sectionsMode === "continuous") {
-        applySectionsMode("divided");
-        notify("Divided sections view enabled");
-      }
-      const hrHtml = `<hr class="script-scene-divider"><br>`;
-      document.execCommand("insertHTML", false, hrHtml);
-      editorSurface.focus();
-      triggerAutoSave();
-    });
+  container.querySelector("[data-insert-divider]")?.addEventListener("click", () => {
+    if (moreMenu) moreMenu.hidden = true;
+    const hrHtml = `<hr class="script-scene-divider"><br>`;
+    document.execCommand("insertHTML", false, hrHtml);
+    editorSurface.focus();
+    triggerAutoSave();
   });
 
   // -------------------------------------------------------------
@@ -3867,27 +3764,7 @@ export async function renderScriptStudioSurface(container, {
       e.preventDefault();
       const chip = delBtn.closest(".cx-script-asset-chip");
       if (chip) {
-        const assetId = chip.dataset.assetId;
-        const parentMark = chip.closest(".cx-linked-asset-phrase");
         chip.remove();
-        if (parentMark) {
-          unwrapElement(parentMark);
-        }
-        if (assetId) {
-          const remaining = editorSurface.querySelectorAll(`.cx-script-asset-chip[data-asset-id="${assetId}"]`);
-          if (!remaining.length) {
-            editorSurface.querySelectorAll(`.cx-linked-asset-phrase[data-asset-id="${assetId}"]`).forEach(mark => {
-              unwrapElement(mark);
-            });
-            const active = getActiveScript();
-            if (active && Array.isArray(active.attachedAssets)) {
-              active.attachedAssets = active.attachedAssets.filter(a => a.id !== assetId);
-            }
-          }
-        }
-        if (typeof hideAssetHoverPreview === "function") {
-          hideAssetHoverPreview();
-        }
         triggerAutoSave();
         updateMetrics();
         renderLinkedAssetsSidebar(getActiveScript());
@@ -4270,191 +4147,6 @@ export async function renderScriptStudioSurface(container, {
   });
 
   // -------------------------------------------------------------
-  // SECTION DIVISION CONTROL (Continuous vs Divided)
-  // -------------------------------------------------------------
-  let sectionsMode = localStorage.getItem("cx_scripts_sections_mode") || "continuous";
-  const sectionsToggleBtns = container.querySelectorAll("[data-toggle-sections]");
-  const sectionsToggleLabels = container.querySelectorAll("[data-sections-toggle-label]");
-  const sectionsOverflowLabels = container.querySelectorAll("[data-sections-overflow-label]");
-
-  function applySectionsMode(mode) {
-    sectionsMode = mode;
-    localStorage.setItem("cx_scripts_sections_mode", mode);
-    const isContinuous = mode === "continuous";
-    editorSurface.classList.toggle("is-continuous-flow", isContinuous);
-
-    sectionsToggleLabels.forEach(lbl => {
-      lbl.innerHTML = isContinuous ? `Sections: <strong>Continuous</strong>` : `Sections: <strong>Divided</strong>`;
-    });
-
-    sectionsOverflowLabels.forEach(lbl => {
-      lbl.textContent = isContinuous ? `Switch to Divided Sections` : `Switch to Continuous Flow`;
-    });
-
-    sectionsToggleBtns.forEach(btn => {
-      btn.classList.toggle("is-active", !isContinuous);
-      btn.title = isContinuous
-        ? "Sections currently continuous (Off). Click to divide into scene sections."
-        : "Sections currently divided (On). Click for continuous flow.";
-    });
-  }
-
-  sectionsToggleBtns.forEach(btn => {
-    btn.addEventListener("click", e => {
-      e.stopPropagation();
-      const nextMode = sectionsMode === "continuous" ? "divided" : "continuous";
-      applySectionsMode(nextMode);
-      notify(nextMode === "continuous" ? "Script set to Continuous Flow (No section breaks)" : "Script set to Divided Sections");
-    });
-  });
-
-  applySectionsMode(sectionsMode);
-
-  // -------------------------------------------------------------
-  // FLOATING ASSET HOVER PREVIEW CONTROLLER
-  // -------------------------------------------------------------
-  const assetHoverPopover = container.querySelector("[data-asset-hover-popover]");
-  const assetHoverMedia = container.querySelector("[data-asset-hover-media]");
-  const assetHoverName = container.querySelector("[data-asset-hover-name]");
-  const assetHoverDetails = container.querySelector("[data-asset-hover-details]");
-  const assetHoverPlayBtn = container.querySelector("[data-asset-hover-play]");
-  const assetHoverUnlinkBtn = container.querySelector("[data-asset-hover-unlink]");
-  const assetHoverCloseBtn = container.querySelector("[data-close-asset-hover]");
-
-  let activeHoverAsset = null;
-  let hoverHideTimeout = null;
-
-  function hideAssetHoverPreview() {
-    clearTimeout(hoverHideTimeout);
-    if (assetHoverPopover) {
-      assetHoverPopover.hidden = true;
-      if (assetHoverMedia) {
-        const vid = assetHoverMedia.querySelector("video");
-        if (vid) {
-          vid.pause();
-          vid.removeAttribute("src");
-          vid.load();
-        }
-        assetHoverMedia.innerHTML = "";
-      }
-    }
-    activeHoverAsset = null;
-  }
-
-  function scheduleHideAssetHover() {
-    clearTimeout(hoverHideTimeout);
-    hoverHideTimeout = setTimeout(() => {
-      hideAssetHoverPreview();
-    }, 280);
-  }
-
-  function showAssetHoverPreview(targetEl, assetData) {
-    if (!assetHoverPopover || !targetEl || !canvasContainer) return;
-    clearTimeout(hoverHideTimeout);
-
-    const assetId = assetData.id || targetEl.dataset.assetId;
-    const assetName = assetData.name || targetEl.dataset.assetName || "Project Asset";
-    const assetUrl = assetData.url || targetEl.dataset.assetUrl || "";
-    const assetSize = Number(assetData.size || targetEl.dataset.assetSize || 0);
-
-    activeHoverAsset = { id: assetId, name: assetName, url: assetUrl, size: assetSize };
-
-    if (assetHoverName) assetHoverName.textContent = assetName;
-    if (assetHoverDetails) {
-      assetHoverDetails.innerHTML = `
-        <span class="hover-detail-tag">${assetSize > 0 ? formatBytes(assetSize) : "HD Footage"}</span>
-        <span class="hover-detail-tag">Status: Ready</span>
-      `;
-    }
-
-    if (assetHoverMedia) {
-      if (assetUrl && (assetUrl.endsWith(".mp4") || assetUrl.endsWith(".webm") || assetUrl.includes("blob:") || assetUrl.startsWith("http"))) {
-        assetHoverMedia.innerHTML = `
-          <video class="cx-asset-hover-vid" src="${escapeHTML(assetUrl)}" autoplay muted loop playsinline></video>
-        `;
-      } else {
-        assetHoverMedia.innerHTML = `
-          <div class="cx-asset-hover-placeholder">
-            <span class="studio-btn-icon">${ICONS.film}</span>
-            <span>Video Footage</span>
-          </div>
-        `;
-      }
-    }
-
-    assetHoverPopover.hidden = false;
-
-    // Position relative to canvasContainer
-    const rect = targetEl.getBoundingClientRect();
-    const canvasRect = canvasContainer.getBoundingClientRect();
-    const popoverWidth = 260;
-    const popoverHeight = 220;
-
-    let top = rect.bottom - canvasRect.top + canvasContainer.scrollTop + 8;
-    let left = rect.left - canvasRect.left + canvasContainer.scrollLeft + (rect.width / 2) - (popoverWidth / 2);
-
-    if (left < 10) left = 10;
-    if (left + popoverWidth > canvasContainer.clientWidth - 20) {
-      left = Math.max(10, canvasContainer.clientWidth - popoverWidth - 20);
-    }
-    if (top + popoverHeight > canvasContainer.clientHeight + canvasContainer.scrollTop && rect.top - canvasRect.top > popoverHeight) {
-      top = rect.top - canvasRect.top + canvasContainer.scrollTop - popoverHeight - 8;
-    }
-
-    assetHoverPopover.style.top = `${top}px`;
-    assetHoverPopover.style.left = `${left}px`;
-  }
-
-  // Hover listeners on editorSurface
-  editorSurface.addEventListener("mouseover", e => {
-    const target = e.target.closest(".cx-linked-asset-phrase, .cx-script-asset-chip");
-    if (!target) return;
-    const assetId = target.dataset.assetId;
-    const active = getActiveScript();
-    const attached = active && Array.isArray(active.attachedAssets) ? active.attachedAssets.find(a => a.id === assetId) : null;
-    const assetData = attached || {
-      id: assetId,
-      name: target.dataset.assetName,
-      url: target.dataset.assetUrl,
-      size: target.dataset.assetSize
-    };
-    showAssetHoverPreview(target, assetData);
-  });
-
-  editorSurface.addEventListener("mouseout", e => {
-    const target = e.target.closest(".cx-linked-asset-phrase, .cx-script-asset-chip");
-    if (target) {
-      scheduleHideAssetHover();
-    }
-  });
-
-  assetHoverPopover?.addEventListener("mouseenter", () => {
-    clearTimeout(hoverHideTimeout);
-  });
-
-  assetHoverPopover?.addEventListener("mouseleave", () => {
-    scheduleHideAssetHover();
-  });
-
-  assetHoverPlayBtn?.addEventListener("click", () => {
-    if (activeHoverAsset && activeHoverAsset.url) {
-      playInLinkedSidebar(activeHoverAsset.name, activeHoverAsset.url);
-    }
-    hideAssetHoverPreview();
-  });
-
-  assetHoverUnlinkBtn?.addEventListener("click", () => {
-    if (activeHoverAsset && activeHoverAsset.id) {
-      unlinkAssetFromScript(activeHoverAsset.id);
-    }
-    hideAssetHoverPreview();
-  });
-
-  assetHoverCloseBtn?.addEventListener("click", () => {
-    hideAssetHoverPreview();
-  });
-
-  // -------------------------------------------------------------
   // EXPORT MENU & ACTIONS
   // -------------------------------------------------------------
   const toggleExportBtn = container.querySelector("[data-toggle-export-menu]");
@@ -4659,19 +4351,6 @@ export function openFullscreenTeleprompter(script, onWpmChange = () => {}) {
           <input type="range" id="prompter-font-slider" min="26" max="72" step="2" value="${fontSize}" data-font-slider>
         </div>
 
-        <!-- Font Family Selector -->
-        <div class="prompter-font-family-control">
-          <label for="prompter-font-select">Font:</label>
-          <select id="prompter-font-select" class="prompter-font-select" data-prompter-font-family aria-label="Teleprompter Font">
-            <option value="inherit">Geist (Default)</option>
-            <option value="'Satoshi', sans-serif">Satoshi</option>
-            <option value="'Instrument Serif', Georgia, serif">Instrument Serif</option>
-            <option value="ui-sans-serif, system-ui, -apple-system, sans-serif">System Sans</option>
-            <option value="Georgia, Cambria, 'Times New Roman', serif">Editorial Serif</option>
-            <option value="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Monospace</option>
-          </select>
-        </div>
-
         <!-- Mirror / Glass Mode Toggle -->
         <button type="button" class="prompter-bar-btn toggle-btn" data-toggle-mirror title="Flip text horizontally for teleprompter glass hardware">
           Mirror Mode
@@ -4778,13 +4457,6 @@ export function openFullscreenTeleprompter(script, onWpmChange = () => {}) {
     fontSize = Number(fontSlider.value);
     fontVal.textContent = `${fontSize}px`;
     track.style.fontSize = `${fontSize}px`;
-  });
-
-  // Font Family Selector
-  const prompterFontSelect = prompter.querySelector("[data-prompter-font-family]");
-  prompterFontSelect?.addEventListener("change", () => {
-    const chosenFont = prompterFontSelect.value;
-    track.style.fontFamily = chosenFont === "inherit" ? "" : chosenFont;
   });
 
   // Mirror Mode Toggle

@@ -570,12 +570,8 @@ html[data-theme="dark"] .pricing-editor-content p {
   font-weight: 900;
 }
 .cx-lobby-pack-switcher button.active .cx-save-tag {
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(255, 255, 255, 0.24);
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  display: inline-block;
-  visibility: visible;
-  opacity: 1;
 }
 .cx-lobby-card--featured .cx-lobby-pack-switcher button.active {
   background: linear-gradient(135deg, #ff5c20 0%, #ff8a5a 100%);

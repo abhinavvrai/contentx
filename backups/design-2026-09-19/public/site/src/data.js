@@ -13,21 +13,21 @@ export const studio = {
   stats: [
     { value: "1,000+", label: "videos delivered" },
     { value: "20+", label: "clients served" },
-    { value: "24–48h", label: "typical first cut" }
+    { value: "48–72h", label: "typical first cut" }
   ],
   cases: [
-    { id: "premium1", category: "motion", complexity: "COMPLEX", title: "Kinetic Motion Reel", label: "Motion Graphics · 9:16", tier: "Motion", src: "videos/premium1.mp4", posterTime: 2.8, copy: "Hyper-focused retention pacing, 3D kinetic typography, and custom sound design." },
-    { id: "premium2", category: "product_led", complexity: "COMPLEX", title: "Product-Led Showcase", label: "Product Demo · 9:16", tier: "Product", src: "videos/premium2.mp4", posterTime: 2.4, copy: "Punchy UI transitions, seamless product sequencing, and dynamic feature callouts." },
-    { id: "premium3", category: "cinematic", complexity: "COMPLEX", title: "Cinematic Brand Film", label: "Cinematic · 9:16", tier: "Cinematic", src: "videos/premium3.mp4", posterTime: 2.6, copy: "Flagship visual storytelling built to stop the feed and convert viewers." },
-    { id: "standard1", category: "talking_head", complexity: "SIMPLE", title: "Creator Talking Head", label: "Talking Head · 9:16", tier: "Talking Head", src: "videos/standard1.mp4", posterTime: 2.5, copy: "Crisp caption styling, jump cuts with zero dead air, and highlighted hooks." },
-    { id: "standard2", category: "talking_head", complexity: "SIMPLE", title: "Authority Interview Cut", label: "Talking Head · 9:16", tier: "Talking Head", src: "videos/standard2.mp4", posterTime: 2.2, copy: "Visual pattern interrupts, relevant screen popups, and smooth sound effects." },
-    { id: "standard3", category: "podcast", complexity: "COMPLEX", title: "Podcast Highlights Cut", label: "Podcast · 9:16", tier: "Podcast", src: "videos/standard3.mp4", posterTime: 2.6, copy: "Multi-speaker dynamic switching, waveform accents, and chapter-ready hooks." },
-    { id: "quick1", category: "ugc", complexity: "SIMPLE", title: "Viral UGC Ad Hook", label: "UGC · 9:16", tier: "UGC", src: "videos/quick1.mp4", posterTime: 2.0, copy: "High-converting UGC pacing with native aesthetic and rapid hook variations." },
-    { id: "quick2", category: "ugc", complexity: "SIMPLE", title: "Customer Review Cut", label: "UGC · 9:16", tier: "UGC", src: "videos/quick2.mp4", posterTime: 2.4, copy: "Authentic testimonial flow with on-screen social proof overlays." },
-    { id: "quick3", category: "motion", complexity: "COMPLEX", title: "Animated Explainer Short", label: "Motion · 9:16", tier: "Motion", src: "videos/quick3.mp4", posterTime: 2.2, copy: "Fluid vector animations, sound effects, and kinetic text layouts." },
-    { id: "quick4", category: "product_led", complexity: "COMPLEX", title: "SaaS Workflow Reel", label: "Product Led · 9:16", tier: "Product", src: "videos/quick4.mp4", posterTime: 2.0, copy: "Smooth screen captures, cursor zooms, and slick interface highlights." },
-    { id: "video4", category: "cinematic", complexity: "COMPLEX", title: "Atmospheric Brand Story", label: "Cinematic · 9:16", tier: "Cinematic", src: "videos/video4.mp4", posterTime: 3.0, copy: "Cinematic color grading, deliberate pacing, and rich soundscapes." },
-    { id: "video6", category: "podcast", complexity: "SIMPLE", title: "Solo Mic Podcast Reel", label: "Podcast · 9:16", tier: "Podcast", src: "videos/video6.mp4", posterTime: 2.5, copy: "Engaging subtitles, auto-framing, and punchy audio clarity." }
+    { id: "premium1", category: "premium", title: "Kinetic Retention Edit", label: "Premium · 1080p", tier: "Premium", src: "videos/premium1.mp4", posterTime: 2.8, copy: "Hyper-focused retention pacing, custom motion typography, and sound design." },
+    { id: "premium2", category: "premium", title: "High-Energy Brand Short", label: "Premium · 1080p", tier: "Premium", src: "videos/premium2.mp4", posterTime: 2.4, copy: "Punchy visual transitions, seamless B-roll sequencing, and dynamic zooms." },
+    { id: "premium3", category: "premium", title: "Motion Story Feature", label: "Premium · 1080p", tier: "Premium", src: "videos/premium3.mp4", posterTime: 2.6, copy: "Flagship vertical cut built to capture cold audiences within 2 seconds." },
+    { id: "standard1", category: "standard", title: "Creator Talking-Head Cut", label: "Standard · 720p", tier: "Standard", src: "videos/standard1.mp4", posterTime: 2.5, copy: "Crisp caption styling, jump cuts with zero dead air, and highlighted hooks." },
+    { id: "standard2", category: "standard", title: "Educational Reel Pacing", label: "Standard · 720p", tier: "Standard", src: "videos/standard2.mp4", posterTime: 2.2, copy: "Visual pattern interrupts, relevant screen popups, and smooth sound effects." },
+    { id: "standard3", category: "standard", title: "Engaging Narrative Story", label: "Standard · 720p", tier: "Standard", src: "videos/standard3.mp4", posterTime: 2.6, copy: "Rhythmic pacing with branded subtitles and audio leveling." },
+    { id: "quick1", category: "quick", title: "Fast-Paced Social Short", label: "Social Fast · 720p", tier: "Fast Cut", src: "videos/quick1.mp4", posterTime: 2.0, copy: "Speedy social delivery ready for TikTok, Instagram Reels, and YouTube Shorts." },
+    { id: "quick2", category: "quick", title: "Viral Hook Formula Reel", label: "Social Fast · 720p", tier: "Fast Cut", src: "videos/quick2.mp4", posterTime: 2.4, copy: "Formulaic hook test edit designed for maximum short-form completion rate." },
+    { id: "quick3", category: "quick", title: "Subtitled Speech Flow", label: "Social Fast · 720p", tier: "Fast Cut", src: "videos/quick3.mp4", posterTime: 2.2, copy: "Clean Hormozi-style animated word-by-word subtitles and punchy SFX." },
+    { id: "quick4", category: "quick", title: "High-Speed Punch Edit", label: "Social Fast · 720p", tier: "Fast Cut", src: "videos/quick4.mp4", posterTime: 2.0, copy: "Fast cuts and kinetic overlays designed for product reveals and announcements." },
+    { id: "video4", category: "landscape", title: "Landscape Brand Walkthrough", label: "YouTube · 16:9", tier: "Landscape", src: "videos/video4.mp4", posterTime: 3.0, copy: "Full widescreen commercial pacing, multi-track audio balancing, and chapter cuts." },
+    { id: "video6", category: "standard", title: "Product Feature Breakdown", label: "Standard · 720p", tier: "Standard", src: "videos/video6.mp4", posterTime: 2.5, copy: "Clear visual callouts, smooth background tracks, and branded lower-thirds." }
   ],
   workflow: [
     { step: "01", title: "Upload", copy: "Drop raw footage, brand assets, references and your brief into a private project folder." },
@@ -76,7 +76,7 @@ export const studio = {
 };
 
 export const demoProjects = [
-  { id: "apex", name: "Apex Fitness Launch", client: "Apex Fitness", type: "12 short-form videos", progress: 72, status: "In review", due: "Aug 8", color: "#38bdf8", files: 24 },
+  { id: "apex", name: "Apex Fitness Launch", client: "Apex Fitness", type: "12 short-form videos", progress: 72, status: "In review", due: "Aug 8", color: "#ff6b35", files: 24 },
   { id: "founder", name: "Founder Story Series", client: "Nivara Studio", type: "6 founder-led reels", progress: 38, status: "Editing", due: "Aug 12", color: "#8b5cf6", files: 18 },
   { id: "product", name: "Product Walkthrough", client: "Orbit Labs", type: "Launch video", progress: 100, status: "Approved", due: "Delivered", color: "#24b47e", files: 31 }
 ];

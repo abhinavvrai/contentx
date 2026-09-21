@@ -7,7 +7,7 @@
   <meta name="description" content="Content X connects strategy, creators, scripts, editing and social management with a private workspace for uploads, feedback, versions and approvals.">
   <meta name="theme-color" content="#101014">
   <title>Content X | Create. Review. Publish.</title>
-  <script>try{var t=localStorage.getItem("cx_theme")||"light";document.documentElement.dataset.theme=localStorage.getItem("cx_theme")||"light";var a=localStorage.getItem("cx_accent")||"blue";document.documentElement.dataset.accent=a;}catch{}</script>
+  <script>try{if(localStorage.getItem("cx_theme")==="light")localStorage.setItem("cx_theme","dark");document.documentElement.dataset.theme=localStorage.getItem("cx_theme")==="light"?"dark":"dark";}catch{}</script>
   <link rel="icon" href="/contentx-favicon.svg?v=contentx-tab-icon-1" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,9 +28,6 @@
   <link rel="stylesheet" href="./src/workspace-organizer.css?v=workspace-organize-35">
   <link rel="stylesheet" href="./src/mobile.css?v=frame-native-20-touch-polish-1">
   <link rel="stylesheet" href="./src/theme.css?v=payment-region-1">
-  <link rel="stylesheet" href="./src/theme-orange.css?v=theme-orange-backup-1">
-  <link rel="stylesheet" href="./src/theme-colors.css?v=master-palette-1">
-  <link rel="stylesheet" href="./src/theme-blue.css?v=electric-blue-1">
 </head>
 <body>
   <div class="preloader" data-loader aria-hidden="true">

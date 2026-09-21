@@ -109,7 +109,6 @@ function profilePanel(user, activeRefunds = 0, workspaceLabel = "View projects")
 
 function appearanceSettingsPanel() {
   const currentTheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
-  const currentAccent = document.documentElement.dataset.accent === "orange" ? "orange" : "blue";
 
   return `<div class="account-panel-heading">
     <p>PREFERENCES</p>
@@ -151,41 +150,11 @@ function appearanceSettingsPanel() {
         </div>
       </article>
     </div>
-
-    <div class="account-section-title" style="margin-top:28px; margin-bottom:14px;">
-      <div>
-        <h2 style="font-size:16px; font-weight:700; margin:0 0 4px;">Brand Accent &amp; Glow</h2>
-        <p style="font-size:13px; color:var(--theme-muted); margin:0;">Switch between the new Electric Blue theme and the saved Sunset Orange theme.</p>
-      </div>
-    </div>
-    <div class="appearance-theme-grid" role="radiogroup" aria-label="Accent selection">
-      <article class="appearance-theme-card ${currentAccent === "blue" ? "active" : ""}" data-set-accent="blue" role="radio" aria-checked="${currentAccent === "blue"}" tabindex="0">
-        <div class="appearance-card-info" style="padding:16px;">
-          <div class="appearance-card-title-row">
-            <span class="theme-icon" style="color:#38bdf8; text-shadow:0 0 10px #38bdf8;">✦</span>
-            <strong>Obsidian &amp; Ice Cyan (Default)</strong>
-            <span class="theme-status-pill accent-status-pill ${currentAccent === "blue" ? "active" : ""}">${currentAccent === "blue" ? "✓ Active" : "Select"}</span>
-          </div>
-          <p>Cosmic obsidian with luminous Ice Cyan (#38bdf8 / #7dd3fc) and Royal Cobalt (#2563eb).</p>
-        </div>
-      </article>
-      <article class="appearance-theme-card ${currentAccent === "orange" ? "active" : ""}" data-set-accent="orange" role="radio" aria-checked="${currentAccent === "orange"}" tabindex="0">
-        <div class="appearance-card-info" style="padding:16px;">
-          <div class="appearance-card-title-row">
-            <span class="theme-icon" style="color:#ff7828; text-shadow:0 0 10px #ff7828;">✦</span>
-            <strong>Sunset Orange (Saved Backup)</strong>
-            <span class="theme-status-pill accent-status-pill ${currentAccent === "orange" ? "active" : ""}">${currentAccent === "orange" ? "✓ Active" : "Select"}</span>
-          </div>
-          <p>Original vivid Content X ember gradient (#ff5c20 to #ff9b35) with warm copper accents.</p>
-        </div>
-      </article>
-    </div>
-
     <div class="appearance-system-note">
       <span>⚙</span>
       <div>
         <strong>Persistent Local Preference</strong>
-        <small>Your theme and accent choices are stored in your browser and automatically applied whenever you open Content X.</small>
+        <small>Your theme choice is stored in your browser and automatically applied whenever you open Content X.</small>
       </div>
     </div>
   </div>`;
@@ -681,19 +650,6 @@ export async function renderWorkspaceAccountPanel(container, actions, initialVie
         el.classList.toggle("active", active);
         el.setAttribute("aria-checked", String(active));
         const pill = el.querySelector(".theme-status-pill");
-        if (pill) {
-          pill.textContent = active ? "✓ Active" : "Select";
-          pill.classList.toggle("active", active);
-        }
-      });
-    });
-    window.addEventListener("cx-accent-changed", e => {
-      const accent = e.detail?.accent || document.documentElement.dataset.accent;
-      container.querySelectorAll("[data-set-accent]").forEach(el => {
-        const active = el.dataset.setAccent === accent;
-        el.classList.toggle("active", active);
-        el.setAttribute("aria-checked", String(active));
-        const pill = el.querySelector(".accent-status-pill");
         if (pill) {
           pill.textContent = active ? "✓ Active" : "Select";
           pill.classList.toggle("active", active);

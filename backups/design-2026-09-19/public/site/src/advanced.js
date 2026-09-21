@@ -19,10 +19,10 @@ const defaultTasks = [
 ];
 
 const defaultClients = [
-  { id: "apex", name: "Apex Fitness", initials: "AF", contactName: "Meera Kapoor", contactInitials: "MK", email: "demo@apexfitness.in", plan: "Content Growth", status: "Active", color: "#38bdf8", storage: 32, storageLabel: "6.4 GB of 20 GB", billing: "₹24,000/month", renewal: "Aug 28, 2026", notificationEmail: true, team: ["Abhinav", "Ravi"], projects: [
-    { id: "apex-launch", name: "Apex Fitness Launch", type: "12 short-form reels", format: "Reel · 9:16", status: "In review", progress: 72, files: 24, due: "Aug 8", color: "#38bdf8" },
-    { id: "apex-august", name: "August Content Batch", type: "10 monthly reels", format: "Reel · 9:16", status: "Editing", progress: 44, files: 31, due: "Aug 14", color: "#2563eb" },
-    { id: "apex-campaign", name: "Transformation Campaign", type: "Ad variations", format: "Mixed formats", status: "Briefing", progress: 15, files: 8, due: "Aug 20", color: "#60a5fa" }
+  { id: "apex", name: "Apex Fitness", initials: "AF", contactName: "Meera Kapoor", contactInitials: "MK", email: "demo@apexfitness.in", plan: "Content Growth", status: "Active", color: "#ff5c20", storage: 32, storageLabel: "6.4 GB of 20 GB", billing: "₹24,000/month", renewal: "Aug 28, 2026", notificationEmail: true, team: ["Abhinav", "Ravi"], projects: [
+    { id: "apex-launch", name: "Apex Fitness Launch", type: "12 short-form reels", format: "Reel · 9:16", status: "In review", progress: 72, files: 24, due: "Aug 8", color: "#ff5c20" },
+    { id: "apex-august", name: "August Content Batch", type: "10 monthly reels", format: "Reel · 9:16", status: "Editing", progress: 44, files: 31, due: "Aug 14", color: "#ff8b61" },
+    { id: "apex-campaign", name: "Transformation Campaign", type: "Ad variations", format: "Mixed formats", status: "Briefing", progress: 15, files: 8, due: "Aug 20", color: "#ffb097" }
   ]},
   { id: "nivara", name: "Nivara Studio", initials: "NS", contactName: "Ananya Shah", contactInitials: "AS", email: "ananya@nivara.example", plan: "Creator Starter", status: "Active", color: "#8b5cf6", storage: 21, storageLabel: "4.2 GB of 20 GB", billing: "₹13,000/month", renewal: "Sep 2, 2026", notificationEmail: true, team: ["Sara", "Abhinav"], projects: [
     { id: "nivara-founder", name: "Founder Story Series", type: "6 founder-led reels", format: "Reel · 9:16", status: "Editing", progress: 38, files: 18, due: "Aug 12", color: "#8b5cf6" },
