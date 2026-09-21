@@ -7833,16 +7833,6 @@ html[data-theme="light"] .profile-theme-pill.active {
   color: #fff;
 }
 
-/* Temporarily hide theme selector controls in Settings until future release (code preserved) */
-[data-account-view="appearance"],
-[data-account-tab="appearance"],
-[data-account-panel="appearance"],
-.account-profile-theme-strip,
-.appearance-settings-body,
-[data-set-theme] {
-  display: none !important;
-}
-
 
 
 

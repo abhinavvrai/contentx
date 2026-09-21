@@ -588,9 +588,10 @@ export async function renderAccountDashboard(root, actions) {
         <nav aria-label="Account settings sections">
           <small>PERSONAL</small>
           <button class="active" type="button" data-account-view="profile"><span>◎</span>Profile</button>
+          <button type="button" data-account-view="appearance"><span>☀</span>Appearance &amp; Theme</button>
           <button type="button" data-account-view="notifications"><span>◌</span>Notifications</button>
           <small>ACCOUNT</small>
-          <button type="button" data-account-view="billing"><span>₹</span>Orders & billing</button>
+          <button type="button" data-account-view="billing"><span>₹</span>Orders &amp; billing</button>
         </nav>
         <button class="account-settings-signout" type="button" data-account-logout>Sign out</button>
       </aside>
@@ -601,11 +602,12 @@ export async function renderAccountDashboard(root, actions) {
             ${profilePanel(data.user, activeRefunds, "View workspace")}
             <article class="account-profile-note"><span>✓</span><div><strong>Your workspace is ready.</strong><p>Create projects, upload source files, manage versions and share review links from the main dashboard.</p></div><a class="workspace-button primary" href="#workspace">Go to workspace</a></article>
           </section>
+          <section class="account-settings-panel" data-account-panel="appearance" hidden>${appearanceSettingsPanel()}</section>
           <section class="account-settings-panel" data-account-panel="notifications" hidden>${notificationSettingsPanel(notificationData)}</section>
           <section class="account-settings-panel" data-account-panel="billing" hidden>
-            <div class="account-panel-heading"><p>ACCOUNT</p><h1>Orders & billing</h1><span>Packages, receipts and refund updates stay private to your account.</span></div>
+            <div class="account-panel-heading"><p>ACCOUNT</p><h1>Orders &amp; billing</h1><span>Packages, receipts and refund updates stay private to your account.</span></div>
             <section class="account-order-section"><div class="account-section-title"><div><h2>Paid Content X orders</h2><p>Editing packages and project briefs appear here after checkout.</p></div><span>${orders.length} order${orders.length === 1 ? "" : "s"}</span></div><div class="account-orders">${orders.length ? orders.map(orderCard).join("") : `<div class="account-empty"><span>◇</span><h3>No paid orders yet</h3><p>Your free workspace is already available.</p><a class="workspace-button primary" href="#workspace">Open workspace</a></div>`}</div></section>
-            <section class="account-order-section account-payment-history"><div class="account-section-title"><div><h2>Payment history & refunds</h2><p>Receipts and status changes appear automatically.</p></div><span>${refundUpdates} refund update${refundUpdates === 1 ? "" : "s"}</span></div><div class="account-payment-list">${orders.length ? orders.map(paymentHistoryCard).join("") : `<div class="account-empty"><span>₹</span><h3>No payment history yet</h3><p>Your receipts will appear here after checkout.</p></div>`}</div></section>
+            <section class="account-order-section account-payment-history"><div class="account-section-title"><div><h2>Payment history &amp; refunds</h2><p>Receipts and status changes appear automatically.</p></div><span>${refundUpdates} refund update${refundUpdates === 1 ? "" : "s"}</span></div><div class="account-payment-list">${orders.length ? orders.map(paymentHistoryCard).join("") : `<div class="account-empty"><span>₹</span><h3>No payment history yet</h3><p>Your receipts will appear here after checkout.</p></div>`}</div></section>
           </section>
         </div>
       </main>
@@ -614,14 +616,42 @@ export async function renderAccountDashboard(root, actions) {
       await api(AUTH_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"logout" }) });
       currentUser = null; sessionChecked = true; localStorage.removeItem("cx_access"); actions.openMarketing();
     });
-    const titles = { profile:"Profile", notifications:"Notifications", billing:"Orders & billing" };
+    const titles = { profile:"Profile", appearance:"Appearance & Theme", notifications:"Notifications", billing:"Orders & billing" };
     root.querySelectorAll("[data-account-view]").forEach(button => button.addEventListener("click", () => {
       const view = button.dataset.accountView;
+      const appearancePanel = root.querySelector('[data-account-panel="appearance"]');
+      if (view === "appearance" && appearancePanel) { appearancePanel.innerHTML = appearanceSettingsPanel(); }
       root.querySelectorAll("[data-account-view]").forEach(item => item.classList.toggle("active", item === button));
       root.querySelectorAll("[data-account-panel]").forEach(panel => { const active = panel.dataset.accountPanel === view; panel.hidden = !active; panel.classList.toggle("active", active); });
       root.querySelector("[data-account-section-title]").textContent = titles[view] || "Account";
       root.querySelector(".account-settings-main")?.scrollTo({ top:0, behavior:"smooth" });
     }));
+    window.addEventListener("cx-theme-changed", e => {
+      const theme = e.detail?.theme || document.documentElement.dataset.theme;
+      root.querySelectorAll("[data-set-theme]").forEach(el => {
+        const active = el.dataset.setTheme === theme;
+        el.classList.toggle("active", active);
+        el.setAttribute("aria-checked", String(active));
+        const pill = el.querySelector(".theme-status-pill");
+        if (pill) {
+          pill.textContent = active ? "✓ Active" : "Select";
+          pill.classList.toggle("active", active);
+        }
+      });
+    });
+    window.addEventListener("cx-accent-changed", e => {
+      const accent = e.detail?.accent || document.documentElement.dataset.accent;
+      root.querySelectorAll("[data-set-accent]").forEach(el => {
+        const active = el.dataset.setAccent === accent;
+        el.classList.toggle("active", active);
+        el.setAttribute("aria-checked", String(active));
+        const pill = el.querySelector(".accent-status-pill");
+        if (pill) {
+          pill.textContent = active ? "✓ Active" : "Select";
+          pill.classList.toggle("active", active);
+        }
+      });
+    });
     bindNotificationSettings(root);
     bindProfileSettings(root, data.user, activeRefunds, "View workspace");
   } catch (error) {
@@ -642,7 +672,7 @@ export async function renderWorkspaceAccountPanel(container, actions, initialVie
     const activeRefunds = orders.filter(order => ["requested", "processing"].includes(order.refund_status)).length;
     const refundUpdates = orders.filter(order => order.refund_status && order.refund_status !== "none").length;
     container.innerHTML = `<div class="workspace-account-head"><div>${avatarMarkup(data.user)}<p><small>ACCOUNT</small><strong data-account-name>${escapeHTML(data.user.name)}</strong><em data-account-email>${escapeHTML(data.user.email)}</em></p></div><button class="workspace-button" type="button" data-account-logout>Sign out</button></div>
-      <nav class="workspace-account-tabs" aria-label="Account sections"><button type="button" data-account-view="profile">Profile</button><button type="button" data-account-view="notifications">Notifications</button><button type="button" data-account-view="billing">Orders & billing</button><button type="button" data-account-view="security">Security & data</button></nav>
+      <nav class="workspace-account-tabs" aria-label="Account sections"><button type="button" data-account-view="profile">Profile</button><button type="button" data-account-view="appearance">Appearance &amp; Theme</button><button type="button" data-account-view="notifications">Notifications</button><button type="button" data-account-view="billing">Orders &amp; billing</button><button type="button" data-account-view="security">Security &amp; data</button></nav>
       <div class="account-settings-content workspace-account-content">
         <section class="account-settings-panel" data-account-panel="security" hidden></section>
         <section class="account-settings-panel" data-account-panel="profile">
