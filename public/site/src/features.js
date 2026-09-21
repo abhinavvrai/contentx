@@ -289,6 +289,9 @@ let themeTransitionTimer;
 
 export function getAppTheme() {
   try {
+    if (localStorage.getItem("cx_theme_user_set") !== "true") {
+      return "light";
+    }
     return localStorage.getItem("cx_theme") || "light";
   } catch {
     return "light";
@@ -297,7 +300,10 @@ export function getAppTheme() {
 
 export function setAppTheme(theme) {
   const next = theme === "light" ? "light" : "dark";
-  try { localStorage.setItem("cx_theme", next); } catch {}
+  try {
+    localStorage.setItem("cx_theme", next);
+    localStorage.setItem("cx_theme_user_set", "true");
+  } catch {}
   
   const commitTheme = () => {
     document.documentElement.dataset.theme = next;
