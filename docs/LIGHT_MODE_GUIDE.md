@@ -245,4 +245,27 @@ To ensure the production real dashboard (`#workspace`) has the exact same visual
 - This includes the complete `public/site/` directory (`assets/`, `src/`, `videos/`, `index.html`).
 - Never delete or overwrite this directory.
 
+---
+
+## 11. Landing Page Black & White Monochrome Contrast
+
+To achieve a modern, high-contrast, editorial aesthetic on the Light Mode landing page without compromising cleanliness, the following key elements incorporate deep obsidian black (`#090a0f` / `#0b0c12`):
+
+1. **Hero Product Preview Window (`.product-window`)**:
+   - Styled as an obsidian dark creative studio window (`#0b0c12`) with dark window bar, dark comment pane, dark video stage, and dark floating notification cards (`.float-card`).
+   - Sits on top of the clean white hero canvas, giving the impression of a professional video editing app sitting on a modern minimalist desk.
+2. **Brand Marquee Bar (`.editorial-brand-marquee`)**:
+   - Styled as a sleek, dark obsidian container (`#090a0f`) with monochrome silver brand marks (`ASAP ROCKY`, `ADIDAS`, `ALO`, etc.).
+3. **High-Contrast Dark Pill Buttons (`.pill-dark`)**:
+   - Solid obsidian black pills with crisp white text (`#090a0f` background, `#ffffff` text, subtle dark border), providing a sharp black-and-white button pairing alongside the primary blue `.pill-hot`.
+4. **Portfolio Active Filter Pill (`.portfolio-filter-pill.active`)**:
+   - Solid obsidian black background with crisp white typography.
+5. **Process Step Badges (`.workflow-step-number`, `.step-icon`)**:
+   - Bold black icons and numerals anchored on the white step cards.
+6. **The Content X Studio Banner (`.editorial-studio-banner`)**:
+   - Styled as an obsidian statement card with an ambient radial blue glow, crisp white headline, and dark review mini-player.
+7. **Bottom Call-to-Action Section (`.editorial-cta-section`)**:
+   - Styled as an obsidian dark anchor block with glowing cyan/blue accents and high-contrast actions, creating a balanced visual conclusion before the footer.
+
+
 
