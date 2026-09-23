@@ -1,6 +1,6 @@
 # Content X Project Guide
 
-Last updated: 14 September 2026
+Last updated: 23 September 2026
 Production URL: https://contentx.co.in/  
 GitHub repository: https://github.com/abhinavvrai/contentx  
 Production branch: `main`  
@@ -59,6 +59,9 @@ The canonical website source is `public/site/`.
 - CSS is split across `styles.css`, `advanced.css`, `creator-tools.css`, `polish.css`, `services.css`, and `uploads.css`.
 - `ember.css` restores the vivid orange-to-amber brand gradient while retaining black surfaces and dark, contrast-checked primary-button text. The optional `ambient-scenes.js` adds original CSS signal bars, floating edit planes and light ribbons in spare creator-tools, FAQ, contact, marketplace, provider and sign-in columns, plus restrained movement on existing dashboard art. Its observers pause offscreen/background motion, respect reduced-motion settings and clean up on navigation. A shared in-memory pause preference follows the user between the homepage and secondary pages. No extra animations are added to media players or payment forms. Current local appearance release: `ember-flow-1`; not published or visually browser-verified.
 - `public/site/src/theme-blue.css` and `public/site/src/theme.css`: Defines the modern Light Theme (`html[data-theme="light"]`) and active Blue Theme (`data-accent="blue"`), overriding legacy dark-only rules across the Review Room (`.media-format-chip`, `.review-command-bar`, `.player-play-toggle`, `.comparison-modal`), Scripts Studio (topbar, breadcrumbs, storage card, footage tabs, blue gauge meter, continuous vs divided sections), and creator tools. Complete reference and guidelines are documented in `docs/LIGHT_MODE_GUIDE.md`.
+- **Default Theme & Settings Switcher**: Light Mode is now the default system theme for visitors (`localStorage.getItem("cx_theme") || "light"`). Users can toggle themes between Light and Dark mode under Settings (`#workspace?panel=account` -> Appearance). Both themes are actively maintained.
+- **Workspace Dashboard Parity**: The real client dashboard (`#workspace` / `workspace.js`) matches the demo workspace (`ui.js`) layout, card design (`.project-card.workspace-overview-card`), radial poster art (`.cx-project-poster`), status badges, search/filter controls, and grouped sidebar navigation. If an account has no projects, it defaults to starter demo projects (*Apex Fitness Launch*, *Founder Story Series*, *Product Walkthrough*).
+- **Design Backup (19 September 2026)**: The complete website design as of 19 September 2026 is preserved in `backups/design-2026-09-19/`. Never delete or overwrite this directory.
 
 Do not treat the root-level `index.html`, `src/`, `videos/`, `vendor/`, or temporary folders as the live website unless the architecture is intentionally changed. The production website currently comes from `public/site/`.
 

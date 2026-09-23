@@ -216,3 +216,33 @@ Content X supports both Dark and Light themes, driven by the root `<html>` attri
 4. **Preserve DOM Element Unwrapping**:
    - Whenever removing chips or inline tags from contenteditable surfaces, always unwrap any `<mark>` wrappers so user text is never permanently marked.
 
+---
+
+## 9. Workspace Dashboard Alignment (Real Dashboard ⟷ Demo Workspace)
+
+To ensure the production real dashboard (`#workspace`) has the exact same visual appeal, layout, typography, cards, poster art, and color scheme as the demo workspace (`renderDashboard`), the following components are unified:
+
+### 9.1 Unified Header & Project Cards
+- **Header**: Dual-classed `.dash-header` with section tag `<p>Workspace</p><h1>Projects</h1>` and primary call-to-action button `<button class="pill pill-hot workspace-button primary">+ New project</button>`.
+- **Tools Bar**: `.dash-section-head.workspace-overview-tools` containing `<h2>All projects</h2>`, active project count, search box (`.workspace-overview-search-wrap`), active/all filter pills, name sorting toggle, and grid/list switch.
+- **Card Design**: Uses `.project-card.workspace-overview-card` with `.project-card-top.workspace-overview-art` rendering the signature radial gradient `.cx-project-poster` with monogram, lock icon (`⌁`), hover arrow (`Open →`), title, client name, and a bottom status bar with asset count and `•••` settings trigger.
+- **Dashed Creation Card**: `.new-project-card.workspace-overview-new` styled with plus glyph, bold label, and caption.
+
+### 9.2 Sidebar Structure & Theme Consistency
+- **Brand/Workspace Widget**: `.dash-workspace` with CX avatar badge, `Content X`, client name (`Apex Fitness`), and menu trigger.
+- **Navigation Sections**:
+  - `WORKSPACE`: Home, Projects (with active count badge), Scripts, Needs review (with review count badge).
+  - `LIBRARY`: All assets, Share links.
+- **Storage & User Widgets**: Storage meter with percentage bar and `Manage plan` button, plus user footer with monogram avatar and profile details.
+- Works identically in both light mode (`html[data-theme="light"]`) and dark mode (`html[data-theme="dark"]`).
+
+---
+
+## 10. Historical Design Backup (19 September 2026)
+
+- The full design and website assets as of 19 September 2026 are archived at:
+  `backups/design-2026-09-19/`
+- This includes the complete `public/site/` directory (`assets/`, `src/`, `videos/`, `index.html`).
+- Never delete or overwrite this directory.
+
+
